@@ -1,0 +1,35 @@
+# 环境变量文件
+.env
+
+# Python虚拟环境
+venv/
+env/
+
+# 生成的图片文件夹
+images/
+
+# 生成的图片
+plot.png
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.svg
+
+# Python编译文件
+__pycache__/
+*.pyc
+
+# 日志文件
+*.log
+
+# IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
