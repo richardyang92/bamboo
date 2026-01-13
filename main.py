@@ -105,6 +105,60 @@ def generate_code(state: GraphState) -> GraphState:
                     "role": "system",
                     "content": """你是一个专业的数据可视化和工程绘图专家，请根据用户需求生成高质量的Python绘图代码。
 
+## 零、代码质量要求（最重要，必须严格遵守）
+
+### 0.1 语法正确性（生死攸关，绝对不能出错）
+**特别警告**：未闭合的括号会导致代码完全无法执行！生成代码后必须进行括号匹配检查：
+
+**常见错误示例（必须避免）**：
+```python
+# ❌ 错误1：函数调用缺少右括号
+ax.annotate('文字', xy=(0, 0), xytext=(1, 1), arrowprops=dict(arrowstyle='->'  # 缺少 )
+
+# ❌ 错误2：函数调用参数列表未闭合
+plt.plot(x, y, 'b-', linewidth=2, label='曲线'  # 缺少 )
+
+# ❌ 错误3：嵌套括号未正确配对
+ax.plot([x1, x2, x3], [y1, y2,  # 缺少 ])
+
+# ❌ 错误4：字符串引号未闭合
+ax.set_title('这是一段未闭合的标题  # 缺少 '
+
+# ❌ 错误5：字典参数缺少右括号
+arrowprops=dict(facecolor='red', arrowstyle='->'  # 缺少 )
+```
+
+**正确示例（必须遵循）**：
+```python
+# ✅ 正确1：完整的函数调用
+ax.annotate('文字', xy=(0, 0), xytext=(1, 1), arrowprops=dict(arrowstyle='->'))
+
+# ✅ 正确2：完整的绘图语句
+plt.plot(x, y, 'b-', linewidth=2, label='曲线')
+
+# ✅ 正确3：嵌套括号正确配对
+ax.plot([x1, x2, x3], [y1, y2, y3], 'r-')
+
+# ✅ 正确4：字符串正确闭合
+ax.set_title('这是一段完整的标题')
+
+# ✅ 正确5：字典参数完整
+arrowprops=dict(facecolor='red', arrowstyle='->')
+```
+
+**必须执行的检查步骤**（生成代码前必须按此顺序检查）：
+1. 从代码开头到结尾，数一数每个 `(` 是否都有对应的 `)`
+2. 检查每个函数调用的最后一行是否以 `)` 结尾
+3. 检查每个字符串（用引号括起来的内容）是否都有结束引号
+4. 特别注意 `ax.annotate()`, `ax.plot()`, `dict()` 等有多层嵌套的函数调用
+5. **确认无误后再输出代码**
+
+### 0.2 代码完整性
+- 不要生成被截断的代码（代码必须完整结束）
+- 确保每个函数调用都有完整的参数列表
+- 确保多行语句使用正确的续行符（反斜杠 `\` 或括号内的隐式续行）
+- 代码最后必须确保所有括号都闭合
+
 ## 一、技术要求
 1. 只使用matplotlib库（可配合numpy等基础库）
 2. 代码要完整，包括导入、数据生成（如果需要）、绘图、保存图片
@@ -332,6 +386,8 @@ def generate_code(state: GraphState) -> GraphState:
 
 ## 四、代码结构模板
 
+**⚠️ 使用模板前必须确认**：按照【零、代码质量要求】检查生成的代码，确保所有括号都闭合！
+
 ### 4.1 数据可视化类模板（折线图、柱状图等）
 ```python
 import matplotlib.pyplot as plt
@@ -375,6 +431,7 @@ plt.close()
 ```
 
 ### 4.2 物理示意图模板
+**⚠️ 警告**：物理示意图包含大量嵌套函数调用（如 ax.annotate, ax.plot 等），最容易缺少右括号！
 ```python
 import matplotlib.pyplot as plt
 import matplotlib
@@ -566,6 +623,11 @@ ax.annotate(
 
 ## 八、质量检查清单
 生成代码前请确认：
+□ **语法正确**（最重要！）
+  - 所有 `()` `[]` `{}` 括号都正确配对
+  - 所有引号 `'"` 都正确配对
+  - 没有未闭合的括号或引号
+  - **每个函数调用都以 `)` 结尾**
 □ **所有变量都已明确定义**（最重要！不要使用未定义的变量如 article、data 等）
 □ **所有数据都在代码中显式定义或生成**（不要假设外部数据存在）
 □ 图形尺寸合适，不拥挤
@@ -582,20 +644,64 @@ ax.annotate(
 □ **避免遮挡**：填充区域使用了 alpha 透明度，文字标注在最上层（zorder=10）
 □ **导入正确**：没有使用 `matplotlib.patches.Line2D`，线条使用 ax.plot() 等方法
 □ **代码可以直接执行，无语法错误**
-□ 使用了 target_filename 变量保存文件"""
+□ 使用了 target_filename 变量保存文件
+
+---
+
+## 🚨 最终输出前强制检查（必须执行，不得跳过）
+
+**现在你已经完成代码生成，在输出代码前必须执行以下检查**：
+
+1. **括号匹配检查**：从代码第一行开始，逐个检查：
+   - 每个 `ax.annotate(` 都有对应的 `)`
+   - 每个 `plt.plot(` 都有对应的 `)`
+   - 每个 `dict(` 都有对应的 `)`
+   - 每个 `[` 都有对应的 `]`
+
+2. **特别检查以下容易出错的行**：
+   - 所有包含 `arrowprops=` 的行，确保最后有 `)`
+   - 所有包含 `xytext=` 的行，确保最后有 `)`
+   - 所有跨越多行的函数调用，确保最后有 `)`
+
+3. **执行测试**：在脑海中逐行执行一遍代码，确认每一行都完整
+
+**✓ 只有完成以上检查，确认代码无语法错误后，才能输出！**
+**✗ 如果发现任何未闭合的括号，立即修复后再输出！**
+
+---"""
                 },
                 {
                     "role": "user",
-                    "content": user_prompt
+                    "content": f"""请根据以下需求生成Python绘图代码：
+
+{user_prompt}
+
+【⚠️ 重要提醒】生成代码时请务必：
+1. 确保所有括号 () 都正确配对
+2. 确保所有引号 都正确配对
+3. 特别检查每个函数调用（尤其是 ax.annotate, plt.plot）最后都有 )
+4. 生成后立即检查一遍代码语法是否正确
+
+请直接输出可执行的Python代码，不要包含任何解释。"""
                 }
             ],
-            temperature=0.7,
-            max_tokens=3000
+            temperature=0.3,  # 降低温度，让输出更稳定
+            max_tokens=6000   # 增加到6000，确保复杂代码完整
         )
 
         # 提取生成的代码
         generated_code = response.choices[0].message.content.strip()
         print(f"   [DEBUG] AI 返回的内容长度: {len(generated_code)} 字符")
+
+        # 检查token使用情况
+        if hasattr(response, 'usage') and response.usage:
+            total_tokens = response.usage.total_tokens
+            completion_tokens = response.usage.completion_tokens
+            print(f"   [DEBUG] Token使用情况 - 总计: {total_tokens}, 生成: {completion_tokens}")
+
+            # 检查是否接近限制
+            if completion_tokens >= 5800:  # 6000的97%
+                print(f"   [WARNING] ⚠️ 代码接近token限制，可能被截断！")
 
         # 去除可能的markdown格式
         if generated_code.startswith('```python'):
@@ -654,6 +760,18 @@ def execute_code(state: GraphState) -> GraphState:
         import time
         from datetime import datetime
 
+        # 获取脚本所在目录的绝对路径，确保路径正确
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        images_dir = os.path.join(script_dir, "images")
+
+        # 确保 images 目录存在
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir)
+            print(f"   [DEBUG] 创建 images 目录: {images_dir}")
+
+        print(f"   [DEBUG] 脚本目录: {script_dir}")
+        print(f"   [DEBUG] Images 目录: {images_dir}")
+
         # 提取关键词
         user_prompt = state["user_prompt"]
         print(f"   [DEBUG] 用户提示词: '{user_prompt}'")
@@ -669,9 +787,9 @@ def execute_code(state: GraphState) -> GraphState:
             keywords = "graph"
             print(f"   [DEBUG] 关键词为空，使用默认值: 'graph'")
 
-        # 生成唯一文件名：关键词_时间戳.png
+        # 生成唯一文件名：关键词_时间戳.png（使用绝对路径）
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        target_filename = f"images/plot_{keywords}_{timestamp}.png"
+        target_filename = os.path.join(images_dir, f"plot_{keywords}_{timestamp}.png")
         print(f"   [DEBUG] 目标文件名: '{target_filename}'")
 
         # 打印生成的代码前100个字符用于调试
@@ -680,9 +798,20 @@ def execute_code(state: GraphState) -> GraphState:
         # 执行生成的代码，并将目标文件名传入执行环境
         local_vars["target_filename"] = target_filename
 
-        # 记录执行前的文件列表
-        files_before = set(glob.glob("images/plot_*.png"))
+        # 记录执行前的文件列表（使用绝对路径）
+        files_before = set(glob.glob(os.path.join(images_dir, "plot_*.png")))
         print(f"   [DEBUG] 执行前存在的 plot 文件: {files_before}")
+
+        # 先进行语法检查，捕获语法错误
+        print(f"   [DEBUG] 开始语法检查...")
+        try:
+            compile(state["generated_code"], '<string>', 'exec')
+            print(f"   [DEBUG] ✓ 语法检查通过")
+        except SyntaxError as se:
+            error_msg = f"生成的代码存在语法错误（第{se.lineno}行）: {se.msg}"
+            print(f"   [DEBUG] ✗ {error_msg}")
+            print(f"   [DEBUG] 问题代码片段:\n{se.text}")
+            return {"error": error_msg}
 
         # 执行代码
         print(f"   [DEBUG] 开始执行生成的代码...")
@@ -692,8 +821,8 @@ def execute_code(state: GraphState) -> GraphState:
         # 等待文件写入
         time.sleep(0.5)
 
-        # 记录执行后的文件列表
-        files_after = set(glob.glob("images/plot_*.png"))
+        # 记录执行后的文件列表（使用绝对路径）
+        files_after = set(glob.glob(os.path.join(images_dir, "plot_*.png")))
         print(f"   [DEBUG] 执行后存在的 plot 文件: {files_after}")
 
         # 找出新创建的文件
@@ -706,8 +835,8 @@ def execute_code(state: GraphState) -> GraphState:
             print(f"   [DEBUG] ✓ 找到目标文件: {target_filename} (大小: {file_size} 字节)")
             return {"image_path": target_filename}
 
-        # 如果没有生成目标文件，查找最新生成的文件
-        plot_files = glob.glob("images/plot_*.png")
+        # 如果没有生成目标文件，查找最新生成的文件（使用绝对路径）
+        plot_files = glob.glob(os.path.join(images_dir, "plot_*.png"))
         print(f"   [DEBUG] 当前目录下所有 plot_*.png 文件: {plot_files}")
 
         if not plot_files:
@@ -791,7 +920,7 @@ def create_graph():
 
 # 主函数
 def main():
-    """主函数，处理用户输入并运行工作流"""
+    """主函数, 处理用户输入并运行工作流"""
     # 获取用户输入
     if len(sys.argv) > 1:
         user_prompt = ' '.join(sys.argv[1:])

@@ -1,7 +1,7 @@
 flask==3.0.0
 flask-socketio==5.3.6
 python-socketio==5.11.0
-eventlet==0.33.3
+eventlet==0.40.4
 python-dotenv==1.0.0
 langgraph==0.0.28
 matplotlib>=3.9.0

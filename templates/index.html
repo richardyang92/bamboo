@@ -2413,14 +2413,36 @@
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('resultContent').classList.add('active');
 
-            document.getElementById('resultImage').src = result.image_url + '?t=' + Date.now();
+            const resultImage = document.getElementById('resultImage');
+            const imageUrl = result.image_url + '?t=' + Date.now();
+
+            // 先显示加载状态
+            resultImage.style.opacity = '0.5';
+
+            // 等待图片加载完成后再显示
+            resultImage.onload = function() {
+                resultImage.style.opacity = '1';
+                console.log('✓ 图片加载成功:', imageUrl);
+            };
+
+            resultImage.onerror = function() {
+                console.error('✗ 图片加载失败:', imageUrl);
+                // 如果加载失败，尝试重试一次
+                setTimeout(() => {
+                    resultImage.src = imageUrl + '&retry=1';
+                }, 500);
+            };
+
+            // 设置图片源（会触发加载）
+            resultImage.src = imageUrl;
+
             document.getElementById('imageSize').textContent = `📏 ${(result.image_size / 1024).toFixed(2)} KB`;
             document.getElementById('imagePath').textContent = `📁 ${result.image_path}`;
 
             generatedCode = result.generated_code;
             document.getElementById('resultCode').textContent = generatedCode;
 
-            // 更新输出节点缩略图
+            // 更新输出节点缩略图（也需要等待加载）
             updateOutputNodeThumbnail(result.image_url);
         }
 
