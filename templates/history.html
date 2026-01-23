@@ -324,6 +324,23 @@
             transform: scale(1.05);
         }
 
+        /* 文档卡片样式 */
+        .gallery-item.document {
+            border-color: var(--primary-light);
+        }
+
+        .document-preview {
+            width: 100%;
+            height: 240px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+        }
+
         .gallery-info {
             padding: 16px;
         }
@@ -695,12 +712,37 @@
         </div>
     </div>
 
+    <!-- 文档预览模态框 -->
+    <div class="image-modal" id="documentModal">
+        <div class="image-modal-backdrop" onclick="closeDocumentModal()"></div>
+        <div class="image-modal-content" style="max-width: 900px;">
+            <div class="image-modal-image-wrapper">
+                <button class="image-modal-close" onclick="closeDocumentModal()">✕</button>
+                <iframe id="documentModalPreview" style="width: 100%; height: 70vh; border: none; border-radius: 12px;"></iframe>
+            </div>
+            <div class="image-modal-info">
+                <div class="image-modal-filename" id="documentModalFilename">document.md</div>
+                <div class="image-modal-actions">
+                    <button class="image-modal-btn" onclick="downloadCurrentDocument()">
+                        <span>💾</span>
+                        <span>下载</span>
+                    </button>
+                    <button class="image-modal-btn delete" onclick="deleteCurrentDocument()">
+                        <span>🗑️</span>
+                        <span>删除</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 主题管理
         const THEME_KEY = 'app-theme';
         const themes = ['light', 'dark', 'auto'];
         let currentThemeMode = localStorage.getItem(THEME_KEY) || 'auto';
         let currentImageData = null;
+        let currentDocumentData = null;
         let allImages = [];
 
         // 初始化主题
@@ -779,31 +821,33 @@
             galleryGrid.innerHTML = '';
 
             try {
-                const response = await fetch('/api/images');
-                const images = await response.json();
-                allImages = images;
+                const response = await fetch('/api/history');
+                const items = await response.json();
+                allImages = items;
 
                 // 隐藏加载状态
                 loadingState.style.display = 'none';
 
-                if (images.length === 0) {
+                if (items.length === 0) {
                     emptyState.style.display = 'flex';
                     return;
                 }
 
                 // 更新统计信息
-                totalCount.textContent = images.length;
-                const totalBytes = images.reduce((sum, img) => sum + img.size, 0);
+                const imageCount = items.filter(item => item.type === 'image').length;
+                const documentCount = items.filter(item => item.type === 'document').length;
+                totalCount.textContent = `${imageCount} 图表 / ${documentCount} 文档`;
+                const totalBytes = items.reduce((sum, item) => sum + item.size, 0);
                 totalSize.textContent = formatFileSize(totalBytes);
 
-                // 渲染图片网格
-                images.forEach((image, index) => {
-                    const item = createGalleryItem(image, index);
-                    galleryGrid.appendChild(item);
+                // 渲染内容网格
+                items.forEach((item, index) => {
+                    const galleryItem = createGalleryItem(item, index);
+                    galleryGrid.appendChild(galleryItem);
                 });
 
             } catch (error) {
-                console.error('加载图片失败:', error);
+                console.error('加载历史记录失败:', error);
                 loadingState.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">❌</div>
@@ -819,43 +863,86 @@
         }
 
         // 创建图片卡片
-        function createGalleryItem(image, index) {
+        function createGalleryItem(item, index) {
             const div = document.createElement('div');
             div.className = 'gallery-item';
+
+            // 根据类型添加class
+            if (item.type === 'document') {
+                div.classList.add('document');
+            }
+
             div.onclick = (e) => {
                 // 如果点击的是操作按钮，不打开预览
                 if (e.target.closest('.gallery-action-btn')) return;
-                openImageModal(image);
+
+                // 根据类型打开不同的预览
+                if (item.type === 'document') {
+                    openDocumentModal(item);
+                } else {
+                    openImageModal(item);
+                }
             };
 
-            const date = new Date(image.created * 1000);
+            const date = new Date(item.created * 1000);
             const dateStr = date.toLocaleString('zh-CN');
 
+            // 根据类型生成不同的预览内容
+            let previewHTML = '';
+            if (item.type === 'document') {
+                previewHTML = `<div class="document-preview">📄</div>`;
+            } else {
+                previewHTML = `<img class="gallery-image" src="${item.url}?t=${Date.now()}" alt="${item.name}" loading="lazy">`;
+            }
+
+            // 根据类型生成不同的操作按钮
+            let actionButtons = '';
+            if (item.type === 'document') {
+                actionButtons = `
+                    <button class="gallery-action-btn" onclick="viewDocument(${index})">
+                        <span>👁️</span>
+                        <span>查看</span>
+                    </button>
+                    <button class="gallery-action-btn" onclick="downloadDocument('${item.url}', '${item.name}')">
+                        <span>💾</span>
+                        <span>下载</span>
+                    </button>
+                    <button class="gallery-action-btn delete" onclick="deleteDocument('${item.name}', ${index})">
+                        <span>🗑️</span>
+                        <span>删除</span>
+                    </button>
+                `;
+            } else {
+                actionButtons = `
+                    <button class="gallery-action-btn" onclick="viewImage(${index})">
+                        <span>👁️</span>
+                        <span>查看</span>
+                    </button>
+                    <button class="gallery-action-btn" onclick="copyImage('${item.url}', this)">
+                        <span>📋</span>
+                        <span>复制</span>
+                    </button>
+                    <button class="gallery-action-btn" onclick="downloadImage('${item.url}', '${item.name}')">
+                        <span>💾</span>
+                        <span>下载</span>
+                    </button>
+                    <button class="gallery-action-btn delete" onclick="deleteImage('${item.name}', ${index})">
+                        <span>🗑️</span>
+                        <span>删除</span>
+                    </button>
+                `;
+            }
+
             div.innerHTML = `
-                <img class="gallery-image" src="${image.path}?t=${Date.now()}" alt="${image.name}" loading="lazy">
+                ${previewHTML}
                 <div class="gallery-info">
-                    <div class="gallery-name">${image.name}</div>
+                    <div class="gallery-name">${item.name}</div>
                     <div class="gallery-meta">
                         <span>📅 ${dateStr}</span>
-                        <span>📏 ${formatFileSize(image.size)}</span>
+                        <span>📏 ${formatFileSize(item.size)}</span>
                     </div>
                     <div class="gallery-actions">
-                        <button class="gallery-action-btn" onclick="viewImage(${index})">
-                            <span>👁️</span>
-                            <span>查看</span>
-                        </button>
-                        <button class="gallery-action-btn" onclick="copyImage('${image.path}', this)">
-                            <span>📋</span>
-                            <span>复制</span>
-                        </button>
-                        <button class="gallery-action-btn" onclick="downloadImage('${image.path}', '${image.name}')">
-                            <span>💾</span>
-                            <span>下载</span>
-                        </button>
-                        <button class="gallery-action-btn delete" onclick="deleteImage('${image.name}', ${index})">
-                            <span>🗑️</span>
-                            <span>删除</span>
-                        </button>
+                        ${actionButtons}
                     </div>
                 </div>
             `;
@@ -870,7 +957,7 @@
             const preview = document.getElementById('imageModalPreview');
             const filename = document.getElementById('imageModalFilename');
 
-            preview.src = image.path + '?t=' + Date.now();
+            preview.src = image.url + '?t=' + Date.now();
             filename.textContent = image.name;
             modal.classList.add('show');
         }
@@ -900,7 +987,7 @@
         // 下载当前预览的图片
         function downloadCurrentImage() {
             if (currentImageData) {
-                downloadImage(currentImageData.path, currentImageData.name);
+                downloadImage(currentImageData.url, currentImageData.name);
             }
         }
 
@@ -1006,8 +1093,207 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeImageModal();
+                closeDocumentModal();
             }
         });
+
+        // ========== 文档相关函数 ==========
+
+        // 打开文档预览
+        async function openDocumentModal(doc) {
+            currentDocumentData = doc;
+            const modal = document.getElementById('documentModal');
+            const preview = document.getElementById('documentModalPreview');
+            const filename = document.getElementById('documentModalFilename');
+
+            try {
+                const response = await fetch(doc.url);
+                const content = await response.text();
+
+                // 使用 marked.js 解析 Markdown，并添加数学公式支持
+                const htmlContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <!-- Marked.js for Markdown -->
+                        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
+                        <!-- KaTeX for math rendering -->
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+                        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
+                        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
+                        <style>
+                            body {
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+                                line-height: 1.6;
+                                color: #333;
+                                padding: 40px;
+                                background: #fff;
+                            }
+                            h1, h2, h3, h4 {
+                                border-bottom: 1px solid #eee;
+                                padding-bottom: 0.3em;
+                                margin-top: 1.5em;
+                                margin-bottom: 0.5em;
+                            }
+                            h1 { font-size: 2em; }
+                            h2 { font-size: 1.5em; }
+                            h3 { font-size: 1.25em; }
+                            code {
+                                background: #f6f8fa;
+                                padding: 0.2em 0.4em;
+                                border-radius: 3px;
+                                font-family: 'Monaco', 'Courier New', monospace;
+                                font-size: 0.9em;
+                            }
+                            pre {
+                                background: #f6f8fa;
+                                padding: 16px;
+                                border-radius: 6px;
+                                overflow: auto;
+                                border: 1px solid #e1e4e8;
+                            }
+                            pre code {
+                                background: transparent;
+                                padding: 0;
+                                border: none;
+                            }
+                            blockquote {
+                                border-left: 4px solid #dfe2e5;
+                                padding-left: 16px;
+                                color: #6a737d;
+                                margin: 1em 0;
+                            }
+                            ul, ol {
+                                padding-left: 2em;
+                                margin: 1em 0;
+                            }
+                            li {
+                                margin: 0.5em 0;
+                            }
+                            a {
+                                color: #0366d6;
+                                text-decoration: none;
+                            }
+                            a:hover {
+                                text-decoration: underline;
+                            }
+                            p {
+                                margin: 1em 0;
+                            }
+                            /* KaTeX 样式调整 */
+                            .katex-display {
+                                overflow-x: auto;
+                                overflow-y: hidden;
+                                padding: 0.5em 0;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div id="content"></div>
+                        <script>
+                            const markdownContent = ${JSON.stringify(content)};
+
+                            // 修复双反斜杠问题：将 LaTeX 中错误的双反斜杠替换为单反斜杠
+                            function fixLatexBackslashes(text) {
+                                // 保护真正的双反斜杠换行符
+                                text = text.replace(/\\\\\\n/g, '___NEWLINE___');
+                                // 将所有 \\+字母 替换为 \+字母
+                                text = text.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
+                                // 恢复换行符
+                                text = text.replace(/___NEWLINE___/g, '\\\\\\n');
+                                return text;
+                            }
+
+                            const fixedContent = fixLatexBackslashes(markdownContent);
+
+                            // 第一步：解析 Markdown
+                            const content = document.getElementById('content');
+                            content.innerHTML = marked.parse(fixedContent);
+
+                            // 第二步：使用 KaTeX 自动渲染数学公式
+                            renderMathInElement(content, {
+                                delimiters: [
+                                    {left: '$$', right: '$$', display: true},
+                                    {left: '$', right: '$', display: false},
+                                    {left: '\\[', right: '\\]', display: true},
+                                    {left: '\\(', right: '\\)', display: false}
+                                ],
+                                throwOnError: false
+                            });
+                        <\/script>
+                    </body>
+                    </html>
+                `;
+
+                preview.srcdoc = htmlContent;
+                filename.textContent = doc.name;
+                modal.classList.add('show');
+            } catch (error) {
+                console.error('加载文档失败:', error);
+                alert('加载文档失败');
+            }
+        }
+
+        // 关闭文档预览
+        function closeDocumentModal() {
+            const modal = document.getElementById('documentModal');
+            modal.classList.remove('show');
+            currentDocumentData = null;
+        }
+
+        // 查看文档
+        function viewDocument(index) {
+            if (allImages[index]) {
+                openDocumentModal(allImages[index]);
+            }
+        }
+
+        // 下载文档
+        function downloadDocument(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+        }
+
+        // 下载当前预览的文档
+        function downloadCurrentDocument() {
+            if (currentDocumentData) {
+                downloadDocument(currentDocumentData.url, currentDocumentData.name);
+            }
+        }
+
+        // 删除文档
+        async function deleteDocument(filename, index) {
+            if (!confirm(`确定要删除 "${filename}" 吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/documents/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadImages();
+                    closeDocumentModal();
+                } else {
+                    alert('删除失败');
+                }
+            } catch (error) {
+                console.error('删除文档失败:', error);
+                alert('删除失败');
+            }
+        }
+
+        // 删除当前预览的文档
+        async function deleteCurrentDocument() {
+            if (currentDocumentData) {
+                await deleteDocument(currentDocumentData.name, -1);
+            }
+        }
     </script>
 </body>
 </html>

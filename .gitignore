@@ -8,6 +8,9 @@ env/
 # 生成的图片文件夹
 images/
 
+# 生成的文档文件夹
+docs/
+
 # 生成的图片
 plot.png
 *.png

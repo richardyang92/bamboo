@@ -1,17 +1,29 @@
-# 基于DeepSeek的AI绘图Agent
+# Bamboo - AI 智能绘图与文档生成工作流
 
-一个使用LangGraph框架构建的AI绘图Agent，能够根据用户需求自动生成、执行和保存matplotlib图表。
+一个使用LangGraph框架构建的AI Agent，支持智能绘图和高质量Markdown文档生成。
 
 ## 功能特性
 
+### 📊 智能绘图
 - ✅ **AI驱动**：使用DeepSeek模型生成高质量绘图代码
-- 📊 **Matplotlib支持**：生成各种类型的图表
+- 📊 **Matplotlib支持**：生成各种类型的图表（折线图、柱状图、散点图等）
 - 🔄 **自动化流程**：用户输入 → 代码生成 → 执行 → 保存图片
 - 📁 **本地保存**：自动将生成的图表保存到本地
 - 🎯 **中文支持**：完美支持中文显示
-- 🌐 **Web界面**：实时展示工作流执行状态
+
+### 📝 文档生成
+- ✨ **AI写作**：使用DeepSeek模型生成高质量Markdown文档
+- 🧮 **数学公式**：完美支持LaTeX数学公式渲染（基于KaTeX）
+- 📚 **结构化内容**：自动生成大纲、章节、示例代码
+- 🎨 **格式规范**：遵循标准的Markdown语法规范
+- 📖 **多领域支持**：技术文档、教程、学术文章等
+
+### 🌐 Web界面
 - 📡 **实时更新**：通过WebSocket实时推送执行进度
-- 📜 **历史记录**：查看和管理所有生成的图表历史
+- 📜 **历史记录**：查看和管理所有生成的图表和文档
+- 🖼️ **预览功能**：实时预览生成的图表和文档
+- 📥 **一键下载**：方便地下载生成的文件
+- 🌓 **主题切换**：支持深色/浅色主题
 - 🚀 **快速启动**：提供便捷的启动脚本
 
 ## 快速开始
@@ -72,37 +84,44 @@ python app.py
 然后在浏览器中访问：`http://localhost:5001`
 
 Web界面功能：
-- 📝 实时输入绘图需求
-- 📊 可视化展示工作流执行步骤
-- ⚡ WebSocket实时更新状态
-- 🖼️ 预览生成的图表
-- 💻 查看生成的代码
-- 📜 查看历史记录（访问 `/history` 页面）
-- 🗑️ 清除历史记录
-- 📥 下载生成的图片
+- 📊 **智能绘图**：实时输入绘图需求，生成图表
+- 📝 **文档生成**：输入主题，自动生成高质量Markdown文档
+- 📊 **可视化展示**：实时显示工作流执行步骤
+- ⚡ **实时更新**：WebSocket推送状态更新
+- 🖼️ **预览功能**：预览生成的图表和文档
+- 📜 **历史记录**：访问 `/history` 页面查看所有生成内容
+- 📥 **一键下载**：下载生成的图片和文档
+- 🗑️ **管理功能**：删除不需要的历史记录
 
 ### 方式三：命令行模式
 
-直接运行脚本：
+#### 绘图功能
 
 ```bash
-python main.py "你的绘图需求"
+python draw_pic.py "你的绘图需求"
 ```
 
 示例：
 
 ```bash
-python main.py "绘制一个简单的折线图，显示2023年每个月的销售额，数据是[100, 120, 150, 180, 200, 220, 250, 280, 300, 320, 350, 400]"
+python draw_pic.py "绘制一个简单的折线图，显示2023年每个月的销售额"
 ```
 
-交互模式（不带参数运行）：
+#### 文档生成功能
 
 ```bash
-python main.py
-请输入你的绘图需求：绘制一个柱状图，显示不同产品的销量
+python write_md.py "文档主题"
+```
+
+示例：
+
+```bash
+python write_md.py "量子力学基础教程"
 ```
 
 ## 工作流程
+
+### 📊 绘图工作流
 
 系统采用LangGraph构建的4步工作流：
 
@@ -126,11 +145,40 @@ python main.py
    - 获取图片大小等信息
    - 返回执行结果
 
+### 📝 文档生成工作流
+
+文档生成采用类似的5步工作流：
+
+1. **润写作需求** (refine_prompt)
+   - 增强用户的写作需求
+   - 添加文档写作要求和格式规范
+   - 包含数学公式KaTeX兼容性要求
+
+2. **生成文档大纲** (generate_outline)
+   - 调用DeepSeek模型生成结构化大纲
+   - 确保逻辑清晰、层次分明
+   - 覆盖主题的所有重要方面
+
+3. **生成文档内容** (generate_content)
+   - 根据大纲展开完整内容
+   - 使用标准Markdown语法
+   - 自动修复LaTeX公式转义问题
+
+4. **保存文档** (save_document)
+   - 保存到 `docs/` 目录
+   - 自动生成唯一文件名（带时间戳）
+   - 返回文件路径和大小
+
+5. **验证文档** (verify_document)
+   - 验证文件是否成功保存
+   - 统计文档字数、行数等信息
+
 ## 代码结构
 
 ```
 bamboo/
-├── main.py              # 核心工作流逻辑
+├── draw_pic.py          # 绘图工作流核心逻辑
+├── write_md.py          # 文档生成工作流核心逻辑
 ├── app.py               # Web服务器和API接口
 ├── start.sh             # 快速启动脚本
 ├── templates/
@@ -139,6 +187,7 @@ bamboo/
 ├── doc/
 │   └── DEEPSEEK_SETUP.md # DeepSeek API配置指南
 ├── images/              # 生成的图表保存目录
+├── docs/                # 生成的文档保存目录
 ├── requirements.txt     # Python依赖包
 ├── .env                 # 环境变量配置
 ├── .env.example         # 环境变量示例
@@ -149,18 +198,21 @@ bamboo/
 
 ### 主要文件说明
 
-- **main.py**: 定义工作流图和各个节点的处理函数
+- **draw_pic.py**: 绘图工作流，定义图表生成的各个节点
+- **write_md.py**: 文档生成工作流，定义文档创作的各个节点
 - **app.py**: Flask Web服务器，提供RESTful API和WebSocket支持
 - **start.sh**: 快速启动脚本，自动检查环境并启动服务
-- **templates/index.html**: 响应式Web界面，实时展示工作流状态
-- **templates/history.html**: 历史记录页面，展示所有生成的图表
+- **templates/index.html**: 响应式Web界面，支持绘图和文档生成
+- **templates/history.html**: 历史记录页面，展示所有生成的图表和文档
 - **doc/DEEPSEEK_SETUP.md**: 详细的DeepSeek API配置和获取指南
 
 ## API 接口
 
 Web服务器提供以下API接口：
 
-### POST /api/workflow
+### 绘图相关
+
+#### POST /api/workflow
 启动新的绘图工作流
 
 **请求体**：
@@ -170,24 +222,54 @@ Web服务器提供以下API接口：
 }
 ```
 
-### GET /api/status
-获取当前工作流状态
+### 文档相关
 
-### GET /api/images
+#### POST /api/document/workflow
+启动新的文档生成工作流
+
+**请求体**：
+```json
+{
+  "prompt": "量子力学基础教程",
+  "options": {
+    "includeCode": true,
+    "includeTables": true
+  }
+}
+```
+
+#### GET /api/documents/<filename>
+获取指定的文档文件
+
+#### DELETE /api/documents/<filename>
+删除指定的文档文件
+
+### 通用接口
+
+#### GET /api/history
+获取所有历史记录（图表和文档）
+
+#### GET /api/images
 列出所有生成的图片
 
-### GET /api/images/<filename>
+#### GET /api/images/<filename>
 获取指定的图片文件
 
-### POST /api/clear
-清除历史记录
+#### DELETE /api/images/<filename>
+删除指定的图片文件
+
+#### POST /api/clear
+清除所有历史记录
 
 ### WebSocket事件
 - `status_update`: 接收工作流状态更新
+- `document_update`: 接收文档生成进度更新
 - `connect`: 客户端连接
 - `disconnect`: 客户端断开
 
 ## 输出示例
+
+### 📊 绘图输出
 
 ```
 1. 正在生成绘图代码...
@@ -201,6 +283,34 @@ import matplotlib.pyplot as plt
 📍 图片绝对路径: /Users/yangyang/Projects/bamboo/images/plot.png
 ```
 
+### 📝 文档生成输出
+
+```
+1. 正在润色写作需求...
+✅ 原始需求: '量子力学基础教程'
+✅ 增强后的提示词已生成
+
+2. 正在生成文档大纲...
+✅ 文档大纲生成完成
+
+3. 正在生成文档内容...
+✅ Markdown 文档内容生成完成
+
+4. 正在保存文档...
+✓ 文档已保存: docs/doc_量子力学基础教程_20260123_180000.md (大小: 12345 字节)
+
+5. 正在验证文档...
+✓ 文档验证成功
+[STATS] 行数: 245, 字符数: 12345, 标题数: 28
+```
+
+生成的文档包含：
+- 清晰的章节结构
+- 标准的Markdown格式
+- LaTeX数学公式（支持KaTeX渲染）
+- 代码示例和说明
+- 表格和列表
+
 ## 注意事项
 
 1. **API密钥安全**：不要将你的API密钥提交到版本控制系统
@@ -211,13 +321,19 @@ import matplotlib.pyplot as plt
 
 ## 技术栈
 
-- **后端框架**: Flask 3.0.0 + Flask-SocketIO 5.3.6
+### 后端
+- **Web框架**: Flask 3.0.0
+- **实时通信**: Flask-SocketIO 5.3.6 + Eventlet
 - **工作流引擎**: LangGraph 0.0.28
 - **AI模型**: DeepSeek (兼容OpenAI API)
-- **绘图库**: Matplotlib >= 3.9.0
+- **绘图**: Matplotlib >= 3.9.0
 - **数值计算**: NumPy >= 2.0.0
-- **实时通信**: WebSocket (Socket.IO + Eventlet)
-- **前端**: 原生 HTML/CSS/JavaScript
+
+### 前端
+- **基础**: 原生 HTML/CSS/JavaScript
+- **Markdown渲染**: Marked.js
+- **数学公式**: KaTeX
+- **实时通信**: Socket.IO Client
 
 ## DeepSeek API 优势
 
@@ -258,8 +374,7 @@ chmod +x start.sh
 
 ## 扩展建议
 
-- [ ] 添加用户认证系统
-- [ ] 实现历史记录持久化存储到数据库
+### 绘图功能
 - [ ] 支持更多绘图库（seaborn、plotly等）
 - [ ] 添加图表编辑和重新生成功能
 - [ ] 实现代码模板管理
@@ -268,6 +383,22 @@ chmod +x start.sh
 - [ ] 实现图表分享功能
 - [ ] 添加图表导出为SVG/PDF功能
 - [ ] 支持自定义图表主题和样式
+
+### 文档功能
+- [ ] 支持更多输出格式（PDF、HTML、Word等）
+- [ ] 添加文档模板系统
+- [ ] 实现文档续写和编辑功能
+- [ ] 支持多语言文档生成
+- [ ] 添加参考文献管理
+- [ ] 实现文档版本控制
+- [ ] 支持协作文档编辑
+- [ ] 添加文档导出和分享功能
+
+### 通用功能
+- [ ] 添加用户认证系统
+- [ ] 实现历史记录持久化存储到数据库
+- [ ] 添加使用统计和分析
+- [ ] 实现API限流和配额管理
 
 ## 许可证
 
