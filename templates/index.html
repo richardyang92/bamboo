@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 智能绘图工作流</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -14,52 +15,76 @@
         }
 
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            --gradient-error: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            /* Material Design Colors */
+            --md-primary: #6200EE;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #FFFFFF;
+            --md-surface: #FFFFFF;
+            --md-error: #B00020;
+            --md-on-primary: #FFFFFF;
+            --md-on-secondary: #000000;
+            --md-on-background: #000000;
+            --md-on-surface: #000000;
+            --md-on-error: #FFFFFF;
+
+            /* Elevation shadows - Material Design */
+            --elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --elevation-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+            --elevation-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+            --elevation-4: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+            --elevation-5: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+
+            --md-success: #4CAF50;
+            --md-warning: #FF9800;
+            --md-info: #2196F3;
+            --md-divider: rgba(0,0,0,0.12);
         }
 
         /* 深色主题 */
         [data-theme="dark"] {
-            --bg-main: #0f172a;
-            --bg-card: #1e293b;
-            --bg-input: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --border: #334155;
-            --border-light: #475569;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+            --bg-main: #121212;
+            --bg-card: #1E1E1E;
+            --bg-input: #2D2D2D;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --text-muted: #808080;
+            --border: #333333;
+            --border-light: #444444;
+            --md-primary: #BB86FC;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #121212;
+            --md-surface: #1E1E1E;
+            --md-on-primary: #000000;
+            --md-on-background: #FFFFFF;
+            --md-on-surface: #FFFFFF;
+            --md-divider: rgba(255,255,255,0.12);
         }
 
         /* 亮色主题 */
         [data-theme="light"] {
-            --bg-main: #f8fafc;
-            --bg-card: #ffffff;
-            --bg-input: #f1f5f9;
-            --text-primary: #0f172a;
-            --text-secondary: #475569;
-            --text-muted: #94a3b8;
-            --border: #e2e8f0;
-            --border-light: #cbd5e1;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.2);
+            --bg-main: #FAFAFA;
+            --bg-card: #FFFFFF;
+            --bg-input: #F5F5F5;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --text-muted: #9E9E9E;
+            --border: #E0E0E0;
+            --border-light: #BDBDBD;
+            --md-primary: #6200EE;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #FAFAFA;
+            --md-surface: #FFFFFF;
+            --md-on-primary: #FFFFFF;
+            --md-on-background: #212121;
+            --md-on-surface: #212121;
+            --md-divider: rgba(0,0,0,0.12);
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-main);
             color: var(--text-primary);
             min-height: 100vh;
@@ -67,30 +92,48 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* 顶部导航栏 */
+        /* Material Design Ripple Effect */
+        .md-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .md-ripple::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, var(--md-on-primary) 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform 0.5s, opacity 1s;
+        }
+
+        .md-ripple:active::after {
+            transform: scale(0, 0);
+            opacity: 0.3;
+            transition: 0s;
+        }
+
+        /* 顶部导航栏 - Material Design AppBar */
         .navbar {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             height: 64px;
-            background: rgba(var(--bg-main), 0.95);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
+            background: var(--md-surface);
+            box-shadow: var(--elevation-4);
             z-index: 1000;
             display: flex;
             align-items: center;
-            padding: 0 32px;
-            box-shadow: var(--shadow-md);
-            transition: background 0.3s ease, border-color 0.3s ease;
-        }
-
-        [data-theme="dark"] .navbar {
-            background: rgba(15, 23, 42, 0.95);
-        }
-
-        [data-theme="light"] .navbar {
-            background: rgba(255, 255, 255, 0.95);
+            padding: 0 16px;
+            transition: background 0.3s ease;
         }
 
         .navbar-brand {
@@ -100,24 +143,26 @@
         }
 
         .navbar-logo {
-            width: 36px;
-            height: 36px;
-            background: var(--gradient-primary);
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            background: var(--md-primary);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            box-shadow: var(--shadow-glow);
+            box-shadow: var(--elevation-2);
+        }
+
+        .navbar-logo .material-icons {
+            color: var(--md-on-primary);
+            font-size: 24px;
         }
 
         .navbar-title {
             font-size: 20px;
-            font-weight: 700;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-weight: 500;
+            color: var(--md-on-surface);
+            letter-spacing: 0.15px;
         }
 
         .navbar-spacer {
@@ -126,101 +171,195 @@
 
         .navbar-actions {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
 
-        /* 主题切换按钮 */
-        .theme-toggle {
-            padding: 8px 16px;
+        /* Material Design Button */
+        .md-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 16px;
+            height: 36px;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.25px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        .md-button-contained {
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            box-shadow: var(--elevation-2);
+        }
+
+        .md-button-contained:hover {
+            box-shadow: var(--elevation-4);
+            background: var(--md-primary-variant);
+        }
+
+        .md-button-contained:active {
+            box-shadow: var(--elevation-1);
+        }
+
+        .md-button-outlined {
+            background: transparent;
+            color: var(--md-primary);
+            border: 1px solid var(--md-primary);
+        }
+
+        .md-button-outlined:hover {
+            background: rgba(98, 0, 238, 0.04);
+        }
+
+        .md-button-text {
+            background: transparent;
+            color: var(--md-primary);
+        }
+
+        .md-button-text:hover {
+            background: rgba(98, 0, 238, 0.04);
+        }
+
+        .md-button:disabled {
+            background: var(--md-divider);
+            color: var(--text-secondary);
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .md-button .material-icons {
+            font-size: 18px;
+        }
+
+        /* Material Design Icon Button */
+        .md-icon-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        .md-icon-button:hover {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .md-icon-button:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .md-icon-button .material-icons {
+            font-size: 24px;
+        }
+
+        /* Material Design Tabs */
+        .md-tabs {
+            display: flex;
             background: var(--bg-input);
-            border: 1px solid var(--border);
+            border-bottom: 1px solid var(--md-divider);
+        }
+
+        .md-tab {
+            position: relative;
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            font-family: 'Roboto', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            outline: none;
+        }
+
+        .md-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .md-tab.active {
+            color: var(--md-primary);
+        }
+
+        .md-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--md-primary);
+        }
+
+        .md-tab .material-icons {
+            font-size: 20px;
+        }
+
+        /* Material Design Segmented Button */
+        .md-segmented {
+            display: inline-flex;
+            background: var(--bg-input);
             border-radius: 8px;
+            padding: 4px;
+            gap: 2px;
+        }
+
+        .md-segmented-item {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
             font-size: 14px;
+            font-weight: 500;
             color: var(--text-secondary);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            font-family: 'Roboto', sans-serif;
         }
 
-        .theme-toggle:hover {
-            background: var(--bg-card);
-            border-color: var(--primary);
-            color: var(--text-primary);
+        .md-segmented-item:hover {
+            background: rgba(0, 0, 0, 0.04);
         }
 
-        .theme-icon {
+        [data-theme="dark"] .md-segmented-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .md-segmented-item.active {
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            box-shadow: var(--elevation-1);
+        }
+
+        .md-segmented-item .material-icons {
             font-size: 18px;
-        }
-
-        /* 视图切换按钮组 */
-        .view-toggle {
-            display: flex;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 4px;
-            gap: 4px;
-        }
-
-        .view-toggle-btn {
-            padding: 8px 16px;
-            background: transparent;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            color: var(--text-secondary);
-            transition: all 0.3s ease;
-        }
-
-        .view-toggle-btn:hover {
-            background: var(--bg-card);
-            color: var(--text-primary);
-        }
-
-        .view-toggle-btn.active {
-            background: var(--gradient-primary);
-            color: white;
-        }
-
-        /* 特性模式切换按钮组 */
-        .feature-mode-tabs {
-            display: flex;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 4px;
-            gap: 4px;
-        }
-
-        .feature-tab {
-            padding: 8px 16px;
-            background: transparent;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            color: var(--text-secondary);
-            transition: all 0.3s ease;
-        }
-
-        .feature-tab:hover {
-            background: var(--bg-card);
-            color: var(--text-primary);
-        }
-
-        .feature-tab.active {
-            background: var(--gradient-success);
-            color: white;
         }
 
         /* 模式容器 */
@@ -241,9 +380,30 @@
             gap: 0;
         }
 
+        /* Material Design Card */
+        .md-card {
+            background: var(--md-surface);
+            border-radius: 8px;
+            box-shadow: var(--elevation-1);
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .md-card:hover {
+            box-shadow: var(--elevation-2);
+        }
+
+        /* Material Design Divider */
+        .md-divider {
+            height: 1px;
+            background: var(--md-divider);
+            border: none;
+            margin: 0;
+        }
+
         /* 通用面板样式 */
         .panel {
-            border-right: 1px solid var(--border);
+            border-right: 1px solid var(--md-divider);
             display: flex;
             flex-direction: column;
             background: var(--bg-main);
@@ -255,26 +415,18 @@
         }
 
         .panel-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
+            padding: 16px;
             background: var(--bg-card);
+            border-bottom: 1px solid var(--md-divider);
             transition: background 0.3s ease, border-color 0.3s ease;
-        }
-
-        [data-theme="dark"] .panel-header {
-            background: rgba(30, 41, 59, 0.5);
-        }
-
-        [data-theme="light"] .panel-header {
-            background: rgba(255, 255, 255, 0.8);
         }
 
         .panel-title {
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.75px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -283,11 +435,11 @@
         .panel-content {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 16px;
         }
 
         .panel-content::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
 
         .panel-content::-webkit-scrollbar-track {
@@ -296,7 +448,11 @@
 
         .panel-content::-webkit-scrollbar-thumb {
             background: var(--border);
-            border-radius: 3px;
+            border-radius: 4px;
+        }
+
+        .panel-content::-webkit-scrollbar-thumb:hover {
+            background: var(--border-light);
         }
 
         /* 输入面板 */
@@ -307,70 +463,141 @@
         }
 
         .input-wrapper {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .input-label {
             display: block;
             margin-bottom: 8px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
             color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+        }
+
+        /* Material Design Text Field */
+        .md-text-field {
+            position: relative;
+            width: 100%;
+        }
+
+        .md-text-field textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px 0;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--text-secondary);
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: 'Roboto', sans-serif;
+            resize: vertical;
+            transition: border-bottom-color 0.3s ease;
+            line-height: 1.5;
+        }
+
+        .md-text-field textarea:focus {
+            outline: none;
+            border-bottom: 2px solid var(--md-primary);
+        }
+
+        .md-text-field textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .md-text-field-label {
+            position: absolute;
+            left: 0;
+            top: 16px;
+            font-size: 16px;
+            color: var(--text-secondary);
+            pointer-events: none;
+            transition: all 0.2s ease;
+        }
+
+        .md-text-field textarea:focus ~ .md-text-field-label,
+        .md-text-field textarea:not(:placeholder-shown) ~ .md-text-field-label {
+            top: -8px;
+            font-size: 12px;
+            color: var(--md-primary);
+        }
+
+        .md-text-field-underline {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--md-primary);
+            transition: width 0.3s ease;
+        }
+
+        .md-text-field textarea:focus ~ .md-text-field-underline {
+            width: 100%;
         }
 
         textarea {
             width: 100%;
-            min-height: 180px;
+            min-height: 120px;
             padding: 16px;
             background: var(--bg-input);
-            border: 2px solid var(--border);
-            border-radius: 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
             color: var(--text-primary);
-            font-size: 14px;
-            font-family: inherit;
+            font-size: 16px;
+            font-family: 'Roboto', sans-serif;
             resize: vertical;
-            transition: all 0.3s ease;
-            line-height: 1.6;
+            transition: border-color 0.3s ease;
+            line-height: 1.5;
         }
 
         textarea:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            border-color: var(--md-primary);
+            border-width: 2px;
+            padding: 15px;
         }
 
         textarea::placeholder {
             color: var(--text-muted);
         }
 
-        /* 快捷模板 */
+        /* 快捷模板 - Material Design Chips */
         .templates-section {
             margin-bottom: 24px;
         }
 
         .templates-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            display: flex;
+            flex-wrap: wrap;
             gap: 8px;
         }
 
-        .template-chip {
-            padding: 10px 12px;
+        .md-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
             background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 12px;
+            border: 1px solid var(--md-divider);
+            border-radius: 16px;
+            font-size: 14px;
             color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
         }
 
-        .template-chip:hover {
-            background: var(--bg-card);
-            border-color: var(--primary-light);
-            color: var(--text-primary);
-            transform: translateY(-1px);
+        .md-chip:hover {
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            box-shadow: var(--elevation-1);
+        }
+
+        .md-chip .material-icons {
+            font-size: 18px;
+            margin-right: 4px;
         }
 
         /* 按钮组 */
@@ -380,31 +607,36 @@
             gap: 12px;
         }
 
-        /* 选项复选框 */
+        /* 选项复选框 - Material Design Checkbox */
         .option-checkbox {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: 4px;
             transition: background 0.2s ease;
         }
 
         .option-checkbox:hover {
-            background: var(--bg-card);
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="dark"] .option-checkbox:hover {
+            background: rgba(255, 255, 255, 0.04);
         }
 
         .option-checkbox input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
-            accent-color: var(--primary);
+            accent-color: var(--md-primary);
         }
 
         .option-checkbox span {
             font-size: 14px;
             color: var(--text-primary);
+            font-family: 'Roboto', sans-serif;
         }
 
         /* 标签页内容 */
@@ -422,10 +654,11 @@
         }
 
         .result-header h3 {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 20px;
+            font-weight: 500;
             color: var(--text-primary);
             margin: 0;
+            font-family: 'Roboto', sans-serif;
         }
 
         /* 文档元数据 */
@@ -435,7 +668,7 @@
             gap: 8px;
             padding: 16px;
             background: var(--bg-input);
-            border-radius: 8px;
+            border-radius: 4px;
             font-size: 14px;
             color: var(--text-secondary);
         }
@@ -446,68 +679,55 @@
             gap: 8px;
         }
 
+        .document-meta .material-icons {
+            font-size: 18px;
+        }
+
+        /* Legacy button compatibility */
         .btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            padding: 14px 24px;
+            gap: 8px;
+            padding: 10px 24px;
             border: none;
-            border-radius: 10px;
+            border-radius: 4px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.25px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .btn:hover::before {
-            left: 100%;
+            font-family: 'Roboto', sans-serif;
         }
 
         .btn-primary {
-            background: var(--gradient-primary);
-            color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            box-shadow: var(--elevation-2);
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
+            box-shadow: var(--elevation-4);
         }
 
         .btn-primary:disabled {
-            opacity: 0.5;
+            background: var(--md-divider);
+            color: var(--text-secondary);
+            box-shadow: none;
             cursor: not-allowed;
-            transform: none;
         }
 
         .btn-secondary {
-            background: var(--bg-input);
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--md-primary);
+            border: 1px solid var(--md-primary);
         }
 
         .btn-secondary:hover {
-            background: var(--bg-card);
-            border-color: var(--primary-light);
-            color: var(--text-primary);
+            background: rgba(98, 0, 238, 0.04);
         }
 
         /* 状态面板 */
@@ -517,42 +737,43 @@
             height: calc(100vh - 64px);
         }
 
+        /* Material Design Status Badge */
         .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 6px 16px;
+            border-radius: 16px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.75px;
             margin-bottom: 16px;
         }
 
         .status-badge.idle {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary-light);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+            background: rgba(33, 150, 243, 0.1);
+            color: var(--md-info);
+            border: 1px solid rgba(33, 150, 243, 0.2);
         }
 
         .status-badge.running {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-            border: 1px solid rgba(245, 158, 11, 0.2);
+            background: rgba(255, 152, 0, 0.1);
+            color: var(--md-warning);
+            border: 1px solid rgba(255, 152, 0, 0.2);
             animation: pulse 2s infinite;
         }
 
         .status-badge.completed {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--md-success);
+            border: 1px solid rgba(76, 175, 80, 0.2);
         }
 
         .status-badge.error {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--error);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--md-error);
+            border: 1px solid rgba(244, 67, 54, 0.2);
         }
 
         @keyframes pulse {
@@ -560,7 +781,7 @@
             50% { opacity: 0.6; }
         }
 
-        /* 进度条 */
+        /* Material Design Linear Progress */
         .progress-container {
             margin-bottom: 24px;
         }
@@ -572,102 +793,95 @@
             margin-bottom: 8px;
             font-size: 12px;
             color: var(--text-secondary);
+            font-weight: 500;
         }
 
         .progress-bar {
-            height: 6px;
-            background: var(--bg-input);
-            border-radius: 3px;
+            height: 4px;
+            background: var(--md-divider);
+            border-radius: 2px;
             overflow: hidden;
             position: relative;
         }
 
         .progress-fill {
             height: 100%;
-            background: var(--gradient-primary);
-            transition: width 0.5s ease;
+            background: var(--md-primary);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
 
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        /* 步骤列表 */
+        /* 步骤列表 - Material Design List Items */
         .steps-list {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 0;
         }
 
         .step-card {
             background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px 16px;
+            border-bottom: 1px solid var(--md-divider);
+            padding: 16px;
             transition: all 0.3s ease;
         }
 
+        .step-card:first-child {
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+
+        .step-card:last-child {
+            border-bottom: none;
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
+
         .step-card.active {
-            border-color: var(--primary);
-            background: rgba(99, 102, 241, 0.05);
-            box-shadow: 0 0 0 1px var(--primary);
+            background: rgba(98, 0, 238, 0.08);
+            border-left: 4px solid var(--md-primary);
         }
 
         .step-card.completed {
-            border-color: var(--success);
-            background: rgba(16, 185, 129, 0.05);
+            background: rgba(76, 175, 80, 0.05);
         }
 
         .step-card.error {
-            border-color: var(--error);
-            background: rgba(239, 68, 68, 0.05);
+            background: rgba(244, 67, 54, 0.05);
+            border-left: 4px solid var(--md-error);
         }
 
         .step-header {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 6px;
+            gap: 16px;
         }
 
         .step-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 16px;
             background: var(--bg-input);
+            color: var(--text-secondary);
             flex-shrink: 0;
         }
 
         .step-card.active .step-icon {
-            background: var(--gradient-primary);
-            color: white;
+            background: var(--md-primary);
+            color: var(--md-on-primary);
             animation: spin 1s linear infinite;
         }
 
         .step-card.completed .step-icon {
-            background: var(--gradient-success);
+            background: var(--md-success);
             color: white;
         }
 
         .step-card.error .step-icon {
-            background: var(--gradient-error);
+            background: var(--md-error);
             color: white;
         }
 
@@ -681,23 +895,25 @@
         }
 
         .step-title {
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 500;
             color: var(--text-primary);
             margin-bottom: 2px;
+            font-family: 'Roboto', sans-serif;
         }
 
         .step-time {
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text-muted);
         }
 
         .step-status {
-            font-size: 10px;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 12px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .step-status.pending {
@@ -706,13 +922,13 @@
         }
 
         .step-status.running {
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--warning);
+            background: rgba(255, 152, 0, 0.15);
+            color: var(--md-warning);
         }
 
         .step-status.completed {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--success);
+            background: rgba(76, 175, 80, 0.15);
+            color: var(--md-success);
         }
 
         /* 结果面板 */
@@ -743,16 +959,18 @@
         }
 
         .empty-title {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 20px;
+            font-weight: 500;
             margin-bottom: 8px;
             color: var(--text-secondary);
+            font-family: 'Roboto', sans-serif;
         }
 
         .empty-text {
             font-size: 14px;
             text-align: center;
             max-width: 400px;
+            line-height: 1.5;
         }
 
         .result-content {
@@ -766,37 +984,54 @@
             display: block;
         }
 
+        /* Material Design Tabs */
         .result-tabs {
             display: flex;
-            gap: 8px;
+            gap: 0;
             margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+            border-bottom: 1px solid var(--md-divider);
         }
 
         .result-tab {
-            padding: 10px 20px;
+            padding: 12px 24px;
             background: transparent;
             border: none;
             color: var(--text-secondary);
             font-size: 14px;
             font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: 4px 4px 0 0;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             gap: 8px;
+            font-family: 'Roboto', sans-serif;
+            position: relative;
         }
 
         .result-tab:hover {
-            background: var(--bg-input);
             color: var(--text-primary);
         }
 
         .result-tab.active {
-            background: var(--gradient-primary);
-            color: white;
+            color: var(--md-primary);
+        }
+
+        .result-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--md-primary);
+        }
+
+        .result-tab .material-icons {
+            font-size: 20px;
         }
 
         .result-view {
@@ -810,9 +1045,9 @@
         /* 图片预览 */
         .image-container {
             background: var(--bg-card);
-            border-radius: 12px;
+            border-radius: 8px;
             overflow: hidden;
-            border: 1px solid var(--border);
+            box-shadow: var(--elevation-1);
         }
 
         .image-preview {
@@ -822,61 +1057,71 @@
         }
 
         .image-preview:hover {
-            transform: scale(1.02);
+            transform: scale(1.01);
         }
 
         .image-meta {
             padding: 16px;
             display: flex;
             gap: 24px;
-            border-top: 1px solid var(--border);
-            font-size: 12px;
+            border-top: 1px solid var(--md-divider);
+            font-size: 14px;
             color: var(--text-secondary);
         }
 
         .image-meta span {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+        }
+
+        .image-meta .material-icons {
+            font-size: 18px;
         }
 
         /* 代码预览 */
         .code-container {
             background: var(--bg-card);
-            border-radius: 12px;
-            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--elevation-1);
             overflow: hidden;
         }
 
         .code-header {
             padding: 12px 16px;
             background: var(--bg-input);
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--md-divider);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .code-lang {
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 500;
             color: var(--text-secondary);
+            font-family: 'Roboto', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .code-copy {
-            padding: 6px 12px;
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 11px;
-            color: var(--text-secondary);
+            padding: 6px 16px;
+            background: transparent;
+            border: 1px solid var(--md-primary);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--md-primary);
             cursor: pointer;
             transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+            font-family: 'Roboto', sans-serif;
         }
 
         .code-copy:hover {
-            background: var(--bg-input);
-            color: var(--text-primary);
+            background: rgba(98, 0, 238, 0.04);
         }
 
         .code-content {
@@ -884,12 +1129,13 @@
             overflow-x: auto;
             max-height: 600px;
             overflow-y: auto;
+            background: var(--bg-input);
         }
 
         .code-content pre {
             margin: 0;
-            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-            font-size: 13px;
+            font-family: 'Roboto Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 14px;
             line-height: 1.6;
             color: var(--text-primary);
         }
@@ -900,7 +1146,7 @@
         }
 
         .code-content::-webkit-scrollbar-track {
-            background: var(--bg-dark);
+            background: var(--bg-input);
         }
 
         .code-content::-webkit-scrollbar-thumb {
@@ -908,12 +1154,16 @@
             border-radius: 4px;
         }
 
+        .code-content::-webkit-scrollbar-thumb:hover {
+            background: var(--border-light);
+        }
+
         /* 错误状态 */
         .error-container {
-            background: rgba(239, 68, 68, 0.05);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 12px;
-            padding: 20px;
+            background: rgba(244, 67, 54, 0.05);
+            border: 1px solid rgba(244, 67, 54, 0.2);
+            border-radius: 4px;
+            padding: 16px;
         }
 
         .error-header {
@@ -926,24 +1176,30 @@
         .error-icon {
             width: 32px;
             height: 32px;
-            background: var(--gradient-error);
-            border-radius: 8px;
+            background: var(--md-error);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 18px;
+        }
+
+        .error-icon .material-icons {
+            color: white;
         }
 
         .error-title {
             font-size: 16px;
-            font-weight: 600;
-            color: var(--error);
+            font-weight: 500;
+            color: var(--md-error);
+            font-family: 'Roboto', sans-serif;
         }
 
         .error-message {
             font-size: 14px;
             color: var(--text-secondary);
             line-height: 1.6;
+            font-family: 'Roboto', sans-serif;
         }
 
         /* Loading 遮罩 */
@@ -1045,10 +1301,7 @@
             font-size: 32px;
             font-weight: 700;
             margin-bottom: 12px;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--text-primary);
         }
 
         .workflow-subtitle {
@@ -1166,42 +1419,42 @@
         /* 输入节点特殊样式 */
         .workflow-node.input-node .workflow-node-card {
             border-color: var(--primary);
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0.1) 100%);
+            background: rgba(249, 115, 22, 0.05);
             cursor: pointer;
         }
 
         .workflow-node.input-node .workflow-node-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .workflow-node.input-node .workflow-node-card.has-input {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.15) 100%);
+            background: rgba(249, 115, 22, 0.1);
             border-width: 2px;
         }
 
         .workflow-node.input-node .workflow-node-icon {
-            background: var(--gradient-primary);
+            background: var(--primary);
         }
 
         /* 输出节点特殊样式 */
         .workflow-node.output-node .workflow-node-card {
             border-color: var(--success);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .workflow-node.output-node .workflow-node-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .workflow-node.output-node .workflow-node-card.has-result {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.1) 100%);
+            background: rgba(16, 185, 129, 0.05);
         }
 
         .workflow-node.output-node .workflow-node-icon {
-            background: var(--gradient-success);
+            background: var(--success);
         }
 
         /* 输出节点缩略图 */
@@ -1265,8 +1518,7 @@
 
         .workflow-node-card.running {
             border-color: var(--warning);
-            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
-            animation: pulse-border 2s infinite;
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
         }
 
         .workflow-node-card.running::before {
@@ -1275,7 +1527,12 @@
 
         .workflow-node-card.completed {
             border-color: var(--success);
-            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+            box-shadow: none;
+        }
+
+        .workflow-node-card.error {
+            border-color: var(--error);
+            box-shadow: none;
         }
 
         .workflow-node-card.completed::before {
@@ -1292,8 +1549,8 @@
         }
 
         @keyframes pulse-border {
-            0%, 100% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1); }
-            50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.2); }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
         }
 
         .workflow-node-icon {
@@ -1310,16 +1567,16 @@
         }
 
         .workflow-node.running .workflow-node-icon {
-            background: var(--gradient-warning);
+            background: var(--warning);
             animation: spin 2s linear infinite;
         }
 
         .workflow-node.completed .workflow-node-icon {
-            background: var(--gradient-success);
+            background: var(--success);
         }
 
         .workflow-node.error .workflow-node-icon {
-            background: var(--gradient-error);
+            background: var(--error);
         }
 
         .workflow-node-title {
@@ -1470,17 +1727,17 @@
         }
 
         .workflow-step-item.running .workflow-step-number {
-            background: var(--gradient-warning);
+            background: var(--warning);
             color: white;
         }
 
         .workflow-step-item.completed .workflow-step-number {
-            background: var(--gradient-success);
+            background: var(--success);
             color: white;
         }
 
         .workflow-step-item.error .workflow-step-number {
-            background: var(--gradient-error);
+            background: var(--error);
             color: white;
         }
 
@@ -1562,7 +1819,7 @@
         }
 
         .workflow-result-tab.active {
-            background: var(--gradient-primary);
+            background: var(--primary);
             color: white;
         }
 
@@ -1779,54 +2036,54 @@
     </style>
 </head>
 <body>
-    <!-- 顶部导航栏 -->
+    <!-- 顶部导航栏 - Material Design -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <div class="navbar-logo">🎋</div>
+            <div class="navbar-logo">
+                <span class="material-icons">spa</span>
+            </div>
             <div class="navbar-title">Bamboo AI</div>
         </div>
         <div class="navbar-spacer"></div>
         <div class="navbar-actions">
-            <!-- 特性模式切换 -->
-            <div class="feature-mode-tabs">
-                <button class="feature-tab active" data-mode="drawing" onclick="switchFeatureMode('drawing')">
-                    <span>🎨</span>
+            <!-- 特性模式切换 - Material Design Segmented Button -->
+            <div class="md-segmented">
+                <button class="md-segmented-item active" data-mode="drawing" onclick="switchFeatureMode('drawing')">
+                    <span class="material-icons">palette</span>
                     <span>绘图</span>
                 </button>
-                <button class="feature-tab" data-mode="document_with_images" onclick="switchFeatureMode('document_with_images')">
-                    <span>📊</span>
+                <button class="md-segmented-item" data-mode="document_with_images" onclick="switchFeatureMode('document_with_images')">
+                    <span class="material-icons">article</span>
                     <span>文档+图</span>
                 </button>
             </div>
 
-            <!-- 历史记录 -->
-            <button class="btn btn-secondary" onclick="goToHistory()" style="padding: 8px 16px;">
-                <span>📚</span>
-                <span>历史记录</span>
-            </button>
-
-            <!-- 视图切换 (仅绘图模式显示) -->
-            <div class="view-toggle" id="viewToggle">
-                <button class="view-toggle-btn active" onclick="switchView('standard')" id="standardViewBtn">
-                    <span class="view-icon">⚡</span>
-                    <span>标准视图</span>
+            <!-- 视图切换 (仅绘图模式显示) - Material Design Segmented Button -->
+            <div class="md-segmented" id="viewToggle">
+                <button class="md-segmented-item active" onclick="switchView('standard')" id="standardViewBtn">
+                    <span class="material-icons">view_stream</span>
+                    <span>标准</span>
                 </button>
-                <button class="view-toggle-btn" onclick="switchView('workflow')" id="workflowViewBtn">
-                    <span class="view-icon">📊</span>
-                    <span>工作流视图</span>
+                <button class="md-segmented-item" onclick="switchView('workflow')" id="workflowViewBtn">
+                    <span class="material-icons">account_tree</span>
+                    <span>工作流</span>
                 </button>
             </div>
 
-            <!-- 主题切换 -->
-            <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">
-                <span class="theme-icon" id="themeIcon">🌙</span>
-                <span class="theme-text" id="themeText">深色</span>
+            <!-- 历史记录 - Material Design Text Button -->
+            <button class="md-button md-button-text" onclick="goToHistory()">
+                <span class="material-icons">history</span>
+                <span>历史</span>
             </button>
 
-            <!-- 清除历史 -->
-            <button class="btn btn-secondary" onclick="clearHistory()" style="padding: 8px 16px;">
-                <span>🗑️</span>
-                <span>清除历史</span>
+            <!-- 主题切换 - Material Design Icon Button -->
+            <button class="md-icon-button" onclick="toggleTheme()" title="切换主题">
+                <span class="material-icons" id="themeIcon">dark_mode</span>
+            </button>
+
+            <!-- 清除历史 - Material Design Icon Button -->
+            <button class="md-icon-button" onclick="clearHistory()" title="清除历史">
+                <span class="material-icons">delete</span>
             </button>
         </div>
     </nav>
@@ -1839,7 +2096,7 @@
         <div class="panel input-panel">
             <div class="panel-header">
                 <div class="panel-title">
-                    <span>✏️</span>
+                    <span class="material-icons">edit</span>
                     <span>输入配置</span>
                 </div>
             </div>
@@ -1848,10 +2105,22 @@
                 <div class="templates-section">
                     <label class="input-label">快捷模板</label>
                     <div class="templates-grid">
-                        <div class="template-chip" onclick="useTemplate('sine')">📈 正弦波图形</div>
-                        <div class="template-chip" onclick="useTemplate('bar')">📊 柱状图</div>
-                        <div class="template-chip" onclick="useTemplate('scatter')">💎 散点图</div>
-                        <div class="template-chip" onclick="useTemplate('physics')">⚡ 物理示意图</div>
+                        <div class="md-chip" onclick="useTemplate('sine')">
+                            <span class="material-icons">show_chart</span>
+                            <span>正弦波</span>
+                        </div>
+                        <div class="md-chip" onclick="useTemplate('bar')">
+                            <span class="material-icons">bar_chart</span>
+                            <span>柱状图</span>
+                        </div>
+                        <div class="md-chip" onclick="useTemplate('scatter')">
+                            <span class="material-icons">scatter_plot</span>
+                            <span>散点图</span>
+                        </div>
+                        <div class="md-chip" onclick="useTemplate('physics')">
+                            <span class="material-icons">science</span>
+                            <span>物理图</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1863,8 +2132,8 @@
 
                 <!-- 操作按钮 -->
                 <div class="button-group">
-                    <button class="btn btn-primary" onclick="startWorkflow()" id="startBtn">
-                        <span>🚀</span>
+                    <button class="md-button md-button-contained" onclick="startWorkflow()" id="startBtn" style="width: 100%;">
+                        <span class="material-icons">rocket_launch</span>
                         <span>生成图表</span>
                     </button>
                 </div>
@@ -1875,7 +2144,7 @@
         <div class="panel status-panel">
             <div class="panel-header">
                 <div class="panel-title">
-                    <span>📊</span>
+                    <span class="material-icons">analytics</span>
                     <span>执行状态</span>
                 </div>
             </div>
@@ -1954,11 +2223,11 @@
                 <div class="result-content" id="resultContent">
                     <div class="result-tabs">
                         <button class="result-tab active" onclick="switchTab('image')">
-                            <span>📊</span>
+                            <span class="material-icons">image</span>
                             <span>图表</span>
                         </button>
                         <button class="result-tab" onclick="switchTab('code')">
-                            <span>💻</span>
+                            <span class="material-icons">code</span>
                             <span>代码</span>
                         </button>
                     </div>
@@ -1968,8 +2237,8 @@
                         <div class="image-container">
                             <img id="resultImage" class="image-preview" src="" alt="生成的图表">
                             <div class="image-meta">
-                                <span id="imageSize">📏 -- KB</span>
-                                <span id="imagePath">📁 --</span>
+                                <span id="imageSize"><span class="material-icons">straighten</span> <span>-- KB</span></span>
+                                <span id="imagePath"><span class="material-icons">folder</span> <span>--</span></span>
                             </div>
                         </div>
                     </div>
@@ -1979,7 +2248,7 @@
                         <div class="code-container">
                             <div class="code-header">
                                 <span class="code-lang">Python</span>
-                                <button class="code-copy" onclick="copyCode()">📋 复制</button>
+                                <button class="code-copy" onclick="copyCode()"><span class="material-icons" style="font-size:16px;">content_copy</span> <span>复制</span></button>
                             </div>
                             <div class="code-content">
                                 <pre id="resultCode"></pre>
@@ -2002,71 +2271,71 @@
                 <div class="workflow-node input-node" id="inputNode">
                     <div class="workflow-node-card" onclick="openInputModal()">
                         <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon">📝</div>
+                        <div class="workflow-node-icon"><span class="material-icons">edit_note</span></div>
                         <div class="workflow-node-title">输入需求</div>
                         <div class="workflow-node-desc">点击输入绘图需求</div>
                     </div>
                 </div>
 
-                <div class="workflow-arrow">→</div>
+                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
 
                 <!-- 节点1 -->
                 <div class="workflow-node" id="workflowNode1">
                     <div class="workflow-node-card pending">
                         <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon">✨</div>
+                        <div class="workflow-node-icon"><span class="material-icons">auto_fix_high</span></div>
                         <div class="workflow-node-title">润色提示词</div>
                         <div class="workflow-node-desc">优化用户输入的绘图需求</div>
                     </div>
                 </div>
 
-                <div class="workflow-arrow">→</div>
+                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
 
                 <!-- 节点2 -->
                 <div class="workflow-node" id="workflowNode2">
                     <div class="workflow-node-card pending">
                         <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon">🤖</div>
+                        <div class="workflow-node-icon"><span class="material-icons">smart_toy</span></div>
                         <div class="workflow-node-title">生成代码</div>
                         <div class="workflow-node-desc">AI生成Python绘图代码</div>
                     </div>
                 </div>
 
-                <div class="workflow-arrow">→</div>
+                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
 
                 <!-- 节点3 -->
                 <div class="workflow-node" id="workflowNode3">
                     <div class="workflow-node-card pending">
                         <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon">⚡</div>
+                        <div class="workflow-node-icon"><span class="material-icons">play_circle</span></div>
                         <div class="workflow-node-title">执行代码</div>
                         <div class="workflow-node-desc">运行代码生成图表</div>
                     </div>
                 </div>
 
-                <div class="workflow-arrow">→</div>
+                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
 
                 <!-- 节点4 -->
                 <div class="workflow-node" id="workflowNode4">
                     <div class="workflow-node-card pending">
                         <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon">💾</div>
+                        <div class="workflow-node-icon"><span class="material-icons">save</span></div>
                         <div class="workflow-node-title">保存图片</div>
                         <div class="workflow-node-desc">验证并保存结果</div>
                     </div>
                 </div>
 
-                <div class="workflow-arrow">→</div>
+                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
 
                 <!-- 输出节点 -->
                 <div class="workflow-node output-node" id="outputNode">
                     <div class="workflow-node-card" onclick="openImageModal()">
                         <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon">🖼️</div>
+                        <div class="workflow-node-icon"><span class="material-icons">image</span></div>
                         <div class="workflow-node-title">查看结果</div>
                         <div class="workflow-node-desc">点击查看生成的图表</div>
                         <div class="output-thumbnail" id="outputThumbnail">
-                            <div class="output-thumbnail-placeholder">📊</div>
+                            <div class="output-thumbnail-placeholder"><span class="material-icons">bar_chart</span></div>
                         </div>
                     </div>
                 </div>
@@ -2075,10 +2344,45 @@
             <!-- 工作流详细信息 -->
             <div class="workflow-info">
                 <div class="workflow-info-title">
-                    <span>📋</span>
+                    <span class="material-icons">list_alt</span>
                     <span>执行详情</span>
                     <span class="execution-status-indicator idle" id="executionStatusIndicator"></span>
                 </div>
+                <div class="workflow-steps-detail" id="workflowStepsDetail">
+                    <div class="workflow-step-item">
+                        <div class="workflow-step-number">1</div>
+                        <div class="workflow-step-content">
+                            <div class="workflow-step-title">润色提示词</div>
+                            <div class="workflow-step-desc">优化用户的绘图需求描述</div>
+                        </div>
+                        <div class="workflow-step-time">等待中</div>
+                    </div>
+                    <div class="workflow-step-item">
+                        <div class="workflow-step-number">2</div>
+                        <div class="workflow-step-content">
+                            <div class="workflow-step-title">生成绘图代码</div>
+                            <div class="workflow-step-desc">使用DeepSeek AI生成Python代码</div>
+                        </div>
+                        <div class="workflow-step-time">等待中</div>
+                    </div>
+                    <div class="workflow-step-item">
+                        <div class="workflow-step-number">3</div>
+                        <div class="workflow-step-content">
+                            <div class="workflow-step-title">执行绘图代码</div>
+                            <div class="workflow-step-desc">运行matplotlib生成图表</div>
+                        </div>
+                        <div class="workflow-step-time">等待中</div>
+                    </div>
+                    <div class="workflow-step-item">
+                        <div class="workflow-step-number">4</div>
+                        <div class="workflow-step-content">
+                            <div class="workflow-step-title">验证图片保存</div>
+                            <div class="workflow-step-desc">检查图片文件并返回结果</div>
+                        </div>
+                        <div class="workflow-step-time">等待中</div>
+                    </div>
+                </div>
+            </div>
                 <div class="workflow-steps-detail" id="workflowStepsDetail">
                     <div class="workflow-step-item">
                         <div class="workflow-step-number">1</div>
@@ -2128,25 +2432,29 @@
         <div class="input-modal-content">
             <div class="input-modal-header">
                 <div class="input-modal-title">
-                    <span>📝</span>
+                    <span class="material-icons">edit_note</span>
                     <span>输入绘图需求</span>
                 </div>
-                <button class="input-modal-close" onclick="closeInputModal()">✕</button>
+                <button class="input-modal-close" onclick="closeInputModal()"><span class="material-icons">close</span></button>
             </div>
 
             <!-- 快捷模板 -->
-            <div class="workflow-templates" style="margin-bottom: 20px;">
-                <div class="workflow-template-chip" onclick="useTemplateInModal('sine')">
-                    📈 正弦波
+            <div class="workflow-templates" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px;">
+                <div class="md-chip" onclick="useTemplateInModal('sine')">
+                    <span class="material-icons">show_chart</span>
+                    <span>正弦波</span>
                 </div>
-                <div class="workflow-template-chip" onclick="useTemplateInModal('bar')">
-                    📊 柱状图
+                <div class="md-chip" onclick="useTemplateInModal('bar')">
+                    <span class="material-icons">bar_chart</span>
+                    <span>柱状图</span>
                 </div>
-                <div class="workflow-template-chip" onclick="useTemplateInModal('scatter')">
-                    💎 散点图
+                <div class="md-chip" onclick="useTemplateInModal('scatter')">
+                    <span class="material-icons">scatter_plot</span>
+                    <span>散点图</span>
                 </div>
-                <div class="workflow-template-chip" onclick="useTemplateInModal('physics')">
-                    ⚡ 物理图
+                <div class="md-chip" onclick="useTemplateInModal('physics')">
+                    <span class="material-icons">science</span>
+                    <span>物理图</span>
                 </div>
             </div>
 
@@ -2157,8 +2465,8 @@
 
             <!-- 操作按钮 -->
             <div class="workflow-button-group">
-                <button class="btn btn-primary" onclick="submitFromModal()">
-                    <span>🚀</span>
+                <button class="md-button md-button-contained" onclick="submitFromModal()" style="width: 100%;">
+                    <span class="material-icons">rocket_launch</span>
                     <span>生成图表</span>
                 </button>
             </div>
@@ -2179,7 +2487,7 @@
             <div class="panel input-panel">
                 <div class="panel-header">
                     <div class="panel-title">
-                        <span>✏️</span>
+                        <span class="material-icons">description</span>
                         <span>文档输入</span>
                     </div>
                 </div>
@@ -2188,17 +2496,21 @@
                     <div class="templates-section">
                         <div class="input-label">文档模板</div>
                         <div class="templates-grid">
-                            <div class="template-chip" onclick="useDocTemplate('tutorial')">
-                                📖 教程
+                            <div class="md-chip" onclick="useDocTemplate('tutorial')">
+                                <span class="material-icons">menu_book</span>
+                                <span>教程</span>
                             </div>
-                            <div class="template-chip" onclick="useDocTemplate('api')">
-                                🔧 API文档
+                            <div class="md-chip" onclick="useDocTemplate('api')">
+                                <span class="material-icons">integration_instructions</span>
+                                <span>API文档</span>
                             </div>
-                            <div class="template-chip" onclick="useDocTemplate('guide')">
-                                📋 使用指南
+                            <div class="md-chip" onclick="useDocTemplate('guide')">
+                                <span class="material-icons">help</span>
+                                <span>使用指南</span>
                             </div>
-                            <div class="template-chip" onclick="useDocTemplate('summary')">
-                                📝 总结
+                            <div class="md-chip" onclick="useDocTemplate('summary')">
+                                <span class="material-icons">summarize</span>
+                                <span>总结</span>
                             </div>
                         </div>
                     </div>
@@ -2211,12 +2523,12 @@
 
                     <!-- 操作按钮 -->
                     <div class="button-group">
-                        <button class="btn btn-primary" onclick="startDocumentWithImagesWorkflow()">
-                            <span>✨</span>
+                        <button class="md-button md-button-contained" onclick="startDocumentWithImagesWorkflow()" style="width: 100%;">
+                            <span class="material-icons">auto_awesome</span>
                             <span>生成文档+图</span>
                         </button>
-                        <button class="btn btn-secondary" onclick="clearDocumentHistory()">
-                            <span>🗑️</span>
+                        <button class="md-button md-button-outlined" onclick="clearDocumentHistory()" style="width: 100%;">
+                            <span class="material-icons">delete</span>
                             <span>清除</span>
                         </button>
                     </div>
@@ -2227,7 +2539,7 @@
             <div class="panel progress-panel">
                 <div class="panel-header">
                     <div class="panel-title">
-                        <span>📊</span>
+                        <span class="material-icons">trending_up</span>
                         <span>生成进度</span>
                     </div>
                 </div>
@@ -2250,7 +2562,7 @@
                     <div class="steps-list" id="docStepsContainer">
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">✨</div>
+                                <div class="step-icon"><span class="material-icons">auto_fix_high</span></div>
                                 <div class="step-info">
                                     <div class="step-title">润色写作需求</div>
                                     <div class="step-time">等待中</div>
@@ -2260,7 +2572,7 @@
                         </div>
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">📋</div>
+                                <div class="step-icon"><span class="material-icons">view_list</span></div>
                                 <div class="step-info">
                                     <div class="step-title">生成文档大纲</div>
                                     <div class="step-time">等待中</div>
@@ -2270,7 +2582,7 @@
                         </div>
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">📝</div>
+                                <div class="step-icon"><span class="material-icons">edit</span></div>
                                 <div class="step-info">
                                     <div class="step-title">生成文档内容</div>
                                     <div class="step-time">等待中</div>
@@ -2280,7 +2592,7 @@
                         </div>
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">🎨</div>
+                                <div class="step-icon"><span class="material-icons">bar_chart</span></div>
                                 <div class="step-info">
                                     <div class="step-title">识别并生成图表</div>
                                     <div class="step-time">等待中</div>
@@ -2290,7 +2602,7 @@
                         </div>
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">💾</div>
+                                <div class="step-icon"><span class="material-icons">save</span></div>
                                 <div class="step-info">
                                     <div class="step-title">保存文档</div>
                                     <div class="step-time">等待中</div>
@@ -2300,7 +2612,7 @@
                         </div>
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">✅</div>
+                                <div class="step-icon"><span class="material-icons">check_circle</span></div>
                                 <div class="step-info">
                                     <div class="step-title">验证文档</div>
                                     <div class="step-time">等待中</div>
@@ -2316,7 +2628,7 @@
             <div class="panel result-panel">
                 <div class="panel-header">
                     <div class="panel-title">
-                        <span>📄</span>
+                        <span class="material-icons">article</span>
                         <span>文档结果</span>
                     </div>
                 </div>
@@ -2324,15 +2636,15 @@
                     <!-- 结果标签页 -->
                     <div class="result-tabs">
                         <button class="result-tab active" data-tab="preview" onclick="switchDocTab('preview')">
-                            <span>👁️</span>
+                            <span class="material-icons">visibility</span>
                             <span>预览</span>
                         </button>
                         <button class="result-tab" data-tab="content" onclick="switchDocTab('content')">
-                            <span>📄</span>
+                            <span class="material-icons">description</span>
                             <span>内容</span>
                         </button>
                         <button class="result-tab" data-tab="outline" onclick="switchDocTab('outline')">
-                            <span>📋</span>
+                            <span class="material-icons">view_list</span>
                             <span>大纲</span>
                         </button>
                     </div>
@@ -2340,7 +2652,7 @@
                     <!-- 预览标签页 -->
                     <div id="docPreviewTab" class="tab-content active">
                         <div class="empty-state" id="docEmptyState">
-                            <div class="empty-icon">📝</div>
+                            <div class="empty-icon"><span class="material-icons" style="font-size: 64px;">note_add</span></div>
                             <div class="empty-title">生成的文档将在这里显示</div>
                             <div class="empty-description">输入文档主题后点击"生成文档+图"按钮</div>
                         </div>
@@ -2349,17 +2661,17 @@
                                 <h3>文档生成成功</h3>
                             </div>
                             <div class="document-meta">
-                                <span>📁 文件名: <span id="docFilename">-</span></span>
-                                <span>📏 大小: <span id="docSize">-</span></span>
-                                <span id="docImageCount" style="display: none;">📊 - 张图表</span>
+                                <span><span class="material-icons">folder</span> 文件名: <span id="docFilename">-</span></span>
+                                <span><span class="material-icons">straighten</span> 大小: <span id="docSize">-</span></span>
+                                <span id="docImageCount" style="display: none;"><span class="material-icons">bar_chart</span> - 张图表</span>
                             </div>
-                            <div class="button-group" style="margin-top: 20px;">
-                                <button class="btn btn-primary" onclick="downloadDocument()">
-                                    <span>💾</span>
+                            <div class="button-group" style="margin-top: 20px; gap: 8px; flex-direction: row;">
+                                <button class="md-button md-button-contained" onclick="downloadDocument()">
+                                    <span class="material-icons">download</span>
                                     <span>下载文档</span>
                                 </button>
-                                <button class="btn btn-secondary" onclick="copyDocumentContent()">
-                                    <span>📋</span>
+                                <button class="md-button md-button-outlined" onclick="copyDocumentContent()">
+                                    <span class="material-icons">content_copy</span>
                                     <span>复制内容</span>
                                 </button>
                             </div>
@@ -2416,6 +2728,246 @@
                 </div>
             </div>
         </div>
+
+        <!-- 文档工作流视图 -->
+        <div class="workflow-view" id="documentWorkflowView">
+            <div class="workflow-container">
+
+                <!-- 工作流节点 -->
+                <div class="workflow-nodes">
+                    <!-- 输入节点 -->
+                    <div class="workflow-node input-node" id="docInputNode">
+                        <div class="workflow-node-card" onclick="openDocInputModal()">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">edit_note</span></div>
+                            <div class="workflow-node-title">输入需求</div>
+                            <div class="workflow-node-desc">点击输入文档主题</div>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
+
+                    <!-- 节点1 -->
+                    <div class="workflow-node" id="docWorkflowNode1">
+                        <div class="workflow-node-card pending">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">auto_fix_high</span></div>
+                            <div class="workflow-node-title">润色需求</div>
+                            <div class="workflow-node-desc">优化文档写作需求</div>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
+
+                    <!-- 节点2 -->
+                    <div class="workflow-node" id="docWorkflowNode2">
+                        <div class="workflow-node-card pending">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">view_list</span></div>
+                            <div class="workflow-node-title">生成大纲</div>
+                            <div class="workflow-node-desc">AI生成文档大纲结构</div>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
+
+                    <!-- 节点3 -->
+                    <div class="workflow-node" id="docWorkflowNode3">
+                        <div class="workflow-node-card pending">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">edit</span></div>
+                            <div class="workflow-node-title">生成内容</div>
+                            <div class="workflow-node-desc">撰写完整文档内容</div>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
+
+                    <!-- 节点4 -->
+                    <div class="workflow-node" id="docWorkflowNode4">
+                        <div class="workflow-node-card pending">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">bar_chart</span></div>
+                            <div class="workflow-node-title">生成图表</div>
+                            <div class="workflow-node-desc">识别并生成所需图片</div>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
+
+                    <!-- 节点5 -->
+                    <div class="workflow-node" id="docWorkflowNode5">
+                        <div class="workflow-node-card pending">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">image</span></div>
+                            <div class="workflow-node-title">整合图片</div>
+                            <div class="workflow-node-desc">将图片嵌入文档</div>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
+
+                    <!-- 节点6 -->
+                    <div class="workflow-node" id="docWorkflowNode6">
+                        <div class="workflow-node-card pending">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">save</span></div>
+                            <div class="workflow-node-title">保存文档</div>
+                            <div class="workflow-node-desc">验证并保存结果</div>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
+
+                    <!-- 节点7 -->
+                    <div class="workflow-node" id="docWorkflowNode7">
+                        <div class="workflow-node-card pending">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">check_circle</span></div>
+                            <div class="workflow-node-title">验证文档</div>
+                            <div class="workflow-node-desc">检查文档完整性</div>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
+
+                    <!-- 输出节点 -->
+                    <div class="workflow-node output-node" id="docOutputNode">
+                        <div class="workflow-node-card" onclick="openDocumentResultModal()">
+                            <div class="workflow-node-status"></div>
+                            <div class="workflow-node-icon"><span class="material-icons">article</span></div>
+                            <div class="workflow-node-title">查看结果</div>
+                            <div class="workflow-node-desc">点击查看生成的文档</div>
+                            <div class="output-thumbnail" id="docOutputThumbnail">
+                                <div class="output-thumbnail-placeholder"><span class="material-icons">description</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 工作流详细信息 -->
+                <div class="workflow-info">
+                    <div class="workflow-info-title">
+                        <span class="material-icons">list_alt</span>
+                        <span>执行详情</span>
+                        <span class="execution-status-indicator idle" id="docExecutionStatusIndicator"></span>
+                    </div>
+                    <div class="workflow-steps-detail" id="docWorkflowStepsDetail">
+                        <div class="workflow-step-item">
+                            <div class="workflow-step-number">1</div>
+                            <div class="workflow-step-content">
+                                <div class="workflow-step-title">润色写作需求</div>
+                                <div class="workflow-step-desc">优化用户的文档写作需求</div>
+                            </div>
+                            <div class="workflow-step-time">等待中</div>
+                        </div>
+                        <div class="workflow-step-item">
+                            <div class="workflow-step-number">2</div>
+                            <div class="workflow-step-content">
+                                <div class="workflow-step-title">生成文档大纲</div>
+                                <div class="workflow-step-desc">AI生成完整的文档结构</div>
+                            </div>
+                            <div class="workflow-step-time">等待中</div>
+                        </div>
+                        <div class="workflow-step-item">
+                            <div class="workflow-step-number">3</div>
+                            <div class="workflow-step-content">
+                                <div class="workflow-step-title">生成文档内容</div>
+                                <div class="workflow-step-desc">撰写完整的Markdown文档</div>
+                            </div>
+                            <div class="workflow-step-time">等待中</div>
+                        </div>
+                        <div class="workflow-step-item">
+                            <div class="workflow-step-number">4</div>
+                            <div class="workflow-step-content">
+                                <div class="workflow-step-title">识别图片需求</div>
+                                <div class="workflow-step-desc">分析文档并识别需要图表的位置</div>
+                            </div>
+                            <div class="workflow-step-time">等待中</div>
+                        </div>
+                        <div class="workflow-step-item">
+                            <div class="workflow-step-number">5</div>
+                            <div class="workflow-step-content">
+                                <div class="workflow-step-title">生成图表</div>
+                                <div class="workflow-step-desc">使用matplotlib生成所需图片</div>
+                            </div>
+                            <div class="workflow-step-time">等待中</div>
+                        </div>
+                        <div class="workflow-step-item">
+                            <div class="workflow-step-number">6</div>
+                            <div class="workflow-step-content">
+                                <div class="workflow-step-title">整合图片到文档</div>
+                                <div class="workflow-step-desc">将生成的图片嵌入文档中</div>
+                            </div>
+                            <div class="workflow-step-time">等待中</div>
+                        </div>
+                        <div class="workflow-step-item">
+                            <div class="workflow-step-number">7</div>
+                            <div class="workflow-step-content">
+                                <div class="workflow-step-title">保存文档</div>
+                                <div class="workflow-step-desc">验证并保存最终文档</div>
+                            </div>
+                            <div class="workflow-step-time">等待中</div>
+                        </div>
+                        <div class="workflow-step-item">
+                            <div class="workflow-step-number">8</div>
+                            <div class="workflow-step-content">
+                                <div class="workflow-step-title">验证文档</div>
+                                <div class="workflow-step-desc">检查文档完整性和格式</div>
+                            </div>
+                            <div class="workflow-step-time">等待中</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文档输入对话框 -->
+    <div class="input-modal" id="docInputModal">
+        <div class="input-modal-backdrop" onclick="closeDocInputModal()"></div>
+        <div class="input-modal-content">
+            <div class="input-modal-header">
+                <div class="input-modal-title">
+                    <span class="material-icons">edit_note</span>
+                    <span>输入文档主题</span>
+                </div>
+                <button class="input-modal-close" onclick="closeDocInputModal()"><span class="material-icons">close</span></button>
+            </div>
+
+            <!-- 文档模板 -->
+            <div class="workflow-templates" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px;">
+                <div class="md-chip" onclick="useDocTemplateInModal('tutorial')">
+                    <span class="material-icons">menu_book</span>
+                    <span>教程</span>
+                </div>
+                <div class="md-chip" onclick="useDocTemplateInModal('api')">
+                    <span class="material-icons">integration_instructions</span>
+                    <span>API文档</span>
+                </div>
+                <div class="md-chip" onclick="useDocTemplateInModal('guide')">
+                    <span class="material-icons">help</span>
+                    <span>使用指南</span>
+                </div>
+                <div class="md-chip" onclick="useDocTemplateInModal('summary')">
+                    <span class="material-icons">summarize</span>
+                    <span>总结</span>
+                </div>
+            </div>
+
+            <!-- 输入框 -->
+            <div class="workflow-input-wrapper" style="margin-bottom: 20px;">
+                <textarea id="docModalPromptInput" class="workflow-textarea" placeholder="描述您要创建的文档主题和内容要求..."></textarea>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="workflow-button-group">
+                <button class="md-button md-button-contained" onclick="submitDocFromModal()" style="width: 100%;">
+                    <span class="material-icons">auto_awesome</span>
+                    <span>生成文档+图</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- 图片预览模态框 -->
@@ -2443,19 +2995,20 @@
             document.getElementById('documentMode').classList.remove('active');
 
             // 更新特性标签激活状态
-            document.querySelectorAll('.feature-tab').forEach(tab => {
+            document.querySelectorAll('.md-segmented-item[data-mode]').forEach(tab => {
                 tab.classList.toggle('active', tab.dataset.mode === mode);
             });
 
-            // 显示/隐藏视图切换按钮（仅绘图模式）
+            // 显示/隐藏视图切换按钮（绘图模式和文档+图模式都显示）
             const viewToggle = document.getElementById('viewToggle');
             if (mode === 'drawing') {
                 viewToggle.style.display = 'flex';
                 document.getElementById('drawingMode').classList.add('active');
                 switchView('standard');
             } else if (mode === 'document_with_images') {
-                viewToggle.style.display = 'none';
+                viewToggle.style.display = 'flex';
                 document.getElementById('documentMode').classList.add('active');
+                switchView('standard');
             }
         }
 
@@ -2483,6 +3036,20 @@
                 return;
             }
 
+            // 重置界面
+            document.getElementById('docEmptyState').style.display = 'flex';
+            document.getElementById('docResultContent').style.display = 'none';
+            document.getElementById('docContentEmpty').style.display = 'flex';
+            document.getElementById('docContentDisplay').style.display = 'none';
+            document.getElementById('docOutlineEmpty').style.display = 'flex';
+            document.getElementById('docOutlineDisplay').style.display = 'none';
+
+            // 设置工作流视图的执行详情状态指示器为运行中
+            const docExecutionIndicator = document.getElementById('docExecutionStatusIndicator');
+            if (docExecutionIndicator) {
+                docExecutionIndicator.className = 'execution-status-indicator running';
+            }
+
             try {
                 const response = await fetch('/api/document/workflow-with-images', {
                     method: 'POST',
@@ -2496,6 +3063,11 @@
             } catch (error) {
                 console.error('启动文档工作流失败:', error);
                 alert('启动失败: ' + error.message);
+
+                // 重置执行详情状态指示器为空闲
+                if (docExecutionIndicator) {
+                    docExecutionIndicator.className = 'execution-status-indicator idle';
+                }
             }
         }
 
@@ -2546,23 +3118,44 @@
                 document.getElementById('docOutlineEmpty').style.display = 'flex';
                 document.getElementById('docOutlineDisplay').style.display = 'none';
 
-                // 重置步骤状态
+                // 重置标准视图的步骤状态
                 document.querySelectorAll('#docStepsContainer .step-status').forEach(el => {
                     el.textContent = '等待';
                     el.className = 'step-status pending';
                 });
+
+                // 重置工作流视图的步骤状态
+                for (let i = 1; i <= 8; i++) {
+                    const node = document.getElementById(`docWorkflowNode${i}`);
+                    const card = node.querySelector('.workflow-node-card');
+                    card.classList.remove('pending', 'running', 'completed', 'error');
+                    card.classList.add('pending');
+                    node.classList.remove('pending', 'running', 'completed', 'error');
+                    node.classList.add('pending');
+                }
+
+                // 重置输出节点
+                const outputNode = document.getElementById('docOutputNode');
+                const card = outputNode.querySelector('.workflow-node-card');
+                const thumbnail = document.getElementById('docOutputThumbnail');
+                card.classList.remove('has-result');
+                thumbnail.classList.remove('show');
+                thumbnail.innerHTML = '<div class="output-thumbnail-placeholder"><span class="material-icons">description</span></div>';
+
+                // 重置当前文档结果
+                currentDocumentResult = null;
             }
         }
 
         // 文档工作流状态
         let currentDocumentResult = null;
         const DOCUMENT_STEPS = [
-            { key: 'refine_prompt', name: '润色写作需求', icon: '✨' },
-            { key: 'generate_outline', name: '生成文档大纲', icon: '📋' },
-            { key: 'generate_content', name: '生成文档内容', icon: '📝' },
-            { key: 'identify_image_requests', name: '识别并生成图表', icon: '🎨' },
-            { key: 'save_document', name: '保存文档', icon: '💾' },
-            { key: 'verify_document', name: '验证文档', icon: '✅' }
+            { key: 'refine_prompt', name: '润色写作需求', icon: 'auto_fix_high' },
+            { key: 'generate_outline', name: '生成文档大纲', icon: 'view_list' },
+            { key: 'generate_content', name: '生成文档内容', icon: 'edit' },
+            { key: 'identify_image_requests', name: '识别并生成图表', icon: 'bar_chart' },
+            { key: 'save_document', name: '保存文档', icon: 'save' },
+            { key: 'verify_document', name: '验证文档', icon: 'check_circle' }
         ];
 
         // 主题管理
@@ -2591,18 +3184,11 @@
         // 更新主题按钮
         function updateThemeButton() {
             const icon = document.getElementById('themeIcon');
-            const text = document.getElementById('themeText');
 
             const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             const actualTheme = currentThemeMode === 'auto' ? systemTheme : currentThemeMode;
 
-            if (currentThemeMode === 'auto') {
-                icon.textContent = actualTheme === 'dark' ? '🌙' : '☀️';
-                text.textContent = '跟随系统';
-            } else {
-                icon.textContent = actualTheme === 'dark' ? '🌙' : '☀️';
-                text.textContent = actualTheme === 'dark' ? '深色' : '浅色';
-            }
+            icon.textContent = actualTheme === 'dark' ? 'dark_mode' : 'light_mode';
         }
 
         // 切换主题
@@ -2636,6 +3222,17 @@
         document.getElementById('modalPromptInput').addEventListener('input', function(e) {
             document.getElementById('promptInput').value = e.target.value;
             updateInputNodeStatus();
+        });
+
+        // 文档输入框同步
+        document.getElementById('docPromptInput').addEventListener('input', function(e) {
+            document.getElementById('docModalPromptInput').value = e.target.value;
+            updateDocInputNodeStatus();
+        });
+
+        document.getElementById('docModalPromptInput').addEventListener('input', function(e) {
+            document.getElementById('docPromptInput').value = e.target.value;
+            updateDocInputNodeStatus();
         });
 
         // 输入节点相关函数
@@ -2714,10 +3311,73 @@
                 thumbnail.classList.add('show');
                 card.classList.add('has-result');
             } else {
-                thumbnail.innerHTML = '<div class="output-thumbnail-placeholder">📊</div>';
+                thumbnail.innerHTML = '<div class="output-thumbnail-placeholder"><span class="material-icons">bar_chart</span></div>';
                 thumbnail.classList.remove('show');
                 card.classList.remove('has-result');
             }
+        }
+
+        // 文档输入框相关函数
+        function openDocInputModal() {
+            const modal = document.getElementById('docInputModal');
+            modal.classList.add('show');
+
+            // 同步当前输入值
+            const currentValue = document.getElementById('docPromptInput').value;
+            document.getElementById('docModalPromptInput').value = currentValue;
+        }
+
+        function closeDocInputModal() {
+            const modal = document.getElementById('docInputModal');
+            modal.classList.remove('show');
+        }
+
+        function useDocTemplateInModal(type) {
+            const docTemplates = {
+                'tutorial': '请编写一个关于[主题]的详细教程，包含：\n1. 概念介绍\n2. 基础用法\n3. 实战案例\n4. 最佳实践\n5. 常见问题',
+                'api': '请编写[名称] API的完整文档，包含：\n1. API概述\n2. 认证方式\n3. 端点说明\n4. 请求/响应示例\n5. 错误码说明',
+                'guide': '请编写[主题]的使用指南，包含：\n1. 快速开始\n2. 配置说明\n3. 核心功能\n4. 高级用法\n5. 故障排查',
+                'summary': '请对[主题]进行总结，包含：\n1. 核心要点\n2. 关键概念\n3. 重要结论\n4. 应用场景\n5. 参考资料'
+            };
+            document.getElementById('docModalPromptInput').value = docTemplates[type];
+            document.getElementById('docPromptInput').value = docTemplates[type];
+            updateDocInputNodeStatus();
+        }
+
+        function submitDocFromModal() {
+            const prompt = document.getElementById('docModalPromptInput').value.trim();
+
+            if (!prompt) {
+                alert('请输入文档主题');
+                return;
+            }
+
+            closeDocInputModal();
+            startDocumentWithImagesWorkflow();
+        }
+
+        function updateDocInputNodeStatus() {
+            const inputNode = document.getElementById('docInputNode');
+            const card = inputNode.querySelector('.workflow-node-card');
+            const prompt = document.getElementById('docPromptInput').value.trim();
+
+            if (prompt) {
+                card.classList.add('has-input');
+            } else {
+                card.classList.remove('has-input');
+            }
+        }
+
+        // 文档结果模态框
+        function openDocumentResultModal() {
+            if (!currentDocumentResult) {
+                alert('暂无生成结果，请先执行工作流');
+                return;
+            }
+
+            // 这里可以打开一个新的窗口或模态框来展示文档结果
+            // 目前简单地在新标签页打开文档
+            window.open(currentDocumentResult.url, '_blank');
         }
 
         // ESC键关闭模态框
@@ -2725,6 +3385,7 @@
             if (e.key === 'Escape') {
                 closeInputModal();
                 closeImageModal();
+                closeDocInputModal();
             }
         });
 
@@ -2733,21 +3394,39 @@
 
         function switchView(view) {
             currentView = view;
-            const standardView = document.getElementById('standardView');
-            const workflowView = document.getElementById('workflowView');
             const standardBtn = document.getElementById('standardViewBtn');
             const workflowBtn = document.getElementById('workflowViewBtn');
 
-            if (view === 'standard') {
-                standardView.style.display = 'grid';
-                workflowView.classList.remove('active');
-                standardBtn.classList.add('active');
-                workflowBtn.classList.remove('active');
-            } else {
-                standardView.style.display = 'none';
-                workflowView.classList.add('active');
-                standardBtn.classList.remove('active');
-                workflowBtn.classList.add('active');
+            if (currentFeatureMode === 'drawing') {
+                const standardView = document.getElementById('standardView');
+                const workflowView = document.getElementById('workflowView');
+                
+                if (view === 'standard') {
+                    standardView.style.display = 'grid';
+                    workflowView.classList.remove('active');
+                    standardBtn.classList.add('active');
+                    workflowBtn.classList.remove('active');
+                } else {
+                    standardView.style.display = 'none';
+                    workflowView.classList.add('active');
+                    standardBtn.classList.remove('active');
+                    workflowBtn.classList.add('active');
+                }
+            } else if (currentFeatureMode === 'document_with_images') {
+                const documentStandardView = document.getElementById('documentStandardView');
+                const documentWorkflowView = document.getElementById('documentWorkflowView');
+                
+                if (view === 'standard') {
+                    documentStandardView.style.display = 'grid';
+                    documentWorkflowView.classList.remove('active');
+                    standardBtn.classList.add('active');
+                    workflowBtn.classList.remove('active');
+                } else {
+                    documentStandardView.style.display = 'none';
+                    documentWorkflowView.classList.add('active');
+                    standardBtn.classList.remove('active');
+                    workflowBtn.classList.add('active');
+                }
             }
         }
 
@@ -2812,6 +3491,87 @@
             container.innerHTML = html;
         }
 
+        // 更新文档工作流视图状态
+        function updateDocumentWorkflowView(steps) {
+            const allSteps = ['refine_prompt', 'generate_outline', 'generate_content', 'identify_image_requests', 'generate_images', 'embed_images', 'save_document', 'verify_document'];
+            const stepNodeMap = {
+                'refine_prompt': 1,
+                'generate_outline': 2,
+                'generate_content': 3,
+                'identify_image_requests': 4,
+                'generate_images': 5,
+                'embed_images': 6,
+                'save_document': 7,
+                'verify_document': 8
+            };
+
+            allSteps.forEach((stepKey, index) => {
+                const node = document.getElementById(`docWorkflowNode${index + 1}`);
+                const step = steps.find(s => s.step === stepKey);
+                const status = step ? step.status : 'pending';
+                const card = node.querySelector('.workflow-node-card');
+
+                // 移除所有状态类
+                card.classList.remove('pending', 'running', 'completed', 'error');
+                node.classList.remove('pending', 'running', 'completed', 'error');
+
+                // 添加新状态类
+                card.classList.add(status);
+                node.classList.add(status);
+            });
+
+            // 更新详情列表
+            updateDocumentWorkflowStepsDetail(steps);
+        }
+
+        function updateDocumentWorkflowStepsDetail(steps) {
+            const container = document.getElementById('docWorkflowStepsDetail');
+            const allSteps = ['refine_prompt', 'generate_outline', 'generate_content', 'identify_image_requests', 'generate_images', 'embed_images', 'save_document', 'verify_document'];
+            const stepInfo = {
+                'refine_prompt': { title: '润色写作需求', desc: '优化用户的文档写作需求' },
+                'generate_outline': { title: '生成文档大纲', desc: 'AI生成完整的文档结构' },
+                'generate_content': { title: '生成文档内容', desc: '撰写完整的Markdown文档' },
+                'identify_image_requests': { title: '识别图片需求', desc: '分析文档并识别需要图表的位置' },
+                'generate_images': { title: '生成图表', desc: '使用matplotlib生成所需图片' },
+                'embed_images': { title: '整合图片到文档', desc: '将生成的图片嵌入文档中' },
+                'save_document': { title: '保存文档', desc: '验证并保存最终文档' },
+                'verify_document': { title: '验证文档', desc: '检查文档完整性和格式' }
+            };
+
+            let html = '';
+            allSteps.forEach((stepKey, index) => {
+                const step = steps.find(s => s.step === stepKey);
+                const status = step ? step.status : 'pending';
+                const time = step ? new Date(step.timestamp).toLocaleTimeString() : '等待中';
+                const info = stepInfo[stepKey];
+
+                html += `
+                    <div class="workflow-step-item ${status}">
+                        <div class="workflow-step-number">${index + 1}</div>
+                        <div class="workflow-step-content">
+                            <div class="workflow-step-title">${info.title}</div>
+                            <div class="workflow-step-desc">${info.desc}</div>
+                        </div>
+                        <div class="workflow-step-time">${time}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function updateDocumentOutputNode() {
+            const outputNode = document.getElementById('docOutputNode');
+            const card = outputNode.querySelector('.workflow-node-card');
+            const thumbnail = document.getElementById('docOutputThumbnail');
+
+            if (currentDocumentResult) {
+                card.classList.add('has-result');
+                thumbnail.innerHTML = '<div class="output-thumbnail-placeholder" style="font-size: 40px; color: #4CAF50;"><span class="material-icons">check_circle</span></div>';
+                thumbnail.classList.add('show');
+            }
+        }
+
         // 模板数据
         const templates = {
             sine: '绘制一个正弦波图形，x轴范围从0到2π，包含网格线和图例',
@@ -2847,10 +3607,10 @@
             // 更新状态徽章
             const statusBadge = document.getElementById('docStatusBadge');
             const statusConfig = {
-                'idle': { class: 'idle', icon: '⚪', text: '就绪' },
-                'running': { class: 'running', icon: '🟡', text: '生成中' },
-                'completed': { class: 'completed', icon: '🟢', text: '已完成' },
-                'error': { class: 'error', icon: '🔴', text: '错误' }
+                'idle': { class: 'idle', icon: 'radio_button_unchecked', text: '就绪' },
+                'running': { class: 'running', icon: 'adjust', text: '生成中' },
+                'completed': { class: 'completed', icon: 'check_circle', text: '已完成' },
+                'error': { class: 'error', icon: 'error', text: '错误' }
             };
 
             const config = statusConfig[status.status];
@@ -2864,7 +3624,7 @@
             document.getElementById('docProgressBar').style.width = `${progress}%`;
             document.getElementById('docProgressPercent').textContent = `${Math.round(progress)}%`;
 
-            // 更新步骤
+            // 更新标准视图的步骤
             if (status.steps && status.steps.length > 0) {
                 status.steps.forEach((step, index) => {
                     const stepCards = document.querySelectorAll('#docStepsContainer .step-card');
@@ -2883,6 +3643,17 @@
                         }
                     }
                 });
+            }
+
+            // 更新工作流视图的步骤
+            if (status.steps && status.steps.length > 0) {
+                updateDocumentWorkflowView(status.steps);
+            }
+
+            // 更新工作流视图的执行详情状态指示器
+            const docExecutionIndicator = document.getElementById('docExecutionStatusIndicator');
+            if (docExecutionIndicator) {
+                docExecutionIndicator.className = `execution-status-indicator ${status.status}`;
             }
 
             // 显示结果
@@ -2915,6 +3686,9 @@
 
                 // 渲染 Markdown 预览
                 renderDocumentPreview(content);
+
+                // 更新工作流视图的输出节点
+                updateDocumentOutputNode();
             } else if (status.status === 'error') {
                 document.getElementById('docStatusText').textContent = '错误';
                 alert('文档生成失败: ' + (status.error || '未知错误'));
@@ -3051,15 +3825,15 @@
             // 更新状态徽章
             const statusBadge = document.getElementById('statusBadge');
             const statusConfig = {
-                'idle': { class: 'idle', icon: '⚪', text: '空闲' },
-                'running': { class: 'running', icon: '🟡', text: '运行中' },
-                'completed': { class: 'completed', icon: '🟢', text: '已完成' },
-                'error': { class: 'error', icon: '🔴', text: '错误' }
+                'idle': { class: 'idle', icon: 'radio_button_unchecked', text: '空闲' },
+                'running': { class: 'running', icon: 'adjust', text: '运行中' },
+                'completed': { class: 'completed', icon: 'check_circle', text: '已完成' },
+                'error': { class: 'error', icon: 'error', text: '错误' }
             };
 
             const config = statusConfig[status.status] || statusConfig.idle;
             statusBadge.className = `status-badge ${config.class}`;
-            statusBadge.innerHTML = `<span>${config.icon}</span><span>${config.text}</span>`;
+            statusBadge.innerHTML = `<span class="material-icons">${config.icon}</span><span>${config.text}</span>`;
 
             // 更新执行详情状态指示器
             const executionIndicator = document.getElementById('executionStatusIndicator');
@@ -3080,10 +3854,10 @@
             const startBtn = document.getElementById('startBtn');
             if (status.status === 'running') {
                 startBtn.disabled = true;
-                startBtn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px;"></div><span>生成中...</span>';
+                startBtn.innerHTML = '<span class="material-icons">cached</span><span>生成中...</span>';
             } else {
                 startBtn.disabled = false;
-                startBtn.innerHTML = '<span>🚀</span><span>生成图表</span>';
+                startBtn.innerHTML = '<span class="material-icons">rocket_launch</span><span>生成图表</span>';
             }
 
             // 显示结果
@@ -3104,6 +3878,12 @@
                 'execute_code': '执行绘图代码',
                 'save_image': '验证图片保存'
             };
+            const stepIcons = {
+                'refine_prompt': 'auto_fix_high',
+                'generate_code': 'smart_toy',
+                'execute_code': 'play_circle',
+                'save_image': 'save'
+            };
 
             let html = '';
             allSteps.forEach((stepKey, index) => {
@@ -3114,7 +3894,7 @@
                 html += `
                     <div class="step-card ${status}">
                         <div class="step-header">
-                            <div class="step-icon">${index + 1}</div>
+                            <div class="step-icon"><span class="material-icons">${status === 'completed' ? 'check' : (status === 'running' ? 'refresh' : stepIcons[stepKey])}</span></div>
                             <div class="step-info">
                                 <div class="step-title">${stepNames[stepKey]}</div>
                                 <div class="step-time">${time}</div>
@@ -3174,7 +3954,7 @@
             document.getElementById('resultContent').innerHTML = `
                 <div class="error-container">
                     <div class="error-header">
-                        <div class="error-icon">⚠️</div>
+                        <div class="error-icon"><span class="material-icons">warning</span></div>
                         <div class="error-title">执行出错</div>
                     </div>
                     <div class="error-message">${escapeHtml(error)}</div>
@@ -3214,7 +3994,7 @@
             // 禁用按钮
             const startBtn = document.getElementById('startBtn');
             startBtn.disabled = true;
-            startBtn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px;"></div><span>启动中...</span>';
+            startBtn.innerHTML = '<span class="material-icons">cached</span><span>启动中...</span>';
 
             // 设置执行详情状态指示器为运行中
             const executionIndicator = document.getElementById('executionStatusIndicator');
@@ -3237,7 +4017,7 @@
             } catch (error) {
                 alert('启动工作流失败: ' + error.message);
                 startBtn.disabled = false;
-                startBtn.innerHTML = '<span>🚀</span><span>生成图表</span>';
+                startBtn.innerHTML = '<span class="material-icons">rocket_launch</span><span>生成图表</span>';
 
                 // 重置执行详情状态指示器为空闲
                 const executionIndicator = document.getElementById('executionStatusIndicator');
@@ -3263,7 +4043,7 @@
                     document.getElementById('stepsContainer').innerHTML = `
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">1</div>
+                                <div class="step-icon"><span class="material-icons">auto_fix_high</span></div>
                                 <div class="step-info">
                                     <div class="step-title">润色提示词</div>
                                     <div class="step-time">等待中</div>
@@ -3273,7 +4053,7 @@
                         </div>
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">2</div>
+                                <div class="step-icon"><span class="material-icons">smart_toy</span></div>
                                 <div class="step-info">
                                     <div class="step-title">生成绘图代码</div>
                                     <div class="step-time">等待中</div>
@@ -3283,7 +4063,7 @@
                         </div>
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">3</div>
+                                <div class="step-icon"><span class="material-icons">play_circle</span></div>
                                 <div class="step-info">
                                     <div class="step-title">执行绘图代码</div>
                                     <div class="step-time">等待中</div>
@@ -3293,7 +4073,7 @@
                         </div>
                         <div class="step-card">
                             <div class="step-header">
-                                <div class="step-icon">4</div>
+                                <div class="step-icon"><span class="material-icons">save</span></div>
                                 <div class="step-info">
                                     <div class="step-title">验证图片保存</div>
                                     <div class="step-time">等待中</div>

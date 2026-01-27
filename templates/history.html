@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>历史图表 - AI 智能绘图工作流</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,82 +14,96 @@
         }
 
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            --gradient-error: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            /* Material Design Colors */
+            --md-primary: #6200EE;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #FFFFFF;
+            --md-surface: #FFFFFF;
+            --md-error: #B00020;
+            --md-on-primary: #FFFFFF;
+            --md-on-secondary: #000000;
+            --md-on-background: #000000;
+            --md-on-surface: #000000;
+            --md-on-error: #FFFFFF;
+
+            /* Elevation shadows - Material Design */
+            --elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --elevation-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+            --elevation-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+            --elevation-4: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+            --elevation-5: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+
+            --md-success: #4CAF50;
+            --md-warning: #FF9800;
+            --md-info: #2196F3;
+            --md-divider: rgba(0,0,0,0.12);
         }
 
         /* 深色主题 */
         [data-theme="dark"] {
-            --bg-main: #0f172a;
-            --bg-card: #1e293b;
-            --bg-input: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --border: #334155;
-            --border-light: #475569;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+            --bg-main: #121212;
+            --bg-card: #1E1E1E;
+            --bg-input: #2D2D2D;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --text-muted: #808080;
+            --border: #333333;
+            --border-light: #444444;
+            --md-primary: #BB86FC;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #121212;
+            --md-surface: #1E1E1E;
+            --md-on-primary: #000000;
+            --md-on-background: #FFFFFF;
+            --md-on-surface: #FFFFFF;
+            --md-divider: rgba(255,255,255,0.12);
         }
 
         /* 亮色主题 */
         [data-theme="light"] {
-            --bg-main: #f8fafc;
-            --bg-card: #ffffff;
-            --bg-input: #f1f5f9;
-            --text-primary: #0f172a;
-            --text-secondary: #475569;
-            --text-muted: #94a3b8;
-            --border: #e2e8f0;
-            --border-light: #cbd5e1;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.2);
+            --bg-main: #FAFAFA;
+            --bg-card: #FFFFFF;
+            --bg-input: #F5F5F5;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --text-muted: #9E9E9E;
+            --border: #E0E0E0;
+            --border-light: #BDBDBD;
+            --md-primary: #6200EE;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #FAFAFA;
+            --md-surface: #FFFFFF;
+            --md-on-primary: #FFFFFF;
+            --md-on-background: #212121;
+            --md-on-surface: #212121;
+            --md-divider: rgba(0,0,0,0.12);
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-main);
             color: var(--text-primary);
             min-height: 100vh;
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* 顶部导航栏 */
+        /* Material Design AppBar */
         .navbar {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             height: 64px;
-            background: rgba(30, 41, 59, 0.95);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
+            background: var(--md-surface);
+            box-shadow: var(--elevation-4);
             z-index: 1000;
             display: flex;
             align-items: center;
-            padding: 0 32px;
-            box-shadow: var(--shadow-md);
-            transition: background 0.3s ease, border-color 0.3s ease;
-        }
-
-        [data-theme="dark"] .navbar {
-            background: rgba(15, 23, 42, 0.95);
-        }
-
-        [data-theme="light"] .navbar {
-            background: rgba(255, 255, 255, 0.95);
+            padding: 0 16px;
+            transition: background 0.3s ease;
         }
 
         .navbar-brand {
@@ -99,24 +114,26 @@
         }
 
         .navbar-logo {
-            width: 36px;
-            height: 36px;
-            background: var(--gradient-primary);
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            background: var(--md-primary);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            box-shadow: var(--shadow-glow);
+            box-shadow: var(--elevation-2);
+        }
+
+        .navbar-logo .material-icons {
+            color: var(--md-on-primary);
+            font-size: 24px;
         }
 
         .navbar-title {
             font-size: 20px;
-            font-weight: 700;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-weight: 500;
+            color: var(--md-on-surface);
+            letter-spacing: 0.15px;
         }
 
         .navbar-spacer {
@@ -125,36 +142,99 @@
 
         .navbar-actions {
             display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        /* 主题切换按钮 */
-        .theme-toggle {
-            padding: 8px 16px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
             gap: 8px;
+            align-items: center;
+        }
+
+        /* Material Design Button */
+        .md-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 16px;
+            height: 36px;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Roboto', sans-serif;
             font-size: 14px;
-            color: var(--text-secondary);
-            transition: all 0.3s ease;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.25px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
         }
 
-        .theme-toggle:hover {
-            background: var(--bg-card);
-            border-color: var(--primary);
-            color: var(--text-primary);
+        .md-button-contained {
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            box-shadow: var(--elevation-2);
         }
 
-        .theme-icon {
+        .md-button-contained:hover {
+            box-shadow: var(--elevation-4);
+        }
+
+        .md-button-contained:active {
+            box-shadow: var(--elevation-1);
+        }
+
+        .md-button-outlined {
+            background: transparent;
+            color: var(--md-primary);
+            border: 1px solid var(--md-primary);
+        }
+
+        .md-button-outlined:hover {
+            background: rgba(98, 0, 238, 0.04);
+        }
+
+        .md-button-text {
+            background: transparent;
+            color: var(--md-primary);
+        }
+
+        .md-button-text:hover {
+            background: rgba(98, 0, 238, 0.04);
+        }
+
+        .md-button .material-icons {
             font-size: 18px;
         }
 
-        /* 按钮样式 */
+        /* Material Design Icon Button */
+        .md-icon-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        .md-icon-button:hover {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .md-icon-button:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .md-icon-button .material-icons {
+            font-size: 24px;
+        }
+
+        /* Legacy button compatibility */
         .btn {
             display: flex;
             align-items: center;
@@ -162,44 +242,46 @@
             gap: 8px;
             padding: 10px 20px;
             border: none;
-            border-radius: 8px;
+            border-radius: 4px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.25px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            font-family: 'Roboto', sans-serif;
         }
 
         .btn-primary {
-            background: var(--gradient-primary);
-            color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            box-shadow: var(--elevation-2);
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+            box-shadow: var(--elevation-4);
         }
 
         .btn-secondary {
-            background: var(--bg-input);
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--md-primary);
+            border: 1px solid var(--md-primary);
         }
 
         .btn-secondary:hover {
-            background: var(--bg-card);
-            border-color: var(--primary-light);
-            color: var(--text-primary);
+            background: rgba(98, 0, 238, 0.04);
         }
 
         .btn-danger {
-            background: var(--gradient-error);
-            color: white;
+            background: var(--md-error);
+            color: var(--md-on-error);
         }
 
         .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+            background: var(--md-error);
+            box-shadow: var(--elevation-2);
         }
 
         /* 主容器 */
@@ -220,10 +302,7 @@
             font-size: 32px;
             font-weight: 700;
             margin-bottom: 8px;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--text-primary);
         }
 
         .page-subtitle {
@@ -307,8 +386,8 @@
         }
 
         .gallery-item:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
             border-color: var(--primary);
         }
 
@@ -321,7 +400,7 @@
         }
 
         .gallery-item:hover .gallery-image {
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
 
         /* 文档卡片样式 */
@@ -332,7 +411,7 @@
         .document-preview {
             width: 100%;
             height: 240px;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            background: var(--primary);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -387,7 +466,7 @@
         .gallery-action-btn:hover {
             background: var(--bg-card);
             border-color: var(--primary);
-            color: var(--text-primary);
+            color: var(--primary);
         }
 
         .gallery-action-btn.delete:hover {
@@ -553,8 +632,8 @@
         .stat-icon {
             width: 48px;
             height: 48px;
-            background: var(--gradient-primary);
-            border-radius: 10px;
+            background: var(--primary);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -609,24 +688,25 @@
     </style>
 </head>
 <body>
-    <!-- 顶部导航栏 -->
+    <!-- 顶部导航栏 - Material Design -->
     <nav class="navbar">
         <div class="navbar-brand" onclick="goToHome()">
-            <div class="navbar-logo">🎨</div>
-            <div class="navbar-title">AI 智能绘图工作流</div>
+            <div class="navbar-logo">
+                <span class="material-icons">palette</span>
+            </div>
+            <div class="navbar-title">Bamboo AI</div>
         </div>
         <div class="navbar-spacer"></div>
         <div class="navbar-actions">
             <!-- 返回首页 -->
-            <button class="btn btn-secondary" onclick="goToHome()">
-                <span>⚡</span>
+            <button class="md-button md-button-outlined" onclick="goToHome()">
+                <span class="material-icons">rocket_launch</span>
                 <span>生成图表</span>
             </button>
 
-            <!-- 主题切换 -->
-            <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">
-                <span class="theme-icon" id="themeIcon">🌙</span>
-                <span class="theme-text" id="themeText">深色</span>
+            <!-- 主题切换 - Material Design Icon Button -->
+            <button class="md-icon-button" onclick="toggleTheme()" title="切换主题">
+                <span class="material-icons" id="themeIcon">dark_mode</span>
             </button>
         </div>
     </nav>
@@ -639,8 +719,8 @@
                 <h1 class="page-title">历史图表</h1>
                 <p class="page-subtitle">查看和管理所有生成的图表</p>
             </div>
-            <button class="btn btn-primary" onclick="loadImages()">
-                <span>🔄</span>
+            <button class="md-button md-button-contained" onclick="loadImages()">
+                <span class="material-icons">refresh</span>
                 <span>刷新</span>
             </button>
         </div>
@@ -648,14 +728,14 @@
         <!-- 统计卡片 -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon">📊</div>
+                <div class="stat-icon"><span class="material-icons">bar_chart</span></div>
                 <div class="stat-content">
                     <div class="stat-value" id="totalCount">0</div>
                     <div class="stat-label">总图表数</div>
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">📁</div>
+                <div class="stat-icon"><span class="material-icons">storage</span></div>
                 <div class="stat-content">
                     <div class="stat-value" id="totalSize">0 KB</div>
                     <div class="stat-label">总大小</div>
@@ -671,11 +751,11 @@
 
         <!-- 空状态 -->
         <div class="empty-state" id="emptyState" style="display: none;">
-            <div class="empty-icon">📭</div>
+            <div class="empty-icon"><span class="material-icons">folder_open</span></div>
             <div class="empty-title">暂无历史图表</div>
             <div class="empty-text">还没有生成任何图表，快去创建第一个吧！</div>
-            <button class="btn btn-primary" onclick="goToHome()">
-                <span>🚀</span>
+            <button class="md-button md-button-contained" onclick="goToHome()">
+                <span class="material-icons">rocket_launch</span>
                 <span>开始生成</span>
             </button>
         </div>
@@ -689,22 +769,22 @@
         <div class="image-modal-backdrop" onclick="closeImageModal()"></div>
         <div class="image-modal-content">
             <div class="image-modal-image-wrapper">
-                <button class="image-modal-close" onclick="closeImageModal()">✕</button>
+                <button class="image-modal-close" onclick="closeImageModal()"><span class="material-icons">close</span></button>
                 <img id="imageModalPreview" src="" alt="图表预览">
             </div>
             <div class="image-modal-info">
                 <div class="image-modal-filename" id="imageModalFilename">filename.png</div>
                 <div class="image-modal-actions">
                     <button class="image-modal-btn" onclick="copyCurrentImage()">
-                        <span>📋</span>
+                        <span class="material-icons">content_copy</span>
                         <span>复制</span>
                     </button>
                     <button class="image-modal-btn" onclick="downloadCurrentImage()">
-                        <span>💾</span>
+                        <span class="material-icons">download</span>
                         <span>下载</span>
                     </button>
                     <button class="image-modal-btn delete" onclick="deleteCurrentImage()">
-                        <span>🗑️</span>
+                        <span class="material-icons">delete</span>
                         <span>删除</span>
                     </button>
                 </div>
@@ -717,18 +797,18 @@
         <div class="image-modal-backdrop" onclick="closeDocumentModal()"></div>
         <div class="image-modal-content" style="max-width: 900px;">
             <div class="image-modal-image-wrapper">
-                <button class="image-modal-close" onclick="closeDocumentModal()">✕</button>
+                <button class="image-modal-close" onclick="closeDocumentModal()"><span class="material-icons">close</span></button>
                 <iframe id="documentModalPreview" style="width: 100%; height: 70vh; border: none; border-radius: 12px;"></iframe>
             </div>
             <div class="image-modal-info">
                 <div class="image-modal-filename" id="documentModalFilename">document.md</div>
                 <div class="image-modal-actions">
                     <button class="image-modal-btn" onclick="downloadCurrentDocument()">
-                        <span>💾</span>
+                        <span class="material-icons">download</span>
                         <span>下载</span>
                     </button>
                     <button class="image-modal-btn delete" onclick="deleteCurrentDocument()">
-                        <span>🗑️</span>
+                        <span class="material-icons">delete</span>
                         <span>删除</span>
                     </button>
                 </div>
@@ -766,18 +846,11 @@
         // 更新主题按钮
         function updateThemeButton() {
             const icon = document.getElementById('themeIcon');
-            const text = document.getElementById('themeText');
 
             const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             const actualTheme = currentThemeMode === 'auto' ? systemTheme : currentThemeMode;
 
-            if (currentThemeMode === 'auto') {
-                icon.textContent = actualTheme === 'dark' ? '🌙' : '☀️';
-                text.textContent = '跟随系统';
-            } else {
-                icon.textContent = actualTheme === 'dark' ? '🌙' : '☀️';
-                text.textContent = actualTheme === 'dark' ? '深色' : '浅色';
-            }
+            icon.textContent = actualTheme === 'dark' ? 'dark_mode' : 'light_mode';
         }
 
         // 切换主题
@@ -850,11 +923,11 @@
                 console.error('加载历史记录失败:', error);
                 loadingState.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-icon">❌</div>
+                        <div class="empty-icon"><span class="material-icons">error</span></div>
                         <div class="empty-title">加载失败</div>
                         <div class="empty-text">无法加载历史图表，请稍后重试</div>
-                        <button class="btn btn-primary" onclick="loadImages()">
-                            <span>🔄</span>
+                        <button class="md-button md-button-contained" onclick="loadImages()">
+                            <span class="material-icons">refresh</span>
                             <span>重试</span>
                         </button>
                     </div>
@@ -900,34 +973,34 @@
             if (item.type === 'document') {
                 actionButtons = `
                     <button class="gallery-action-btn" onclick="viewDocument(${index})">
-                        <span>👁️</span>
+                        <span class="material-icons">visibility</span>
                         <span>查看</span>
                     </button>
                     <button class="gallery-action-btn" onclick="downloadDocument('${item.url}', '${item.name}')">
-                        <span>💾</span>
+                        <span class="material-icons">download</span>
                         <span>下载</span>
                     </button>
                     <button class="gallery-action-btn delete" onclick="deleteDocument('${item.name}', ${index})">
-                        <span>🗑️</span>
+                        <span class="material-icons">delete</span>
                         <span>删除</span>
                     </button>
                 `;
             } else {
                 actionButtons = `
                     <button class="gallery-action-btn" onclick="viewImage(${index})">
-                        <span>👁️</span>
+                        <span class="material-icons">visibility</span>
                         <span>查看</span>
                     </button>
                     <button class="gallery-action-btn" onclick="copyImage('${item.url}', this)">
-                        <span>📋</span>
+                        <span class="material-icons">content_copy</span>
                         <span>复制</span>
                     </button>
                     <button class="gallery-action-btn" onclick="downloadImage('${item.url}', '${item.name}')">
-                        <span>💾</span>
+                        <span class="material-icons">download</span>
                         <span>下载</span>
                     </button>
                     <button class="gallery-action-btn delete" onclick="deleteImage('${item.name}', ${index})">
-                        <span>🗑️</span>
+                        <span class="material-icons">delete</span>
                         <span>删除</span>
                     </button>
                 `;
@@ -938,8 +1011,8 @@
                 <div class="gallery-info">
                     <div class="gallery-name">${item.name}</div>
                     <div class="gallery-meta">
-                        <span>📅 ${dateStr}</span>
-                        <span>📏 ${formatFileSize(item.size)}</span>
+                        <span><span class="material-icons" style="font-size:14px;vertical-align:middle;">event</span> ${dateStr}</span>
+                        <span><span class="material-icons" style="font-size:14px;vertical-align:middle;">straighten</span> ${formatFileSize(item.size)}</span>
                     </div>
                     <div class="gallery-actions">
                         ${actionButtons}
@@ -1039,7 +1112,7 @@
 
                 // 显示成功提示
                 const originalText = buttonElement.innerHTML;
-                buttonElement.innerHTML = '<span>✅</span><span>已复制</span>';
+                buttonElement.innerHTML = '<span class="material-icons">check</span><span>已复制</span>';
                 setTimeout(() => {
                     buttonElement.innerHTML = originalText;
                 }, 2000);
