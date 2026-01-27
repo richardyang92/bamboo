@@ -32,41 +32,74 @@ def refine_prompt(state: GraphState) -> GraphState:
         # 手动增强提示词，添加必要的绘图要求
         enhanced_prompt = f"""{user_prompt}
 
-## 重要物理约束和绘图要求
+## 核心绘图要求（必须严格遵守）
 
-### 基本要求
-1. 使用matplotlib库绘制
-2. 确保中文正常显示
-3. 添加适当的标题、坐标轴标签
-4. 使用清晰的配色方案
-5. 包含必要的图例和标注
-6. 生成高质量的可视化效果
+### 通用基本要求
+1. 使用matplotlib库绘制，配合numpy等基础库
+2. 确保中文正常显示，设置中文字体
+3. 添加适当的标题、坐标轴标签、图例
+4. 使用清晰的配色方案（推荐：蓝色、红色、绿色、橙色、紫色）
+5. 设置合理的图形尺寸(figsize=(10, 8))和dpi=100
+6. 使用plt.tight_layout()自动调整布局
+7. 确保代码可以直接执行，无语法错误
 
-### 物理规律约束（必须严格遵守）
-7. **斜面物体接触约束**（最重要）：
-   - 当物体放置在斜面上时，物体底部必须完全贴合斜面，不能有穿模现象
-   - 物体底部的所有点（包括矩形底边、轮子底部等）都必须精确计算在斜面上
-   - 使用三角函数精确计算物体在斜面上的位置：
-     * 斜面角度为θ时，物体沿斜面方向的位移需要分解为x和y分量
-     * 物体底部中心的x坐标 = 起始x + 沿斜面距离 * cos(θ)
-     * 物体底部中心的y坐标 = 起始y + 沿斜面距离 * sin(θ)
-   - 绘制矩形物体时，使用旋转矩阵计算矩形四个顶点的坐标，确保底边完全贴合斜面
-   - 轮子（圆形）的最低点必须接触斜面：圆心y坐标 = 斜面y + 轮子半径
+### 数据可视化类图形（曲线图、折线图等）特定要求
+8. **数据点生成**（最重要）：
+   - 使用numpy生成密集的数据点：`x = np.linspace(起始值, 结束值, 1000)`
+   - 确保x轴范围足够覆盖所需区域（如0到π、0到2等）
+   - 计算y值时使用明确的数学公式，不要使用未定义的变量
+   - 示例：`y = np.sin(x)` 或 `y = (1 - (t/t_c)**8)**0.125`
 
-8. **避免图形重叠和穿模**：
-   - 确保物体与斜面之间没有间隙或穿透
-   - 轮子与车身之间不能有重叠
-   - 使用精确的几何计算，不要凭估计设置坐标
+9. **曲线绘制**：
+   - 使用`ax.plot(x, y, 'b-', linewidth=2, label='曲线名称')`
+   - 线条宽度设为2-3，颜色醒目
+   - 确保曲线在图形范围内清晰可见
 
-9. **坐标系和角度**：
-   - 所有角度使用弧度制（np.radians()转换）
-   - 使用matplotlib的transforms进行图形旋转时，确保旋转中心正确
+10. **坐标轴设置**：
+    - 设置合理的x轴和y轴范围（使用ax.set_xlim和ax.set_ylim）
+    - 添加网格线：`plt.grid(True, alpha=0.3)`辅助读数
+    - 添加坐标轴标签和标题，使用中文标注
 
-10. **绘图顺序**：
-    - 先绘制斜面
-    - 再绘制物体（矩形车身）
-    - 最后绘制轮子（确保轮子底部接触斜面）
-    - 添加力和运动方向标注""" 
+11. **特殊标注**（如需要）：
+    - 标注关键点（极值、零点、交点、临界点等）
+    - 添加文字注释说明特殊点或区域
+    - 对于能隙、相变点等重要位置，使用箭头或虚线标注
+
+ 12. **代码完整性**（生死攸关）：
+     - 所有变量必须在代码中显式定义或生成
+     - 不要使用任何未定义的变量（如data、result等）
+     - 确保所有函数调用都完整，特别是括号闭合
+     - 数据必须完整，不能有undefined values
+
+  13. **物理规律正确性**：
+      - 曲线形状必须符合物理规律（如能谱的连续性、磁化强度在临界点的平滑变化等）
+      - 数学公式必须正确（如二维Ising模型的临界指数β=1/8）
+      - 数据范围和比例关系必须合理
+
+  14. **单摆/摆动系统角度标注**（必须严格遵守）：
+      - **角度顶点定位**：角度θ的顶点必须在支点/转轴处，绝不能标注在摆球或其他运动物体上
+      - **参考线绘制**：必须绘制垂直向下的虚线作为角度参考线（从支点垂直向下延伸）
+      - **角度弧线绘制**：使用Arc绘制角度弧线，弧的圆心必须在支点坐标
+      - **角度计算**：对于单摆，从垂直向下方向（270度）开始，到摆线方向（270+θ度）
+      - **弧线参数**：theta1和theta2必须是角度值（0-360度），不是弧度
+      - **标签位置**：角度标签放置在弧线中点附近，确保清晰可见
+
+  15. **刚体约束条件和物理真实性**（必须严格遵守）：
+     - **接触面约束**：物体（如小车、滑块）必须完全贴合接触面，不能有穿模或间隙
+     - **斜面约束**：斜面上的物体底部必须与斜面线精确重合，使用三角函数计算坐标
+     - **刚体完整性**：物体内部不能有任何线条穿模，所有几何关系必须精确计算
+     - **轮子约束**：轮子必须接触地面或斜面，轮心到接触面的距离等于半径
+     - **运动连续性**：如果展示运动状态，轨迹必须连续且平滑
+     - **角度精确性**：所有角度必须与标注一致，不能有视觉上的偏差
+     - **比例一致性**：同类物体的大小比例必须合理，符合物理直觉
+     - **重力方向**：重力必须严格垂直向下，不能有偏差
+     - **力系平衡**：静止物体的受力分析必须满足平衡条件
+
+### 重要提醒
+- 如果绘制曲线图，必须使用numpy生成足够多的数据点（至少1000个）
+- 必须显式设置坐标轴范围，确保曲线完整显示在图形中
+- 曲线的数学关系必须准确，不能凭空捏造数据
+- 对于物理系统的曲线，必须遵循已知的理论公式或规律"""
         print(f"✅ 增强后的提示词: '{enhanced_prompt}'")
         
         return {"refined_prompt": enhanced_prompt}
@@ -168,24 +201,24 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 6. 确保中文正常显示：设置多种中文字体备选（['Arial Unicode MS', 'SimHei', 'WenQuanYi Micro Hei', 'Heiti TC', 'STHeiti']）
 7. 只返回可执行的Python代码，不要返回任何其他内容（如解释、说明等）
 8. **代码必须完全自包含**（最重要）：
-   - **所有变量都必须在使用前明确定义**
-   - **不要使用任何未在代码中定义的变量名**（如 article、data、result 等）
-   - **不要假设任何预定义的数据或变量存在**（除了 target_filename）
-   - **所有需要的数据（数值、列表、数组等）都必须在代码中显式定义或生成**
-   - **示例错误**：`plt.plot(article['data'])` ❌（article 未定义）
-   - **示例正确**：`data = [1, 2, 3, 4, 5]` 然后 `plt.plot(data)` ✅
+    - **所有变量都必须在使用前明确定义**
+    - **不要使用任何未在代码中定义的变量名**（如 article、data、result 等）
+    - **不要假设任何预定义的数据或变量存在**（除了 target_filename）
+    - **所有需要的数据（数值、列表、数组等）都必须在代码中显式定义或生成**
+    - **示例错误**：`plt.plot(article['data'])` ❌（article 未定义）
+    - **示例正确**：`data = [1, 2, 3, 4, 5]` 然后 `plt.plot(data)` ✅
 9. **matplotlib 导入规范**（重要）：
-   - 基本导入：`import matplotlib.pyplot as plt` 和 `import matplotlib.patches as patches`
-   - 图形类导入：
-     - 矩形：`from matplotlib.patches import Rectangle`
-     - 圆形：`from matplotlib.patches import Circle`
-     - 弧线：`from matplotlib.patches import Arc`
-     - 多边形：`from matplotlib.patches import Polygon`
-     - 箭头：使用 `ax.annotate()` 的 `arrowprops` 参数，不要导入 Arrow 类
-   - **线条类注意**（重要）：不要使用 `matplotlib.patches.Line2D`，这是错误的！
-     - 绘制线条使用：`ax.plot()`, `ax.axhline()`, `ax.axvline()` 等方法
-     - 如需 Line2D 类，使用：`from matplotlib.lines import Line2D`
-   - 不要随意导入不确定的类，优先使用 plt 和 ax 的方法
+    - 基本导入：`import matplotlib.pyplot as plt` 和 `import matplotlib.patches as patches`
+    - 图形类导入：
+      - 矩形：`from matplotlib.patches import Rectangle`
+      - 圆形：`from matplotlib.patches import Circle`
+      - 弧线：`from matplotlib.patches import Arc`
+      - 多边形：`from matplotlib.patches import Polygon`
+      - 箭头：使用 `ax.annotate()` 的 `arrowprops` 参数，不要导入 Arrow 类
+    - **线条类注意**（重要）：不要使用 `matplotlib.patches.Line2D`，这是错误的！
+      - 绘制线条使用：`ax.plot()`, `ax.axhline()`, `ax.axvline()` 等方法
+      - 如需 Line2D 类，使用：`from matplotlib.lines import Line2D`
+    - 不要随意导入不确定的类，优先使用 plt 和 ax 的方法
 
 ## 二、通用绘图规范
 
@@ -204,10 +237,10 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 - 所有重要部分都要有清晰的中文标注
 - 使用 ax.annotate() 添加带箭头的标注，格式：ax.annotate('文字', xy=(x,y), xytext=(偏移), arrowprops=dict(facecolor='color'))
 - **文字标注位置规范**（重要）：
-  - **实心物体**（如填充的矩形、圆形等）：文字必须标注在物体外部，不能遮挡物体
-  - **空心物体**（如圆环、空心框、仅边线的图形）：文字可以标注在物体内部或外部
-  - 使用箭头指向物体（xy 参数指向物体，xytext 参数在外部设置文字位置）
-  - 如果必须标注物体内部属性（如质量、名称），使用引线将文字引到外部
+   - **实心物体**（如填充的矩形、圆形等）：文字必须标注在物体外部，不能遮挡物体
+   - **空心物体**（如圆环、空心框、仅边线的图形）：文字可以标注在物体内部或外部
+   - 使用箭头指向物体（xy 参数指向物体，xytext 参数在外部设置文字位置）
+   - 如果必须标注物体内部属性（如质量、名称），使用引线将文字引到外部
 - 标题字体 fontsize=14-16，轴标签 fontsize=12-14，标注文字 fontsize=10-12
 - 标注位置要合理，不遮挡图形主体
 - 添加图例（plt.legend()）说明不同元素
@@ -227,31 +260,33 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 ### 2.6 图层顺序和避免遮挡（重要）
 - **绘图顺序原则**：按照"背景→网格线→辅助线→主体图形→填充区域→边框→箭头→文字标注"的顺序绘制
 - **避免遮挡的具体方法**：
-  - 先绘制大型背景元素（如网格、辅助线）
-  - 再绘制主体图形（如矩形、圆形、线条等）
-  - 然后绘制填充区域（使用 alpha 参数设置透明度，避免完全遮挡）
-  - 最后绘制箭头和文字标注（确保在最上层）
+   - 先绘制大型背景元素（如网格、辅助线）
+   - 再绘制主体图形（如矩形、圆形、线条等）
+   - 然后绘制填充区域（使用 alpha 参数设置透明度，避免完全遮挡）
+   - 最后绘制箭头和文字标注（确保在最上层）
 - **使用 zorder 参数**：
-  - 背景元素：zorder=0-1
-  - 网格线：zorder=1
-  - 辅助线：zorder=2
-  - 主体图形：zorder=3-5
-  - 填充区域：zorder=3-4（设置 alpha=0.3-0.7 透明度）
-  - 边框线：zorder=5-6
-  - 箭头：zorder=10（确保在所有图形上方）
-  - 文字标注：zorder=10（确保在所有元素上方）
+   - 背景元素：zorder=0-1
+   - 网格线：zorder=1
+   - 辅助线：zorder=2
+   - 主体图形：zorder=3-5
+   - 填充区域：zorder=3-4（设置 alpha=0.3-0.7 透明度）
+   - 边框线：zorder=5-6
+   - 箭头：zorder=10（确保在所有图形上方）
+   - 文字标注：zorder=10（确保在所有元素上方）
 - **特殊场景处理**：
-  - 当填充区域可能遮挡其他元素时，使用 alpha 参数（0.3-0.7）设置半透明
-  - 当多个图形重叠时，使用不同的 zorder 值控制前后顺序
-  - 使用 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8) 为文字添加背景，避免文字与图形重叠
+   - 当填充区域可能遮挡其他元素时，使用 alpha 参数（0.3-0.7）设置半透明
+   - 当多个图形重叠时，使用不同的 zorder 值控制前后顺序
+   - 使用 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8) 为文字添加背景，避免文字与图形重叠
 - **透明度设置**：
-  - 填充区域默认使用 alpha=0.5 半透明
-  - 重叠的填充区域使用不同 alpha 值区分层次
-  - 文字背景使用 alpha=0.8 保证可读性
+   - 填充区域默认使用 alpha=0.5 半透明
+   - 重叠的填充区域使用不同 alpha 值区分层次
+   - 文字背景使用 alpha=0.8 保证可读性
 
 ## 三、分类绘图规范
 
-### 3.1 数据可视化类（折线图、柱状图、饼图、散点图等）
+### 3.1 数据可视化类（折线图、曲线图、柱状图等）——最重要！
+
+#### 3.1.1 基本要求
 - 必须有清晰的标题、轴标签、图例
 - 数据点要清晰可见，使用 marker 符号（折线图、散点图）
 - 柱状图添加数值标签（ax.bar_label）
@@ -259,99 +294,202 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 - 使用合适的图表类型表达数据关系
 - 添加网格线辅助读数
 
-### 3.2 物理示意图类（力学、电路、光学、机械结构等）
-- **物体表示**：使用标准几何形状，圆形用 Circle，矩形用 Rectangle
-- **物体填充规范**：
-  - 实心物体使用 fill=True，填充适当的颜色（如 facecolor='lightblue'）
-  - 空心物体使用 fill=False，仅绘制边框
+#### 3.1.2 数据生成规范（生死攸关，必须严格遵守）
+**所有数据必须在代码中显式定义或生成，不能有任何未定义的变量！**
 
-- **斜面物体的精确绘制**（非常重要，必须严格遵守）：
-  - **斜面上物体定位原则**：
-    * 物体底部必须完全贴合斜面，不能有穿模或间隙
-    * 使用三角函数精确计算，不能凭估计设置坐标
-  - **斜面角度转换**：
-    * 角度必须转换为弧度：theta_rad = np.radians(theta)
-  - **矩形物体在斜面上的绘制方法**：
-    ```python
-    # 斜面参数
-    theta = np.radians(30)  # 斜面角度转弧度
-    incline_start_x = 0     # 斜面起点x
-    incline_start_y = 0     # 斜面起点y
-    distance_along_incline = 2  # 物体沿斜面的位置
+**错误示例（必须避免）**：
+```python
+# ❌ 错误1：使用未定义的变量
+plt.plot(x, y)  # x 和 y 未定义
 
-    # 物体底部中心在斜面上的坐标
-    bottom_center_x = incline_start_x + distance_along_incline * np.cos(theta)
-    bottom_center_y = incline_start_y + distance_along_incline * np.sin(theta)
+# ❌ 错误2：使用假设的数据
+data = article['values']  # article 未定义
 
-    # 矩形尺寸
-    rect_width = 1.0
-    rect_height = 0.5
+# ❌ 错误3：数据点太少导致曲线不平滑
+x = [0, 1, 2, 3]  # 只有4个点
+y = [0, 1, 4, 9]
+plt.plot(x, y)  # 曲线会很粗糙
+```
 
-    # 计算矩形四个顶点的坐标（考虑斜面旋转）
-    # 使用旋转矩阵：
-    # x' = x*cos(θ) - y*sin(θ)
-    # y' = x*sin(θ) + y*cos(θ)
-    # 其中(x,y)是未旋转时的相对坐标，(x',y')是旋转后的绝对坐标
+**正确示例（必须遵循）**：
+```python
+# ✅ 正确1：使用 numpy 生成密集数据点
+import numpy as np
+x = np.linspace(0, np.pi, 1000)  # 生成1000个点，确保曲线平滑
+y = np.sin(x)
+plt.plot(x, y, 'b-', linewidth=2)
 
-    # 未旋转时矩形的四个顶点（相对于底部中心）
-    corners = [
-        (-rect_width/2, 0),  # 左下
-        (rect_width/2, 0),   # 右下
-        (rect_width/2, rect_height),   # 右上
-        (-rect_width/2, rect_height)   # 左上
-    ]
+# ✅ 正确2：明确定义所有参数
+import numpy as np
+# 能谱示例
+k = np.linspace(0, np.pi, 1000)  # 波矢范围 0 到 π
+Lambda_k = np.abs(np.cos(k/2))   # 能谱公式
+plt.plot(k, Lambda_k, 'r-', linewidth=2)
 
-    # 旋转并平移到正确位置
-    rotated_corners = []
-    for x, y in corners:
-        rot_x = x * np.cos(theta) - y * np.sin(theta)
-        rot_y = x * np.sin(theta) + y * np.cos(theta)
-        rotated_corners.append((
-            bottom_center_x + rot_x,
-            bottom_center_y + rot_y
-        ))
+# ✅ 正确3：二维 Ising 模型磁化强度示例
+import numpy as np
+T = np.linspace(0, 1.5, 1000)    # T/T_c 范围
+T_c = 1.0
+# 对于 T < T_c，使用临界指数 β=1/8
+M = np.zeros_like(T)
+mask_below = T < T_c
+M[mask_below] = (1 - T[mask_below]/T_c)**(1/8)
+plt.plot(T, M, 'g-', linewidth=2)
 
-    # 使用Polygon绘制旋转后的矩形
-    from matplotlib.patches import Polygon
-    rect = Polygon(rotated_corners, facecolor='lightblue', edgecolor='black', linewidth=2)
-    ax.add_patch(rect)
-    ```
-  - **轮子（圆形）在斜面上的绘制方法**：
-    ```python
-    # 轮子必须接触斜面
-    wheel_radius = 0.15
-    wheel_center_x = bottom_center_x - (rect_width/2 - 0.1) * np.cos(theta)
-    wheel_center_y = bottom_center_y - (rect_width/2 - 0.1) * np.sin(theta) + wheel_radius
+# ✅ 正确4：添加适当的坐标轴范围和网格
+plt.xlim(0, np.pi)
+plt.ylim(0, 1.1)
+plt.grid(True, alpha=0.3)
+```
 
-    # 注意：轮子中心的y坐标应该是斜面高度 + 轮子半径
-    # 确保轮子底部刚好接触斜面
+#### 3.1.3 曲线绘制规范
+- 使用 `ax.plot(x, y, 'b-', linewidth=2, label='曲线名称')` 格式
+- 线条宽度设为 2-3，颜色醒目
+- 确保曲线在图形范围内清晰可见
+- 对于多条曲线，使用不同颜色和线型区分
 
-    wheel = Circle((wheel_center_x, wheel_center_y), wheel_radius,
-                   facecolor='black', edgecolor='black')
-    ax.add_patch(wheel)
-    ```
+#### 3.1.4 坐标轴设置规范
+- **必须显式设置坐标轴范围**（使用 ax.set_xlim 和 ax.set_ylim），确保曲线完整显示
+- 添加坐标轴标签，使用中文
+- 添加标题，说明图形内容
+- 添加网格线：`plt.grid(True, alpha=0.3)`
+- 使用清晰的刻度标记
+
+#### 3.1.5 特殊标注规范
+- 标注关键点（极值、零点、交点、临界点、能隙等）
+- 添加文字注释说明特殊点或区域
+- 对于能隙、相变点等重要位置，使用箭头或虚线标注
+- 示例：
+```python
+# 标注临界点
+ax.axvline(x=1, color='red', linestyle='--', alpha=0.5, label='T_c')
+ax.annotate('临界点 T_c', xy=(1, 0), xytext=(1.1, 0.2),
+            arrowprops=dict(arrowstyle='->', color='red'),
+            fontsize=12)
+```
+
+#### 3.1.6 物理规律正确性
+- 曲线形状必须符合物理规律（如能谱的连续性、磁化强度在临界点的平滑变化等）
+- 数学公式必须正确（如二维Ising模型的临界指数β=1/8）
+- 数据范围和比例关系必须合理
+- 对于物理系统的曲线，必须遵循已知的理论公式或规律
+
+ ### 3.2 物理示意图类（力学、电路、光学、机械结构等）
+  - **刚体约束条件和物理真实性**（最重要，必须严格遵守）：
+     - **接触面约束**：物体必须完全贴合接触面，不能有穿模或间隙
+     - **斜面约束**：斜面上的物体底部必须与斜面线精确重合，使用三角函数计算坐标
+     - **刚体完整性**：物体内部不能有任何线条穿模，所有几何关系必须精确计算
+     - **轮子约束**：轮子必须接触地面或斜面，轮心到接触面的距离等于半径
+     - **运动连续性**：如果展示运动状态，轨迹必须连续且平滑
+     - **角度精确性**：所有角度必须与标注一致，不能有视觉上的偏差
+     - **角度顶点定位**：摆动系统的角度顶点必须在支点/转轴处，绝不能标注在摆球或运动物体上
+     - **角度参考线**：必须绘制垂直向下的虚线作为角度参考线，从支点垂直向下延伸
+     - **比例一致性**：同类物体的大小比例必须合理，符合物理直觉
+     - **重力方向**：重力必须严格垂直向下，不能有偏差
+     - **力系平衡**：静止物体的受力分析必须满足平衡条件
+
+ - **物体表示**：使用标准几何形状，圆形用 Circle，矩形用 Rectangle
+ - **物体填充规范**：
+    - 实心物体使用 fill=True，填充适当的颜色（如 facecolor='lightblue'）
+    - 空心物体使用 fill=False，仅绘制边框
+
+ - **斜面物体的精确绘制**（非常重要，必须严格遵守）：
+    - **斜面上物体定位原则**：
+      * 物体底部必须完全贴合斜面，不能有穿模或间隙
+      * 使用三角函数精确计算，不能凭估计设置坐标
+    - **斜面角度转换**：
+      * 角度必须转换为弧度：theta_rad = np.radians(theta)
+    - **矩形物体在斜面上的绘制方法**：
+     ```python
+     # 斜面参数
+     theta = np.radians(30)  # 斜面角度转弧度
+     incline_start_x = 0     # 斜面起点x
+     incline_start_y = 0     # 斜面起点y
+     distance_along_incline = 2  # 物体沿斜面的位置
+
+     # 物体底部中心在斜面上的坐标
+     bottom_center_x = incline_start_x + distance_along_incline * np.cos(theta)
+     bottom_center_y = incline_start_y + distance_along_incline * np.sin(theta)
+
+     # 矩形尺寸
+     rect_width = 1.0
+     rect_height = 0.5
+
+     # 计算矩形四个顶点的坐标（考虑斜面旋转）
+     # 使用旋转矩阵：
+     # x' = x*cos(θ) - y*sin(θ)
+     # y' = x*sin(θ) + y*cos(θ)
+     # 其中(x,y)是未旋转时的相对坐标，(x',y')是旋转后的绝对坐标
+
+     # 未旋转时矩形的四个顶点（相对于底部中心）
+     corners = [
+         (-rect_width/2, 0),  # 左下
+         (rect_width/2, 0),   # 右下
+         (rect_width/2, rect_height),   # 右上
+         (-rect_width/2, rect_height)   # 左上
+     ]
+
+     # 旋转并平移到正确位置
+     rotated_corners = []
+     for x, y in corners:
+         rot_x = x * np.cos(theta) - y * np.sin(theta)
+         rot_y = x * np.sin(theta) + y * np.cos(theta)
+         rotated_corners.append((
+             bottom_center_x + rot_x,
+             bottom_center_y + rot_y
+         ))
+
+     # 使用Polygon绘制旋转后的矩形
+     from matplotlib.patches import Polygon
+     rect = Polygon(rotated_corners, facecolor='lightblue', edgecolor='black', linewidth=2)
+     ax.add_patch(rect)
+     ```
+    - **轮子（圆形）在斜面上的绘制方法**：
+      ```python
+      # 轮子必须接触斜面（刚体约束条件）
+      wheel_radius = 0.15
+      wheel_center_x = bottom_center_x - (rect_width/2 - 0.1) * np.cos(theta)
+      wheel_center_y = bottom_center_y - (rect_width/2 - 0.1) * np.sin(theta) + wheel_radius
+
+      # 注意：轮子中心的y坐标应该是斜面高度 + 轮子半径
+      # 确保轮子底部刚好接触斜面（物理真实性约束）
+      # 必须保证：轮心到斜面的垂直距离 = 轮子半径
+
+      wheel = Circle((wheel_center_x, wheel_center_y), wheel_radius,
+                     facecolor='black', edgecolor='black')
+      ax.add_patch(wheel)
+      ```
 
 - **文字标注位置**（重要）：
-  - 实心物体（如重物方块、填充的滑轮）：文字必须在物体外部，使用箭头指向
-  - 空心物体（如线框、无填充圆环）：文字可以在内部或外部
-  - 示例：ax.annotate('文字', xy=(物体边缘), xytext=(外部位置), arrowprops=dict(arrowstyle='->'))
+   - 实心物体（如重物方块、填充的滑轮）：文字必须在物体外部，使用箭头指向
+   - 空心物体（如线框、无填充圆环）：文字可以在内部或外部
+   - 示例：ax.annotate('文字', xy=(物体边缘), xytext=(外部位置), arrowprops=dict(arrowstyle='->'))
 - **连接关系**：绳索、导线、连杆等用直线，linewidth=2-2.5
 - **关键点**：支点、节点、连接点用实心圆点标记（marker='o', markersize=8）
 - **力和方向标注规范**（重要）：
-  - **重力 mg**：必须垂直向下（从物体指向地心，即 -y 方向），箭头向下
-  - **支持力 N**：垂直于接触面向外（如桌面的支持力向上）
-  - **拉力 T**：沿绳索方向，远离物体
-  - **摩擦力 f**：沿接触面，与相对运动或运动趋势方向相反
-  - 箭头使用 ax.annotate() 添加：ax.annotate('力名', xy=(起点), xytext=(终点), arrowprops=dict(arrowstyle='->', lw=2))
-  - 力的箭头应该从施力物体指向受力物体，或表示运动趋势方向
-  - 所有力必须标注清楚符号和大小（如有）
-- **角度标注规范**（重要）：
-  - 使用 matplotlib.patches.Arc 绘制角度弧线
-  - Arc 的中心点必须是角的顶点坐标
-  - 弧线半径适中（0.15-0.25 倍图形尺寸），不要太大或太小
-  - theta1 和 theta2 参数必须是角度值（0-360），不是弧度
-  - 角度文字使用 ax.annotate() 放置在弧线中间位置
-  - 标准格式：Arc(xy=顶点坐标, width=2*半径, height=2*半径, angle=0, theta1=起始角, theta2=结束角, color='颜色')
+   - **重力 mg**：必须垂直向下（从物体指向地心，即 -y 方向），箭头向下
+   - **支持力 N**：垂直于接触面向外（如桌面的支持力向上）
+   - **拉力 T**：沿绳索方向，远离物体
+   - **摩擦力 f**：沿接触面，与相对运动或运动趋势方向相反
+   - 箭头使用 ax.annotate() 添加：ax.annotate('力名', xy=(起点), xytext=(终点), arrowprops=dict(arrowstyle='->', lw=2))
+   - 力的箭头应该从施力物体指向受力物体，或表示运动趋势方向
+   - 所有力必须标注清楚符号和大小（如有）
+ - **角度标注规范**（最重要）：
+    - **角的顶点定位原则**：角度的顶点必须在支点或转动轴上，绝不能标注在摆球或其他运动物体上
+    - **单摆角度标注**（必须严格遵守）：
+       * 角度θ的顶点在单摆的固定支点处
+       * 一条边沿垂直向下方向（平衡位置，即0度或270度方向）
+       * 另一条边沿摆线方向（实际摆动位置）
+       - 使用 matplotlib.patches.Arc 绘制角度弧线，弧的圆心必须在支点坐标
+       - 弧线半径适中（0.15-0.25 倍图形尺寸），不要太大或太小
+       - theta1 和 theta2 参数必须是角度值（0-360），不是弧度
+       - 从垂直向下方向（270度）开始，到摆线方向（270+θ度）
+       - 角度文字使用 ax.annotate() 放置在弧线中间位置
+       - 标准格式：Arc(xy=顶点坐标, width=2*半径, height=2*半径, angle=0, theta1=起始角, theta2=结束角, color='颜色')
+    - **辅助线标注**（重要）：
+       - 必须绘制垂直向下的虚线作为角度参考线（从支点垂直向下）
+       - 使用 ax.plot() 绘制虚线：`ax.plot([支点x, 支点x], [支点y, 支点y - 长度], 'k--', alpha=0.5)`
+       - 确保角度弧线清晰显示在两条边之间
 - **尺寸标注**：添加必要的长度、半径标注
 - **符号规范**：使用标准物理符号（如 F、mg、N、T、θ、α 等）
 - 坐标轴比例相等（ax.set_aspect('equal')）
@@ -360,12 +498,12 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 ### 3.3 几何图形类（三角形、圆形、多边形等）
 - 使用几何图形的标准画法
 - **角度标注**（重要）：
-  - 使用 matplotlib.patches.Arc 绘制角度弧线
-  - Arc 的中心点(xy)必须是角的顶点坐标
-  - width 和 height 设为相同值（2*半径），确保是圆弧
-  - theta1 和 theta2 必须是角度值（0-360度），计算从正x轴逆时针旋转的角度
-  - 角度文字标签放置在弧线中点附近（使用三角函数计算中点坐标）
-  - 示例：对于顶点在(0,0)，边线指向0°和60°的角，使用 Arc(xy=(0,0), width=0.4, height=0.4, angle=0, theta1=0, theta2=60)
+   - 使用 matplotlib.patches.Arc 绘制角度弧线
+   - Arc 的中心点(xy)必须是角的顶点坐标
+   - width 和 height 设为相同值（2*半径），确保是圆弧
+   - theta1 和 theta2 必须是角度值（0-360度），计算从正x轴逆时针旋转的角度
+   - 角度文字标签放置在弧线中点附近（使用三角函数计算中点坐标）
+   - 示例：对于顶点在(0,0)，边线指向0°和60°的角，使用 Arc(xy=(0,0), width=0.4, height=0.4, angle=0, theta1=0, theta2=60)
 - 标注顶点、边长、角度、半径等关键参数
 - 使用 ax.set_aspect('equal') 保持比例
 - 添加辅助线（虚线）帮助理解
@@ -388,7 +526,7 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 
 **⚠️ 使用模板前必须确认**：按照【零、代码质量要求】检查生成的代码，确保所有括号都闭合！
 
-### 4.1 数据可视化类模板（折线图、柱状图等）
+### 4.1 数据可视化类模板（折线图、曲线图等）——最常用！
 ```python
 import matplotlib.pyplot as plt
 import matplotlib
@@ -404,22 +542,22 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
 
 # 【重要】所有数据必须在代码中显式定义
-# 示例1：绘制折线图
-x = np.linspace(0, 2*np.pi, 100)  # 定义x坐标数据
-y = np.sin(x)                      # 定义y坐标数据
-ax.plot(x, y, 'b-', linewidth=2, label='正弦波')
+# 示例1：绘制能谱曲线
+k = np.linspace(0, np.pi, 1000)      # 波矢范围 0 到 π
+Lambda_k = np.abs(np.cos(k/2))      # 能谱公式
+ax.plot(k, Lambda_k, 'b-', linewidth=2, label='能谱 Λ_k')
 
-# 示例2：绘制柱状图
-categories = ['1月', '2月', '3月', '4月', '5月']  # 定义类别
-values = [120, 150, 180, 200, 190]              # 定义数值
-ax.bar(categories, values, color='steelblue')
+# 设置坐标轴
+plt.xlabel('波矢 k', fontsize=12)
+plt.ylabel('能谱 Λ_k', fontsize=12)
+plt.title('能谱随波矢的变化', fontsize=16)
 
-# 设置标题、标签
-plt.title('标题', fontsize=16)
-plt.xlabel('X轴', fontsize=12)
-plt.ylabel('Y轴', fontsize=12)
+# 设置坐标轴范围（必须显式设置）
+plt.xlim(0, np.pi)
+plt.ylim(0, 1.1)
 
-# 添加图例
+# 添加网格和图例
+plt.grid(True, alpha=0.3)
 plt.legend()
 
 # 调整布局
@@ -428,6 +566,16 @@ plt.tight_layout()
 # 保存图片
 plt.savefig(target_filename, dpi=100, bbox_inches='tight')
 plt.close()
+
+# 示例2：绘制二维Ising模型磁化强度曲线
+# T = np.linspace(0, 1.5, 1000)  # T/T_c 范围
+# T_c = 1.0
+# M = np.zeros_like(T)
+# mask_below = T < T_c
+# M[mask_below] = (1 - T[mask_below]/T_c)**(1/8)  # 临界指数 β=1/8
+# ax.plot(T, M, 'g-', linewidth=2, label='磁化强度 M')
+# ax.axvline(x=T_c, color='red', linestyle='--', alpha=0.5, label='T_c')
+# ax.annotate('β=1/8', xy=(0.5, 0.8), fontsize=12, ha='center')
 ```
 
 ### 4.2 物理示意图模板
@@ -446,40 +594,40 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 # 创建图形
 fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
 
-# 【重要】所有参数必须在代码中定义
-# 示例：斜面上的物体
-theta = np.radians(30)  # 斜面角度（转换为弧度）
-incline_start_x = 0     # 斜面起点
-incline_start_y = 0
-incline_length = 5      # 斜面长度
-rect_width = 1.0        # 物体宽度
-rect_height = 0.5       # 物体高度
-distance_along = 2      # 物体沿斜面的位置
+ # 【重要】所有参数必须在代码中定义
+ # 示例：斜面上的物体（必须严格遵守刚体约束条件）
+ theta = np.radians(30)  # 斜面角度（转换为弧度）
+ incline_start_x = 0     # 斜面起点
+ incline_start_y = 0
+ incline_length = 5      # 斜面长度
+ rect_width = 1.0        # 物体宽度
+ rect_height = 0.5       # 物体高度
+ distance_along = 2      # 物体沿斜面的位置
 
-# 计算物体底部中心在斜面上的坐标
-bottom_center_x = incline_start_x + distance_along * np.cos(theta)
-bottom_center_y = incline_start_y + distance_along * np.sin(theta)
+ # 计算物体底部中心在斜面上的坐标（精确计算，确保完全贴合斜面）
+ bottom_center_x = incline_start_x + distance_along * np.cos(theta)
+ bottom_center_y = incline_start_y + distance_along * np.sin(theta)
 
-# 绘制斜面
-ax.plot([incline_start_x, incline_start_x + incline_length * np.cos(theta)],
-        [incline_start_y, incline_start_y + incline_length * np.sin(theta)],
-        'k-', linewidth=3)
+ # 绘制斜面
+ ax.plot([incline_start_x, incline_start_x + incline_length * np.cos(theta)],
+         [incline_start_y, incline_start_y + incline_length * np.sin(theta)],
+         'k-', linewidth=3)
 
-# 计算并绘制旋转后的矩形
-corners = [
-    (-rect_width/2, 0),
-    (rect_width/2, 0),
-    (rect_width/2, rect_height),
-    (-rect_width/2, rect_height)
-]
-rotated_corners = []
-for x, y in corners:
-    rot_x = x * np.cos(theta) - y * np.sin(theta)
-    rot_y = x * np.sin(theta) + y * np.cos(theta)
-    rotated_corners.append((bottom_center_x + rot_x, bottom_center_y + rot_y))
+ # 计算并绘制旋转后的矩形（刚体约束：底部必须完全贴合斜面）
+ corners = [
+     (-rect_width/2, 0),
+     (rect_width/2, 0),
+     (rect_width/2, rect_height),
+     (-rect_width/2, rect_height)
+ ]
+ rotated_corners = []
+ for x, y in corners:
+     rot_x = x * np.cos(theta) - y * np.sin(theta)
+     rot_y = x * np.sin(theta) + y * np.cos(theta)
+     rotated_corners.append((bottom_center_x + rot_x, bottom_center_y + rot_y))
 
-rect = Polygon(rotated_corners, facecolor='lightblue', edgecolor='black', linewidth=2)
-ax.add_patch(rect)
+ rect = Polygon(rotated_corners, facecolor='lightblue', edgecolor='black', linewidth=2)
+ ax.add_patch(rect)
 
 # 添加标注
 ax.annotate('物体', xy=(bottom_center_x, bottom_center_y + rect_height/2),
@@ -495,47 +643,120 @@ plt.savefig(target_filename, dpi=100, bbox_inches='tight')
 plt.close()
 ```
 
-## 五、角度标注标准示例
-```python
-from matplotlib.patches import Arc
-import numpy as np
+ ## 五、角度标注标准示例
 
-# 角的顶点坐标
-vertex = (0, 0)
+ ### 5.1 单摆角度标注（最重要）
+ ```python
+ from matplotlib.patches import Arc
+ import numpy as np
 
-# 两条边的角度（单位：度，从正x轴逆时针测量）
-angle1 = 0    # 第一条边的角度
-angle2 = 60   # 第二条边的角度
+ # 单摆参数
+ pivot_x, pivot_y = 0, 2  # 支点坐标
+ theta = np.radians(30)   # 摆角（弧度）
+ string_length = 1.5      # 摆长
 
-# 绘制角度弧线
-arc_radius = .2  # 弧线半径
-angle_arc = Arc(
-    xy=vertex,           # 弧的圆心（角的顶点）
-    width=2*arc_radius,  # 宽度=2*半径
-    height=2*arc_radius, # 高度=2*半径
-    angle=0,             # 弧自身的旋转角度（通常为0）
-    theta1=angle1,       # 起始角度（度）
-    theta2=angle2,       # 结束角度（度）
-    color='red',         # 弧线颜色
-    linewidth=1.5
-)
-ax.add_patch(angle_arc)
+ # 计算摆球位置
+ ball_x = pivot_x + string_length * np.sin(theta)
+ ball_y = pivot_y - string_length * np.cos(theta)
 
-# 计算弧线中点位置（用于放置文字标签）
-mid_angle = np.radians((angle1 + angle2) / 2)  # 转换为弧度
-label_radius = arc_radius * 1.5  # 文字距离稍远一点
-label_x = vertex[0] + label_radius * np.cos(mid_angle)
-label_y = vertex[1] + label_radius * np.sin(mid_angle)
+ # 绘制支点
+ ax.plot(pivot_x, pivot_y, 'ko', markersize=8, zorder=10)
 
-# 添加角度标签
-ax.annotate(
-    f'θ',  # 角度符号
-    xy=(label_x, label_y),
-    fontsize=12,
-    ha='center',
-    va='center'
-)
-```
+ # 绘制摆线
+ ax.plot([pivot_x, ball_x], [pivot_y, ball_y], 'k-', linewidth=2, zorder=5)
+
+ # 绘制摆球
+ from matplotlib.patches import Circle
+ ball = Circle((ball_x, ball_y), 0.1, facecolor='red', edgecolor='black', zorder=6)
+ ax.add_patch(ball)
+
+ # 【关键步骤1】绘制垂直向下的虚线作为角度参考线
+ # 从支点垂直向下延伸一定长度
+ reference_length = 1.0
+ ax.plot([pivot_x, pivot_x],
+        [pivot_y, pivot_y - reference_length],
+        'k--', alpha=0.5, linewidth=1.5, zorder=3, label='平衡位置')
+
+ # 【关键步骤2】绘制角度弧线
+ # 弧的圆心必须在支点坐标（pivot_x, pivot_y）
+ # 从垂直向下方向（270度）开始，到摆线方向（270+θ度）
+ theta_deg = np.degrees(theta)  # 转换为角度
+ arc_radius = 0.3  # 弧线半径
+ angle_arc = Arc(
+     xy=(pivot_x, pivot_y),      # 弧的圆心（角的顶点必须在支点）
+     width=2*arc_radius,
+     height=2*arc_radius,
+     angle=0,
+     theta1=270,                  # 起始角度：垂直向下（270度）
+     theta2=270 + theta_deg,     # 结束角度：270+θ度
+     color='red',
+     linewidth=2,
+     zorder=4
+ )
+ ax.add_patch(angle_arc)
+
+ # 【关键步骤3】计算弧线中点位置并放置角度标签
+ mid_angle_deg = 270 + theta_deg / 2  # 弧线中点的角度（度）
+ mid_angle_rad = np.radians(mid_angle_deg)  # 转换为弧度
+ label_radius = arc_radius * 1.4  # 标签距离
+ label_x = pivot_x + label_radius * np.cos(mid_angle_rad)
+ label_y = pivot_y + label_radius * np.sin(mid_angle_rad)
+
+ # 添加角度标签
+ ax.annotate(
+     f'θ',
+     xy=(label_x, label_y),
+     fontsize=14,
+     ha='center',
+     va='center',
+     bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='none', alpha=0.8)
+ )
+
+ # 设置坐标轴比例相等，确保角度显示正确
+ ax.set_aspect('equal')
+ ```
+
+ ### 5.2 通用角度标注
+ ```python
+ from matplotlib.patches import Arc
+ import numpy as np
+
+ # 角的顶点坐标
+ vertex = (0, 0)
+
+ # 两条边的角度（单位：度，从正x轴逆时针测量）
+ angle1 = 0    # 第一条边的角度
+ angle2 = 60   # 第二条边的角度
+
+ # 绘制角度弧线
+ arc_radius = .2  # 弧线半径
+ angle_arc = Arc(
+     xy=vertex,           # 弧的圆心（角的顶点）
+     width=2*arc_radius,  # 宽度=2*半径
+     height=2*arc_radius, # 高度=2*半径
+     angle=0,             # 弧自身的旋转角度（通常为0）
+     theta1=angle1,       # 起始角度（度）
+     theta2=angle2,       # 结束角度（度）
+     color='red',         # 弧线颜色
+     linewidth=1.5
+ )
+ ax.add_patch(angle_arc)
+
+ # 计算弧线中点位置（用于放置文字标签）
+ mid_angle = np.radians((angle1 + angle2) / 2)  # 转换为弧度
+ label_radius = arc_radius * 1.5  # 文字距离稍远一点
+ label_x = vertex[0] + label_radius * np.cos(mid_angle)
+ label_y = vertex[1] + label_radius * np.sin(mid_angle)
+
+ # 添加角度标签
+ ax.annotate(
+     f'θ',  # 角度符号
+     xy=(label_x, label_y),
+     fontsize=12,
+     ha='center',
+     va='center'
+ )
+ ```
 
 ## 六、力的标注标准示例
 ```python
@@ -624,23 +845,32 @@ ax.annotate(
 ## 八、质量检查清单
 生成代码前请确认：
 □ **语法正确**（最重要！）
-  - 所有 `()` `[]` `{}` 括号都正确配对
-  - 所有引号 `'"` 都正确配对
-  - 没有未闭合的括号或引号
-  - **每个函数调用都以 `)` 结尾**
+   - 所有 `()` `[]` `{}` 括号都正确配对
+   - 所有引号 `'"` 都正确配对
+   - 没有未闭合的括号或引号
+   - **每个函数调用都以 `)` 结尾**
 □ **所有变量都已明确定义**（最重要！不要使用未定义的变量如 article、data 等）
 □ **所有数据都在代码中显式定义或生成**（不要假设外部数据存在）
+□ **数据点足够密集**（曲线图至少1000个点，确保曲线平滑）
+□ **坐标轴范围已显式设置**（使用 ax.set_xlim 和 ax.set_ylim）
+□ **物理公式正确**（如二维Ising模型的临界指数β=1/8）
 □ 图形尺寸合适，不拥挤
-□ 所有重要元素都有中文标注
-□ 颜色方案专业、清晰
-□ 线条粗细有层次
-□ 布局合理，主体居中
-□ 需要保持比例的图形设置了 equal
-□ 添加了图例说明
-□ 实心物体的文字标注在外部，空心物体的文字标注可在内部或外部
-□ 角度标注使用了正确的 Arc 参数（顶点坐标、角度值为度数）
-□ 力的方向正确：重力向下、支持力垂直接触面、拉力沿绳远离物体
-□ **图层顺序正确**：背景→网格→主体→填充→箭头→文字（使用了正确的 zorder 值）
+ □ 所有重要元素都有中文标注
+ □ 颜色方案专业、清晰
+ □ 线条粗细有层次
+ □ 布局合理，主体居中
+ □ 需要保持比例的图形设置了 equal
+ □ 添加了图例说明
+ □ 实心物体的文字标注在外部，空心物体的文字标注可在内部或外部
+  □ **角度标注使用了正确的 Arc 参数**（顶点坐标、角度值为度数）
+  □ **单摆角度顶点在支点处**，绝不能标注在摆球上
+  □ **绘制了垂直向下的虚线**作为角度参考线
+  □ **角度弧线清晰可见**，半径适中（0.15-0.25倍图形尺寸）
+  □ **角度标签位置合适**，在弧线中点附近
+  □ 力的方向正确：重力向下、支持力垂直接触面、拉力沿绳远离物体
+ □ **刚体约束条件满足**：物体完全贴合接触面，无穿模或间隙
+ □ **物理真实性满足**：轮子接触面，角度精确，重力方向正确
+ □ **图层顺序正确**：背景→网格→主体→填充→箭头→文字（使用了正确的 zorder 值）
 □ **避免遮挡**：填充区域使用了 alpha 透明度，文字标注在最上层（zorder=10）
 □ **导入正确**：没有使用 `matplotlib.patches.Line2D`，线条使用 ax.plot() 等方法
 □ **代码可以直接执行，无语法错误**
@@ -663,10 +893,29 @@ ax.annotate(
    - 所有包含 `xytext=` 的行，确保最后有 `)`
    - 所有跨越多行的函数调用，确保最后有 `)`
 
-3. **执行测试**：在脑海中逐行执行一遍代码，确认每一行都完整
+ 3. **数据生成检查**（最重要）：
+    - 检查所有数据变量（x, y, k, Lambda_k, T, M 等）是否都已定义
+    - 检查是否使用了 numpy 生成足够密集的数据点（至少1000个）
+    - 检查是否显式设置了坐标轴范围
+
+  4. **刚体约束条件检查**（物理示意图必须检查）：
+     - 斜面上的物体是否完全贴合斜面，无穿模或间隙
+     - 轮子是否接触地面或斜面，轮心到接触面的距离是否等于半径
+     - 角度是否与标注一致，使用三角函数精确计算坐标
+     - 重力是否严格垂直向下，无偏差
+
+  5. **单摆/摆动系统角度标注检查**（重要，必须检查）：
+     - 角度θ的顶点是否在支点/转轴坐标处（绝不能在摆球上）
+     - 是否绘制了垂直向下的虚线作为角度参考线
+     - 角度弧线的圆心参数xy是否设置为支点坐标
+     - 角度弧线的theta1和theta2参数是否为角度值（度数）
+     - 对于单摆：theta1=270（垂直向下），theta2=270+θ度
+     - 角度标签是否放置在弧线中点附近，清晰可见
+
+ 5. **执行测试**：在脑海中逐行执行一遍代码，确认每一行都完整
 
 **✓ 只有完成以上检查，确认代码无语法错误后，才能输出！**
-**✗ 如果发现任何未闭合的括号，立即修复后再输出！**
+**✗ 如果发现任何未闭合的括号或未定义的变量，立即修复后再输出！**
 
 ---"""
                 },
