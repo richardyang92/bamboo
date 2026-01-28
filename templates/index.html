@@ -2058,18 +2058,6 @@
                 </button>
             </div>
 
-            <!-- 视图切换 (仅绘图模式显示) - Material Design Segmented Button -->
-            <div class="md-segmented" id="viewToggle">
-                <button class="md-segmented-item active" onclick="switchView('standard')" id="standardViewBtn">
-                    <span class="material-icons">view_stream</span>
-                    <span>标准</span>
-                </button>
-                <button class="md-segmented-item" onclick="switchView('workflow')" id="workflowViewBtn">
-                    <span class="material-icons">account_tree</span>
-                    <span>工作流</span>
-                </button>
-            </div>
-
             <!-- 历史记录 - Material Design Text Button -->
             <button class="md-button md-button-text" onclick="goToHistory()">
                 <span class="material-icons">history</span>
@@ -2260,219 +2248,6 @@
         </div>
     </div>
         <!-- 标准视图结束 -->
-
-    <!-- 工作流视图 -->
-    <div class="workflow-view" id="workflowView">
-        <div class="workflow-container">
-
-            <!-- 工作流节点 -->
-            <div class="workflow-nodes">
-                <!-- 输入节点 -->
-                <div class="workflow-node input-node" id="inputNode">
-                    <div class="workflow-node-card" onclick="openInputModal()">
-                        <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon"><span class="material-icons">edit_note</span></div>
-                        <div class="workflow-node-title">输入需求</div>
-                        <div class="workflow-node-desc">点击输入绘图需求</div>
-                    </div>
-                </div>
-
-                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                <!-- 节点1 -->
-                <div class="workflow-node" id="workflowNode1">
-                    <div class="workflow-node-card pending">
-                        <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon"><span class="material-icons">auto_fix_high</span></div>
-                        <div class="workflow-node-title">润色提示词</div>
-                        <div class="workflow-node-desc">优化用户输入的绘图需求</div>
-                    </div>
-                </div>
-
-                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                <!-- 节点2 -->
-                <div class="workflow-node" id="workflowNode2">
-                    <div class="workflow-node-card pending">
-                        <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon"><span class="material-icons">smart_toy</span></div>
-                        <div class="workflow-node-title">生成代码</div>
-                        <div class="workflow-node-desc">AI生成Python绘图代码</div>
-                    </div>
-                </div>
-
-                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                <!-- 节点3 -->
-                <div class="workflow-node" id="workflowNode3">
-                    <div class="workflow-node-card pending">
-                        <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon"><span class="material-icons">play_circle</span></div>
-                        <div class="workflow-node-title">执行代码</div>
-                        <div class="workflow-node-desc">运行代码生成图表</div>
-                    </div>
-                </div>
-
-                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                <!-- 节点4 -->
-                <div class="workflow-node" id="workflowNode4">
-                    <div class="workflow-node-card pending">
-                        <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon"><span class="material-icons">save</span></div>
-                        <div class="workflow-node-title">保存图片</div>
-                        <div class="workflow-node-desc">验证并保存结果</div>
-                    </div>
-                </div>
-
-                <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                <!-- 输出节点 -->
-                <div class="workflow-node output-node" id="outputNode">
-                    <div class="workflow-node-card" onclick="openImageModal()">
-                        <div class="workflow-node-status"></div>
-                        <div class="workflow-node-icon"><span class="material-icons">image</span></div>
-                        <div class="workflow-node-title">查看结果</div>
-                        <div class="workflow-node-desc">点击查看生成的图表</div>
-                        <div class="output-thumbnail" id="outputThumbnail">
-                            <div class="output-thumbnail-placeholder"><span class="material-icons">bar_chart</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 工作流详细信息 -->
-            <div class="workflow-info">
-                <div class="workflow-info-title">
-                    <span class="material-icons">list_alt</span>
-                    <span>执行详情</span>
-                    <span class="execution-status-indicator idle" id="executionStatusIndicator"></span>
-                </div>
-                <div class="workflow-steps-detail" id="workflowStepsDetail">
-                    <div class="workflow-step-item">
-                        <div class="workflow-step-number">1</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">润色提示词</div>
-                            <div class="workflow-step-desc">优化用户的绘图需求描述</div>
-                        </div>
-                        <div class="workflow-step-time">等待中</div>
-                    </div>
-                    <div class="workflow-step-item">
-                        <div class="workflow-step-number">2</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">生成绘图代码</div>
-                            <div class="workflow-step-desc">使用DeepSeek AI生成Python代码</div>
-                        </div>
-                        <div class="workflow-step-time">等待中</div>
-                    </div>
-                    <div class="workflow-step-item">
-                        <div class="workflow-step-number">3</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">执行绘图代码</div>
-                            <div class="workflow-step-desc">运行matplotlib生成图表</div>
-                        </div>
-                        <div class="workflow-step-time">等待中</div>
-                    </div>
-                    <div class="workflow-step-item">
-                        <div class="workflow-step-number">4</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">验证图片保存</div>
-                            <div class="workflow-step-desc">检查图片文件并返回结果</div>
-                        </div>
-                        <div class="workflow-step-time">等待中</div>
-                    </div>
-                </div>
-            </div>
-                <div class="workflow-steps-detail" id="workflowStepsDetail">
-                    <div class="workflow-step-item">
-                        <div class="workflow-step-number">1</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">润色提示词</div>
-                            <div class="workflow-step-desc">优化用户的绘图需求描述</div>
-                        </div>
-                        <div class="workflow-step-time">等待中</div>
-                    </div>
-                    <div class="workflow-step-item">
-                        <div class="workflow-step-number">2</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">生成绘图代码</div>
-                            <div class="workflow-step-desc">使用DeepSeek AI生成Python代码</div>
-                        </div>
-                        <div class="workflow-step-time">等待中</div>
-                    </div>
-                    <div class="workflow-step-item">
-                        <div class="workflow-step-number">3</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">执行绘图代码</div>
-                            <div class="workflow-step-desc">运行matplotlib生成图表</div>
-                        </div>
-                        <div class="workflow-step-time">等待中</div>
-                    </div>
-                    <div class="workflow-step-item">
-                        <div class="workflow-step-number">4</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">验证图片保存</div>
-                            <div class="workflow-step-desc">检查图片文件并返回结果</div>
-                        </div>
-                        <div class="workflow-step-time">等待中</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loading 遮罩 -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-    </div>
-
-    <!-- 输入对话框 -->
-    <div class="input-modal" id="inputModal">
-        <div class="input-modal-backdrop" onclick="closeInputModal()"></div>
-        <div class="input-modal-content">
-            <div class="input-modal-header">
-                <div class="input-modal-title">
-                    <span class="material-icons">edit_note</span>
-                    <span>输入绘图需求</span>
-                </div>
-                <button class="input-modal-close" onclick="closeInputModal()"><span class="material-icons">close</span></button>
-            </div>
-
-            <!-- 快捷模板 -->
-            <div class="workflow-templates" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px;">
-                <div class="md-chip" onclick="useTemplateInModal('sine')">
-                    <span class="material-icons">show_chart</span>
-                    <span>正弦波</span>
-                </div>
-                <div class="md-chip" onclick="useTemplateInModal('bar')">
-                    <span class="material-icons">bar_chart</span>
-                    <span>柱状图</span>
-                </div>
-                <div class="md-chip" onclick="useTemplateInModal('scatter')">
-                    <span class="material-icons">scatter_plot</span>
-                    <span>散点图</span>
-                </div>
-                <div class="md-chip" onclick="useTemplateInModal('physics')">
-                    <span class="material-icons">science</span>
-                    <span>物理图</span>
-                </div>
-            </div>
-
-            <!-- 输入框 -->
-            <div class="workflow-input-wrapper" style="margin-bottom: 20px;">
-                <textarea id="modalPromptInput" class="workflow-textarea" placeholder="描述您想要生成的图表，例如：&#10;&#10;• 绘制一个正弦波图形，x轴范围0到2π&#10;• 生成柱状图显示月度销售数据&#10;• 创建斜面上的物体受力分析图"></textarea>
-            </div>
-
-            <!-- 操作按钮 -->
-            <div class="workflow-button-group">
-                <button class="md-button md-button-contained" onclick="submitFromModal()" style="width: 100%;">
-                    <span class="material-icons">rocket_launch</span>
-                    <span>生成图表</span>
-                </button>
-            </div>
-        </div>
-    </div>
-    <!-- 工作流视图结束 -->
 
     <!-- 绘图模式容器结束 -->
     </div>
@@ -2728,246 +2503,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- 文档工作流视图 -->
-        <div class="workflow-view" id="documentWorkflowView">
-            <div class="workflow-container">
-
-                <!-- 工作流节点 -->
-                <div class="workflow-nodes">
-                    <!-- 输入节点 -->
-                    <div class="workflow-node input-node" id="docInputNode">
-                        <div class="workflow-node-card" onclick="openDocInputModal()">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">edit_note</span></div>
-                            <div class="workflow-node-title">输入需求</div>
-                            <div class="workflow-node-desc">点击输入文档主题</div>
-                        </div>
-                    </div>
-
-                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                    <!-- 节点1 -->
-                    <div class="workflow-node" id="docWorkflowNode1">
-                        <div class="workflow-node-card pending">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">auto_fix_high</span></div>
-                            <div class="workflow-node-title">润色需求</div>
-                            <div class="workflow-node-desc">优化文档写作需求</div>
-                        </div>
-                    </div>
-
-                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                    <!-- 节点2 -->
-                    <div class="workflow-node" id="docWorkflowNode2">
-                        <div class="workflow-node-card pending">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">view_list</span></div>
-                            <div class="workflow-node-title">生成大纲</div>
-                            <div class="workflow-node-desc">AI生成文档大纲结构</div>
-                        </div>
-                    </div>
-
-                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                    <!-- 节点3 -->
-                    <div class="workflow-node" id="docWorkflowNode3">
-                        <div class="workflow-node-card pending">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">edit</span></div>
-                            <div class="workflow-node-title">生成内容</div>
-                            <div class="workflow-node-desc">撰写完整文档内容</div>
-                        </div>
-                    </div>
-
-                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                    <!-- 节点4 -->
-                    <div class="workflow-node" id="docWorkflowNode4">
-                        <div class="workflow-node-card pending">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">bar_chart</span></div>
-                            <div class="workflow-node-title">生成图表</div>
-                            <div class="workflow-node-desc">识别并生成所需图片</div>
-                        </div>
-                    </div>
-
-                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                    <!-- 节点5 -->
-                    <div class="workflow-node" id="docWorkflowNode5">
-                        <div class="workflow-node-card pending">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">image</span></div>
-                            <div class="workflow-node-title">整合图片</div>
-                            <div class="workflow-node-desc">将图片嵌入文档</div>
-                        </div>
-                    </div>
-
-                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                    <!-- 节点6 -->
-                    <div class="workflow-node" id="docWorkflowNode6">
-                        <div class="workflow-node-card pending">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">save</span></div>
-                            <div class="workflow-node-title">保存文档</div>
-                            <div class="workflow-node-desc">验证并保存结果</div>
-                        </div>
-                    </div>
-
-                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                    <!-- 节点7 -->
-                    <div class="workflow-node" id="docWorkflowNode7">
-                        <div class="workflow-node-card pending">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">check_circle</span></div>
-                            <div class="workflow-node-title">验证文档</div>
-                            <div class="workflow-node-desc">检查文档完整性</div>
-                        </div>
-                    </div>
-
-                    <div class="workflow-arrow"><span class="material-icons">arrow_forward</span></div>
-
-                    <!-- 输出节点 -->
-                    <div class="workflow-node output-node" id="docOutputNode">
-                        <div class="workflow-node-card" onclick="openDocumentResultModal()">
-                            <div class="workflow-node-status"></div>
-                            <div class="workflow-node-icon"><span class="material-icons">article</span></div>
-                            <div class="workflow-node-title">查看结果</div>
-                            <div class="workflow-node-desc">点击查看生成的文档</div>
-                            <div class="output-thumbnail" id="docOutputThumbnail">
-                                <div class="output-thumbnail-placeholder"><span class="material-icons">description</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 工作流详细信息 -->
-                <div class="workflow-info">
-                    <div class="workflow-info-title">
-                        <span class="material-icons">list_alt</span>
-                        <span>执行详情</span>
-                        <span class="execution-status-indicator idle" id="docExecutionStatusIndicator"></span>
-                    </div>
-                    <div class="workflow-steps-detail" id="docWorkflowStepsDetail">
-                        <div class="workflow-step-item">
-                            <div class="workflow-step-number">1</div>
-                            <div class="workflow-step-content">
-                                <div class="workflow-step-title">润色写作需求</div>
-                                <div class="workflow-step-desc">优化用户的文档写作需求</div>
-                            </div>
-                            <div class="workflow-step-time">等待中</div>
-                        </div>
-                        <div class="workflow-step-item">
-                            <div class="workflow-step-number">2</div>
-                            <div class="workflow-step-content">
-                                <div class="workflow-step-title">生成文档大纲</div>
-                                <div class="workflow-step-desc">AI生成完整的文档结构</div>
-                            </div>
-                            <div class="workflow-step-time">等待中</div>
-                        </div>
-                        <div class="workflow-step-item">
-                            <div class="workflow-step-number">3</div>
-                            <div class="workflow-step-content">
-                                <div class="workflow-step-title">生成文档内容</div>
-                                <div class="workflow-step-desc">撰写完整的Markdown文档</div>
-                            </div>
-                            <div class="workflow-step-time">等待中</div>
-                        </div>
-                        <div class="workflow-step-item">
-                            <div class="workflow-step-number">4</div>
-                            <div class="workflow-step-content">
-                                <div class="workflow-step-title">识别图片需求</div>
-                                <div class="workflow-step-desc">分析文档并识别需要图表的位置</div>
-                            </div>
-                            <div class="workflow-step-time">等待中</div>
-                        </div>
-                        <div class="workflow-step-item">
-                            <div class="workflow-step-number">5</div>
-                            <div class="workflow-step-content">
-                                <div class="workflow-step-title">生成图表</div>
-                                <div class="workflow-step-desc">使用matplotlib生成所需图片</div>
-                            </div>
-                            <div class="workflow-step-time">等待中</div>
-                        </div>
-                        <div class="workflow-step-item">
-                            <div class="workflow-step-number">6</div>
-                            <div class="workflow-step-content">
-                                <div class="workflow-step-title">整合图片到文档</div>
-                                <div class="workflow-step-desc">将生成的图片嵌入文档中</div>
-                            </div>
-                            <div class="workflow-step-time">等待中</div>
-                        </div>
-                        <div class="workflow-step-item">
-                            <div class="workflow-step-number">7</div>
-                            <div class="workflow-step-content">
-                                <div class="workflow-step-title">保存文档</div>
-                                <div class="workflow-step-desc">验证并保存最终文档</div>
-                            </div>
-                            <div class="workflow-step-time">等待中</div>
-                        </div>
-                        <div class="workflow-step-item">
-                            <div class="workflow-step-number">8</div>
-                            <div class="workflow-step-content">
-                                <div class="workflow-step-title">验证文档</div>
-                                <div class="workflow-step-desc">检查文档完整性和格式</div>
-                            </div>
-                            <div class="workflow-step-time">等待中</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 文档输入对话框 -->
-    <div class="input-modal" id="docInputModal">
-        <div class="input-modal-backdrop" onclick="closeDocInputModal()"></div>
-        <div class="input-modal-content">
-            <div class="input-modal-header">
-                <div class="input-modal-title">
-                    <span class="material-icons">edit_note</span>
-                    <span>输入文档主题</span>
-                </div>
-                <button class="input-modal-close" onclick="closeDocInputModal()"><span class="material-icons">close</span></button>
-            </div>
-
-            <!-- 文档模板 -->
-            <div class="workflow-templates" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px;">
-                <div class="md-chip" onclick="useDocTemplateInModal('tutorial')">
-                    <span class="material-icons">menu_book</span>
-                    <span>教程</span>
-                </div>
-                <div class="md-chip" onclick="useDocTemplateInModal('api')">
-                    <span class="material-icons">integration_instructions</span>
-                    <span>API文档</span>
-                </div>
-                <div class="md-chip" onclick="useDocTemplateInModal('guide')">
-                    <span class="material-icons">help</span>
-                    <span>使用指南</span>
-                </div>
-                <div class="md-chip" onclick="useDocTemplateInModal('summary')">
-                    <span class="material-icons">summarize</span>
-                    <span>总结</span>
-                </div>
-            </div>
-
-            <!-- 输入框 -->
-            <div class="workflow-input-wrapper" style="margin-bottom: 20px;">
-                <textarea id="docModalPromptInput" class="workflow-textarea" placeholder="描述您要创建的文档主题和内容要求..."></textarea>
-            </div>
-
-            <!-- 操作按钮 -->
-            <div class="workflow-button-group">
-                <button class="md-button md-button-contained" onclick="submitDocFromModal()" style="width: 100%;">
-                    <span class="material-icons">auto_awesome</span>
-                    <span>生成文档+图</span>
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- 图片预览模态框 -->
@@ -2999,16 +2534,11 @@
                 tab.classList.toggle('active', tab.dataset.mode === mode);
             });
 
-            // 显示/隐藏视图切换按钮（绘图模式和文档+图模式都显示）
-            const viewToggle = document.getElementById('viewToggle');
+            // 切换到相应的模式容器（标准视图）
             if (mode === 'drawing') {
-                viewToggle.style.display = 'flex';
                 document.getElementById('drawingMode').classList.add('active');
-                switchView('standard');
             } else if (mode === 'document_with_images') {
-                viewToggle.style.display = 'flex';
                 document.getElementById('documentMode').classList.add('active');
-                switchView('standard');
             }
         }
 
@@ -3044,12 +2574,6 @@
             document.getElementById('docOutlineEmpty').style.display = 'flex';
             document.getElementById('docOutlineDisplay').style.display = 'none';
 
-            // 设置工作流视图的执行详情状态指示器为运行中
-            const docExecutionIndicator = document.getElementById('docExecutionStatusIndicator');
-            if (docExecutionIndicator) {
-                docExecutionIndicator.className = 'execution-status-indicator running';
-            }
-
             try {
                 const response = await fetch('/api/document/workflow-with-images', {
                     method: 'POST',
@@ -3063,11 +2587,6 @@
             } catch (error) {
                 console.error('启动文档工作流失败:', error);
                 alert('启动失败: ' + error.message);
-
-                // 重置执行详情状态指示器为空闲
-                if (docExecutionIndicator) {
-                    docExecutionIndicator.className = 'execution-status-indicator idle';
-                }
             }
         }
 
@@ -3213,74 +2732,17 @@
         // 初始化
         initTheme();
 
-        // 同步输入框的内容
+        // 同步输入框的内容（标准视图不需要modalPromptInput）
         document.getElementById('promptInput').addEventListener('input', function(e) {
-            document.getElementById('modalPromptInput').value = e.target.value;
-            updateInputNodeStatus();
+            // 标准视图不需要同步到modal
         });
 
-        document.getElementById('modalPromptInput').addEventListener('input', function(e) {
-            document.getElementById('promptInput').value = e.target.value;
-            updateInputNodeStatus();
-        });
-
-        // 文档输入框同步
+        // 文档输入框同步（标准视图不需要modal）
         document.getElementById('docPromptInput').addEventListener('input', function(e) {
-            document.getElementById('docModalPromptInput').value = e.target.value;
-            updateDocInputNodeStatus();
+            // 标准视图不需要同步到modal
         });
 
-        document.getElementById('docModalPromptInput').addEventListener('input', function(e) {
-            document.getElementById('docPromptInput').value = e.target.value;
-            updateDocInputNodeStatus();
-        });
-
-        // 输入节点相关函数
-        function openInputModal() {
-            const modal = document.getElementById('inputModal');
-            modal.classList.add('show');
-
-            // 同步当前输入值
-            const currentValue = document.getElementById('promptInput').value;
-            document.getElementById('modalPromptInput').value = currentValue;
-        }
-
-        function closeInputModal() {
-            const modal = document.getElementById('inputModal');
-            modal.classList.remove('show');
-        }
-
-        function useTemplateInModal(type) {
-            document.getElementById('modalPromptInput').value = templates[type];
-            document.getElementById('promptInput').value = templates[type];
-            updateInputNodeStatus();
-        }
-
-        function submitFromModal() {
-            const prompt = document.getElementById('modalPromptInput').value.trim();
-
-            if (!prompt) {
-                alert('请输入绘图需求');
-                return;
-            }
-
-            closeInputModal();
-            startWorkflow();
-        }
-
-        function updateInputNodeStatus() {
-            const inputNode = document.getElementById('inputNode');
-            const card = inputNode.querySelector('.workflow-node-card');
-            const prompt = document.getElementById('promptInput').value.trim();
-
-            if (prompt) {
-                card.classList.add('has-input');
-            } else {
-                card.classList.remove('has-input');
-            }
-        }
-
-        // 输出节点相关函数
+        // 图片预览功能（保留给标准视图使用）
         function openImageModal() {
             const resultImage = document.getElementById('resultImage');
             const modal = document.getElementById('imageModal');
@@ -3301,276 +2763,12 @@
             modal.classList.remove('show');
         }
 
-        function updateOutputNodeThumbnail(imageUrl) {
-            const thumbnail = document.getElementById('outputThumbnail');
-            const outputNode = document.getElementById('outputNode');
-            const card = outputNode.querySelector('.workflow-node-card');
-
-            if (imageUrl) {
-                thumbnail.innerHTML = `<img src="${imageUrl}?t=${Date.now()}" alt="生成的图表">`;
-                thumbnail.classList.add('show');
-                card.classList.add('has-result');
-            } else {
-                thumbnail.innerHTML = '<div class="output-thumbnail-placeholder"><span class="material-icons">bar_chart</span></div>';
-                thumbnail.classList.remove('show');
-                card.classList.remove('has-result');
-            }
-        }
-
-        // 文档输入框相关函数
-        function openDocInputModal() {
-            const modal = document.getElementById('docInputModal');
-            modal.classList.add('show');
-
-            // 同步当前输入值
-            const currentValue = document.getElementById('docPromptInput').value;
-            document.getElementById('docModalPromptInput').value = currentValue;
-        }
-
-        function closeDocInputModal() {
-            const modal = document.getElementById('docInputModal');
-            modal.classList.remove('show');
-        }
-
-        function useDocTemplateInModal(type) {
-            const docTemplates = {
-                'tutorial': '请编写一个关于[主题]的详细教程，包含：\n1. 概念介绍\n2. 基础用法\n3. 实战案例\n4. 最佳实践\n5. 常见问题',
-                'api': '请编写[名称] API的完整文档，包含：\n1. API概述\n2. 认证方式\n3. 端点说明\n4. 请求/响应示例\n5. 错误码说明',
-                'guide': '请编写[主题]的使用指南，包含：\n1. 快速开始\n2. 配置说明\n3. 核心功能\n4. 高级用法\n5. 故障排查',
-                'summary': '请对[主题]进行总结，包含：\n1. 核心要点\n2. 关键概念\n3. 重要结论\n4. 应用场景\n5. 参考资料'
-            };
-            document.getElementById('docModalPromptInput').value = docTemplates[type];
-            document.getElementById('docPromptInput').value = docTemplates[type];
-            updateDocInputNodeStatus();
-        }
-
-        function submitDocFromModal() {
-            const prompt = document.getElementById('docModalPromptInput').value.trim();
-
-            if (!prompt) {
-                alert('请输入文档主题');
-                return;
-            }
-
-            closeDocInputModal();
-            startDocumentWithImagesWorkflow();
-        }
-
-        function updateDocInputNodeStatus() {
-            const inputNode = document.getElementById('docInputNode');
-            const card = inputNode.querySelector('.workflow-node-card');
-            const prompt = document.getElementById('docPromptInput').value.trim();
-
-            if (prompt) {
-                card.classList.add('has-input');
-            } else {
-                card.classList.remove('has-input');
-            }
-        }
-
-        // 文档结果模态框
-        function openDocumentResultModal() {
-            if (!currentDocumentResult) {
-                alert('暂无生成结果，请先执行工作流');
-                return;
-            }
-
-            // 这里可以打开一个新的窗口或模态框来展示文档结果
-            // 目前简单地在新标签页打开文档
-            window.open(currentDocumentResult.url, '_blank');
-        }
-
         // ESC键关闭模态框
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                closeInputModal();
                 closeImageModal();
-                closeDocInputModal();
             }
         });
-
-        // 视图切换
-        let currentView = 'standard';
-
-        function switchView(view) {
-            currentView = view;
-            const standardBtn = document.getElementById('standardViewBtn');
-            const workflowBtn = document.getElementById('workflowViewBtn');
-
-            if (currentFeatureMode === 'drawing') {
-                const standardView = document.getElementById('standardView');
-                const workflowView = document.getElementById('workflowView');
-                
-                if (view === 'standard') {
-                    standardView.style.display = 'grid';
-                    workflowView.classList.remove('active');
-                    standardBtn.classList.add('active');
-                    workflowBtn.classList.remove('active');
-                } else {
-                    standardView.style.display = 'none';
-                    workflowView.classList.add('active');
-                    standardBtn.classList.remove('active');
-                    workflowBtn.classList.add('active');
-                }
-            } else if (currentFeatureMode === 'document_with_images') {
-                const documentStandardView = document.getElementById('documentStandardView');
-                const documentWorkflowView = document.getElementById('documentWorkflowView');
-                
-                if (view === 'standard') {
-                    documentStandardView.style.display = 'grid';
-                    documentWorkflowView.classList.remove('active');
-                    standardBtn.classList.add('active');
-                    workflowBtn.classList.remove('active');
-                } else {
-                    documentStandardView.style.display = 'none';
-                    documentWorkflowView.classList.add('active');
-                    standardBtn.classList.remove('active');
-                    workflowBtn.classList.add('active');
-                }
-            }
-        }
-
-        // 更新工作流视图状态
-        function updateWorkflowView(steps) {
-            const allSteps = ['refine_prompt', 'generate_code', 'execute_code', 'save_image'];
-            const stepNodeMap = {
-                'refine_prompt': 1,
-                'generate_code': 2,
-                'execute_code': 3,
-                'save_image': 4
-            };
-
-            allSteps.forEach((stepKey, index) => {
-                const node = document.getElementById(`workflowNode${index + 1}`);
-                const step = steps.find(s => s.step === stepKey);
-                const status = step ? step.status : 'pending';
-                const card = node.querySelector('.workflow-node-card');
-
-                // 移除所有状态类
-                card.classList.remove('pending', 'running', 'completed', 'error');
-                node.classList.remove('pending', 'running', 'completed', 'error');
-
-                // 添加新状态类
-                card.classList.add(status);
-                node.classList.add(status);
-            });
-
-            // 更新详情列表
-            updateWorkflowStepsDetail(steps);
-        }
-
-        function updateWorkflowStepsDetail(steps) {
-            const container = document.getElementById('workflowStepsDetail');
-            const allSteps = ['refine_prompt', 'generate_code', 'execute_code', 'save_image'];
-            const stepInfo = {
-                'refine_prompt': { title: '润色提示词', desc: '优化用户的绘图需求描述' },
-                'generate_code': { title: '生成绘图代码', desc: '使用DeepSeek AI生成Python代码' },
-                'execute_code': { title: '执行绘图代码', desc: '运行matplotlib生成图表' },
-                'save_image': { title: '验证图片保存', desc: '检查图片文件并返回结果' }
-            };
-
-            let html = '';
-            allSteps.forEach((stepKey, index) => {
-                const step = steps.find(s => s.step === stepKey);
-                const status = step ? step.status : 'pending';
-                const time = step ? new Date(step.timestamp).toLocaleTimeString() : '等待中';
-                const info = stepInfo[stepKey];
-
-                html += `
-                    <div class="workflow-step-item ${status}">
-                        <div class="workflow-step-number">${index + 1}</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">${info.title}</div>
-                            <div class="workflow-step-desc">${info.desc}</div>
-                        </div>
-                        <div class="workflow-step-time">${time}</div>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
-        }
-
-        // 更新文档工作流视图状态
-        function updateDocumentWorkflowView(steps) {
-            const allSteps = ['refine_prompt', 'generate_outline', 'generate_content', 'identify_image_requests', 'generate_images', 'embed_images', 'save_document', 'verify_document'];
-            const stepNodeMap = {
-                'refine_prompt': 1,
-                'generate_outline': 2,
-                'generate_content': 3,
-                'identify_image_requests': 4,
-                'generate_images': 5,
-                'embed_images': 6,
-                'save_document': 7,
-                'verify_document': 8
-            };
-
-            allSteps.forEach((stepKey, index) => {
-                const node = document.getElementById(`docWorkflowNode${index + 1}`);
-                const step = steps.find(s => s.step === stepKey);
-                const status = step ? step.status : 'pending';
-                const card = node.querySelector('.workflow-node-card');
-
-                // 移除所有状态类
-                card.classList.remove('pending', 'running', 'completed', 'error');
-                node.classList.remove('pending', 'running', 'completed', 'error');
-
-                // 添加新状态类
-                card.classList.add(status);
-                node.classList.add(status);
-            });
-
-            // 更新详情列表
-            updateDocumentWorkflowStepsDetail(steps);
-        }
-
-        function updateDocumentWorkflowStepsDetail(steps) {
-            const container = document.getElementById('docWorkflowStepsDetail');
-            const allSteps = ['refine_prompt', 'generate_outline', 'generate_content', 'identify_image_requests', 'generate_images', 'embed_images', 'save_document', 'verify_document'];
-            const stepInfo = {
-                'refine_prompt': { title: '润色写作需求', desc: '优化用户的文档写作需求' },
-                'generate_outline': { title: '生成文档大纲', desc: 'AI生成完整的文档结构' },
-                'generate_content': { title: '生成文档内容', desc: '撰写完整的Markdown文档' },
-                'identify_image_requests': { title: '识别图片需求', desc: '分析文档并识别需要图表的位置' },
-                'generate_images': { title: '生成图表', desc: '使用matplotlib生成所需图片' },
-                'embed_images': { title: '整合图片到文档', desc: '将生成的图片嵌入文档中' },
-                'save_document': { title: '保存文档', desc: '验证并保存最终文档' },
-                'verify_document': { title: '验证文档', desc: '检查文档完整性和格式' }
-            };
-
-            let html = '';
-            allSteps.forEach((stepKey, index) => {
-                const step = steps.find(s => s.step === stepKey);
-                const status = step ? step.status : 'pending';
-                const time = step ? new Date(step.timestamp).toLocaleTimeString() : '等待中';
-                const info = stepInfo[stepKey];
-
-                html += `
-                    <div class="workflow-step-item ${status}">
-                        <div class="workflow-step-number">${index + 1}</div>
-                        <div class="workflow-step-content">
-                            <div class="workflow-step-title">${info.title}</div>
-                            <div class="workflow-step-desc">${info.desc}</div>
-                        </div>
-                        <div class="workflow-step-time">${time}</div>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
-        }
-
-        function updateDocumentOutputNode() {
-            const outputNode = document.getElementById('docOutputNode');
-            const card = outputNode.querySelector('.workflow-node-card');
-            const thumbnail = document.getElementById('docOutputThumbnail');
-
-            if (currentDocumentResult) {
-                card.classList.add('has-result');
-                thumbnail.innerHTML = '<div class="output-thumbnail-placeholder" style="font-size: 40px; color: #4CAF50;"><span class="material-icons">check_circle</span></div>';
-                thumbnail.classList.add('show');
-            }
-        }
 
         // 模板数据
         const templates = {
@@ -3645,17 +2843,6 @@
                 });
             }
 
-            // 更新工作流视图的步骤
-            if (status.steps && status.steps.length > 0) {
-                updateDocumentWorkflowView(status.steps);
-            }
-
-            // 更新工作流视图的执行详情状态指示器
-            const docExecutionIndicator = document.getElementById('docExecutionStatusIndicator');
-            if (docExecutionIndicator) {
-                docExecutionIndicator.className = `execution-status-indicator ${status.status}`;
-            }
-
             // 显示结果
             if (status.status === 'completed' && status.result) {
                 currentDocumentResult = status.result;
@@ -3686,9 +2873,6 @@
 
                 // 渲染 Markdown 预览
                 renderDocumentPreview(content);
-
-                // 更新工作流视图的输出节点
-                updateDocumentOutputNode();
             } else if (status.status === 'error') {
                 document.getElementById('docStatusText').textContent = '错误';
                 alert('文档生成失败: ' + (status.error || '未知错误'));
@@ -3835,10 +3019,6 @@
             statusBadge.className = `status-badge ${config.class}`;
             statusBadge.innerHTML = `<span class="material-icons">${config.icon}</span><span>${config.text}</span>`;
 
-            // 更新执行详情状态指示器
-            const executionIndicator = document.getElementById('executionStatusIndicator');
-            executionIndicator.className = `execution-status-indicator ${status.status}`;
-
             // 更新进度条
             const progress = (status.steps.filter(s => s.status === 'completed').length / 4) * 100;
             document.getElementById('progressBar').style.width = `${progress}%`;
@@ -3846,9 +3026,6 @@
 
             // 更新步骤列表
             updateSteps(status.steps);
-
-            // 更新工作流视图
-            updateWorkflowView(status.steps);
 
             // 更新按钮状态
             const startBtn = document.getElementById('startBtn');
@@ -3941,9 +3118,6 @@
 
             generatedCode = result.generated_code;
             document.getElementById('resultCode').textContent = generatedCode;
-
-            // 更新输出节点缩略图（也需要等待加载）
-            updateOutputNodeThumbnail(result.image_url);
         }
 
         // 显示错误
@@ -3996,10 +3170,6 @@
             startBtn.disabled = true;
             startBtn.innerHTML = '<span class="material-icons">cached</span><span>启动中...</span>';
 
-            // 设置执行详情状态指示器为运行中
-            const executionIndicator = document.getElementById('executionStatusIndicator');
-            executionIndicator.className = 'execution-status-indicator running';
-
             try {
                 const response = await fetch('/api/workflow', {
                     method: 'POST',
@@ -4018,10 +3188,6 @@
                 alert('启动工作流失败: ' + error.message);
                 startBtn.disabled = false;
                 startBtn.innerHTML = '<span class="material-icons">rocket_launch</span><span>生成图表</span>';
-
-                // 重置执行详情状态指示器为空闲
-                const executionIndicator = document.getElementById('executionStatusIndicator');
-                executionIndicator.className = 'execution-status-indicator idle';
             }
         }
 
@@ -4033,10 +3199,6 @@
                 });
 
                 if (response.ok) {
-                    // 重置执行详情状态指示器
-                    const executionIndicator = document.getElementById('executionStatusIndicator');
-                    executionIndicator.className = 'execution-status-indicator idle';
-
                     // 清除标准视图
                     document.getElementById('emptyState').style.display = 'flex';
                     document.getElementById('resultContent').classList.remove('active');
@@ -4084,15 +3246,6 @@
                     `;
                     document.getElementById('progressBar').style.width = '0%';
                     document.getElementById('progressText').textContent = '0%';
-
-                    // 重置工作流视图的节点状态
-                    updateWorkflowView([]);
-
-                    // 重置输入节点状态
-                    updateInputNodeStatus();
-
-                    // 重置输出节点缩略图
-                    updateOutputNodeThumbnail(null);
                 }
             } catch (error) {
                 alert('清除失败: ' + error.message);

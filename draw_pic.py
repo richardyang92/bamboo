@@ -294,6 +294,99 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 - 使用合适的图表类型表达数据关系
 - 添加网格线辅助读数
 
+#### 3.1.2 防止空白图像的特别要求（生死攸关，必须严格遵守）
+**警告**：以下情况会导致生成全白或全黑图像，必须严格避免！
+
+**常见错误原因及解决方案**：
+
+1. **数据范围错误**：
+   ```python
+   # ❌ 错误：数据值太小或太大，导致超出坐标轴范围
+   y = [1e-10, 2e-10, 3e-10]  # 值太小
+   ax.plot(x, y)  # 会在默认y轴范围内看不见
+
+   # ✅ 正确：显式设置坐标轴范围或使用归一化数据
+   ax.plot(x, y)
+   ax.set_ylim(0, max(y) * 1.1)  # 根据数据动态设置范围
+   ```
+
+2. **数据全为零或未定义**：
+   ```python
+   # ❌ 错误：计算结果全为零
+   y = np.zeros(1000)  # 全是零
+   ax.plot(x, y)  # 只能看到一条底线
+
+   # ✅ 正确：检查数据是否有效，添加调试代码
+   y = calculate_function(x)
+   if np.all(y == 0):
+       raise ValueError("计算结果全为零，请检查函数实现")
+   print(f"数据范围: {y.min()} 到 {y.max()}")  # 调试信息
+   ax.plot(x, y)
+   ```
+
+3. **绘图背景与线条颜色冲突**：
+   ```python
+   # ❌ 错误：白色线条在白色背景上
+   ax.plot(x, y, color='white', linewidth=2)
+
+   # ✅ 正确：使用深色线条
+   ax.plot(x, y, color='blue', linewidth=2)  # 蓝色
+   ax.plot(x, y, color='#1f77b4', linewidth=2)  # 或使用十六进制颜色
+   ```
+
+4. **子图绘制问题**：
+   ```python
+   # ❌ 错误：子图循环中某个图数据有问题，导致整个图像空白
+   fig, axes = plt.subplots(1, 3)
+   for ax, data in zip(axes, datasets):
+       P = calculate(data)  # 如果 calculate 返回 None 或空数组
+       ax.plot(x, P)  # 会画不出东西
+
+   # ✅ 正确：添加数据验证
+   fig, axes = plt.subplots(1, 3)
+   for ax, data in zip(axes, datasets):
+       P = calculate(data)
+       if P is None or len(P) == 0 or np.all(np.isnan(P)):
+           print(f"警告: 数据无效")
+           continue
+       print(f"子图数据范围: {P.min()} 到 {P.max()}")  # 调试
+       ax.plot(x, P, color='blue', linewidth=2)  # 明确指定颜色
+   ```
+
+5. **坐标轴范围未设置或设置不当**：
+   ```python
+   # ❌ 错误：自动范围设置不当
+   ax.plot(x, y)  # 如果 y 值很小，可能看不见
+
+   # ✅ 正确：显式设置合理的坐标轴范围
+   ax.plot(x, y, 'b-', linewidth=2)
+   ax.set_xlim(x.min(), x.max())
+   ax.set_ylim(y.min() * 0.9, y.max() * 1.1)  # 留出10%边距
+   ```
+
+6. **特殊函数计算错误**（如拉盖尔多项式、贝塞尔函数等）：
+   ```python
+   # ❌ 错误：特殊函数返回 NaN 或 Inf
+   from scipy import special
+   L = special.genlaguerre(n-l-1, 2*l+1)(rho)  # 可能返回无效值
+   y = np.exp(-rho/2) * (rho**l) * L  # 如果 L 包含 NaN，结果也是 NaN
+
+   # ✅ 正确：验证特殊函数的输出
+   L = special.genlaguerre(n-l-1, 2*l+1)(rho)
+   if np.any(np.isnan(L)) or np.any(np.isinf(L)):
+       raise ValueError("拉盖尔多项式计算结果包含 NaN 或 Inf")
+   y = np.exp(-rho/2) * (rho**l) * L
+   y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)  # 清理无效值
+   ```
+
+**必须执行的检查清单**（生成代码前必须逐项检查）：
+□ 所有绘图语句都显式指定了颜色（color='blue' 或 color='#1f77b4'）
+□ 数据生成后立即打印数据范围（print(f"Min: {y.min()}, Max: {y.max()}"））
+□ 检查数据是否包含 NaN 或 Inf（np.any(np.isnan(y)) 或 np.any(np.isinf(y))））
+□ 显式设置了坐标轴范围（ax.set_xlim 和 ax.set_ylim）
+□ 如果使用子图，每个子图都单独验证了数据有效性
+□ 对于特殊函数计算，添加了错误处理和无效值清理
+
 #### 3.1.2 数据生成规范（生死攸关，必须严格遵守）
 **所有数据必须在代码中显式定义或生成，不能有任何未定义的变量！**
 
@@ -466,14 +559,26 @@ ax.annotate('临界点 T_c', xy=(1, 0), xytext=(1.1, 0.2),
    - 示例：ax.annotate('文字', xy=(物体边缘), xytext=(外部位置), arrowprops=dict(arrowstyle='->'))
 - **连接关系**：绳索、导线、连杆等用直线，linewidth=2-2.5
 - **关键点**：支点、节点、连接点用实心圆点标记（marker='o', markersize=8）
-- **力和方向标注规范**（重要）：
+- **力和方向标注规范**（非常重要，必须严格遵守）：
    - **重力 mg**：必须垂直向下（从物体指向地心，即 -y 方向），箭头向下
-   - **支持力 N**：垂直于接触面向外（如桌面的支持力向上）
+   - **支持力 N（法向力）**：**必须垂直于接触面**（最重要！）
+     * 斜面上的物体：支持力方向垂直于斜面向上，角度 = 斜面角度 - 90°
+     * 使用三角函数精确计算：nx = sin(θ), ny = cos(θ)
+     * 示例：斜面角度30°时，支持力角度为30°-90°=-60°（即120°）
    - **拉力 T**：沿绳索方向，远离物体
    - **摩擦力 f**：沿接触面，与相对运动或运动趋势方向相反
+     * 斜面摩擦力：平行于斜面方向，角度 = 斜面角度或斜面角度 + 180°
    - 箭头使用 ax.annotate() 添加：ax.annotate('力名', xy=(起点), xytext=(终点), arrowprops=dict(arrowstyle='->', lw=2))
    - 力的箭头应该从施力物体指向受力物体，或表示运动趋势方向
    - 所有力必须标注清楚符号和大小（如有）
+   - **物理规律强制要求**：
+     * 使用 numpy 三角函数精确计算力的方向角度
+     * 不要凭视觉估计，必须用数学公式计算
+     * 斜面角度 θ 的力方向关系（单位：度）：
+       - 重力：-90°（竖直向下）
+       - 支持力：θ - 90°（垂直于斜面向上）
+       - 摩擦力沿斜面上：θ（沿斜面向上）
+       - 摩擦力沿斜面下：θ + 180°（沿斜面向下）
  - **角度标注规范**（最重要）：
     - **角的顶点定位原则**：角度的顶点必须在支点或转动轴上，绝不能标注在摆球或其他运动物体上
     - **单摆角度标注**（必须严格遵守）：
@@ -545,6 +650,14 @@ fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
 # 示例1：绘制能谱曲线
 k = np.linspace(0, np.pi, 1000)      # 波矢范围 0 到 π
 Lambda_k = np.abs(np.cos(k/2))      # 能谱公式
+
+# 【关键】数据验证和调试（防止空白图像）
+print(f"数据范围: Lambda_k.min() = {Lambda_k.min()}, Lambda_k.max() = {Lambda_k.max()}")
+if np.all(Lambda_k == 0):
+    raise ValueError("数据全为零，请检查计算公式")
+if np.any(np.isnan(Lambda_k)) or np.any(np.isinf(Lambda_k)):
+    raise ValueError("数据包含 NaN 或 Inf，请检查计算公式")
+
 ax.plot(k, Lambda_k, 'b-', linewidth=2, label='能谱 Λ_k')
 
 # 设置坐标轴
@@ -552,7 +665,7 @@ plt.xlabel('波矢 k', fontsize=12)
 plt.ylabel('能谱 Λ_k', fontsize=12)
 plt.title('能谱随波矢的变化', fontsize=16)
 
-# 设置坐标轴范围（必须显式设置）
+# 设置坐标轴范围（必须显式设置，防止数据看不见）
 plt.xlim(0, np.pi)
 plt.ylim(0, 1.1)
 
@@ -566,6 +679,63 @@ plt.tight_layout()
 # 保存图片
 plt.savefig(target_filename, dpi=100, bbox_inches='tight')
 plt.close()
+
+# 示例2：绘制包含特殊函数的曲线（如径向概率密度）
+# 注意：特殊函数容易产生无效值，需要严格验证
+try:
+    from scipy import special
+
+    # 生成数据
+    r = np.linspace(0, 30, 500)
+
+    # 计算拉盖尔多项式（容易出错的地方）
+    n, l = 2, 0
+    rho = 2 * r / (n * 0.529)
+    L = special.genlaguerre(n-l-1, 2*l+1)(rho)
+
+    # 【关键】验证特殊函数的输出
+    if np.any(np.isnan(L)):
+        print("警告: 拉盖尔多项式包含 NaN，已清理")
+        L = np.nan_to_num(L, nan=0.0)
+
+    # 计算波函数
+    R = np.exp(-rho/2) * (rho**l) * L
+
+    # 计算概率密度
+    P = (r**2) * (R**2)
+
+    # 【关键】归一化并验证数据
+    if P.max() > 0:
+        P = P / P.max()  # 归一化到 [0, 1]
+    else:
+        raise ValueError("概率密度全为零或负数")
+
+    print(f"概率密度范围: {P.min()} 到 {P.max()}")
+
+    # 绘图（明确指定颜色）
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(r, P, 'b-', linewidth=2.5, label='2s 态')
+    ax.fill_between(r, 0, P, alpha=0.3, color='blue')
+
+    # 显式设置坐标轴范围
+    ax.set_xlim(0, 30)
+    ax.set_ylim(0, 1.1)
+
+    ax.set_xlabel('半径 r (Å)', fontsize=12)
+    ax.set_ylabel('相对概率密度', fontsize=12)
+    ax.set_title('氢原子径向概率密度分布', fontsize=16)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    plt.tight_layout()
+    plt.savefig(target_filename, dpi=100, bbox_inches='tight')
+    plt.close()
+
+except ImportError:
+    print("警告: scipy 未安装，跳过特殊函数示例")
+except Exception as e:
+    print(f"计算或绘图失败: {str(e)}")
+    raise
 
 # 示例2：绘制二维Ising模型磁化强度曲线
 # T = np.linspace(0, 1.5, 1000)  # T/T_c 范围
@@ -759,6 +929,8 @@ plt.close()
  ```
 
 ## 六、力的标注标准示例
+
+### 6.1 基本力的标注
 ```python
 # 绘制重力（必须垂直向下）
 ax.annotate(
@@ -779,16 +951,71 @@ ax.annotate(
     fontsize=12,
     ha='center'
 )
+```
 
-# 绘制支持力（垂直于接触面向上）
+### 6.2 斜面上的力标注（最重要，必须使用三角函数精确计算）
+```python
+import numpy as np
+
+# 斜面参数
+theta_deg = 30  # 斜面角度（度）
+theta = np.radians(theta_deg)  # 转换为弧度
+
+# 物体底部中心在斜面上的坐标
+bottom_center_x = 2.0
+bottom_center_y = 1.0
+rect_height = 0.5
+
+# 物体中心坐标
+center_x = bottom_center_x
+center_y = bottom_center_y + rect_height / 2
+
+# 力的箭头长度
+force_length = 0.8
+
+# 【关键】使用三角函数精确计算各力的方向
+# 重力：竖直向下（-90度）
+mg_end_x = center_x
+mg_end_y = center_y - force_length
 ax.annotate(
-    'N',  # 支持力符号
-    xy=(物体x坐标, 物体y坐标 + 0.3),  # 箭头终点（在物体上方）
-    xytext=(物体x坐标, 物体y坐标),    # 箭头起点（在物体中心）
+    'mg',
+    xy=(mg_end_x, mg_end_y),
+    xytext=(center_x, center_y),
+    arrowprops=dict(arrowstyle='->', color='red', lw=2),
+    fontsize=12,
+    ha='center'
+)
+
+# 支持力（法向力）：垂直于斜面向上
+# 方向角度 = 斜面角度 - 90度
+normal_angle = np.radians(theta_deg - 90)
+n_end_x = center_x + force_length * np.cos(normal_angle)
+n_end_y = center_y + force_length * np.sin(normal_angle)
+ax.annotate(
+    'N',
+    xy=(n_end_x, n_end_y),
+    xytext=(center_x, center_y),
     arrowprops=dict(arrowstyle='->', color='green', lw=2),
     fontsize=12,
     ha='center'
 )
+
+# 摩擦力：沿斜面向上（阻碍下滑）
+# 方向角度 = 斜面角度
+friction_angle = np.radians(theta_deg)
+f_end_x = center_x + force_length * np.cos(friction_angle)
+f_end_y = center_y + force_length * np.sin(friction_angle)
+ax.annotate(
+    'f',
+    xy=(f_end_x, f_end_y),
+    xytext=(center_x, center_y),
+    arrowprops=dict(arrowstyle='->', color='blue', lw=2),
+    fontsize=12,
+    ha='center'
+)
+
+# 验证：支持力应该垂直于斜面，摩擦力应该平行于斜面
+# 可以通过计算两个向量之间的夹角来验证
 ```
 
 ## 七、物体文字标注标准示例
@@ -854,6 +1081,26 @@ ax.annotate(
 □ **数据点足够密集**（曲线图至少1000个点，确保曲线平滑）
 □ **坐标轴范围已显式设置**（使用 ax.set_xlim 和 ax.set_ylim）
 □ **物理公式正确**（如二维Ising模型的临界指数β=1/8）
+
+□ **防止空白图像的特殊检查**（最重要！对于特殊函数或复杂数据计算）：
+   - **数据有效性验证**：
+     * 检查数据是否全为零：`not np.all(y == 0)`
+     * 检查数据是否包含 NaN：`not np.any(np.isnan(y))`
+     * 检查数据是否包含 Inf：`not np.any(np.isinf(y))`
+   - **颜色显式指定**：
+     * 所有 `ax.plot()` 都明确指定了 `color='blue'` 或类似颜色
+     * 避免使用 `color='white'` 或默认颜色可能导致看不见的情况
+   - **坐标轴范围验证**：
+     * 使用 `ax.set_ylim(y.min()*0.9, y.max()*1.1)` 动态设置范围
+     * 确保 y 轴范围覆盖所有数据点
+   - **子图数据验证**：
+     * 对于多子图，每个子图的数据都单独验证
+     * 某个子图数据无效时跳过或处理，不影响其他子图
+   - **特殊函数输出验证**：
+     * scipy.special 等特殊函数的输出必须检查 NaN/Inf
+     * 使用 `np.nan_to_num()` 清理无效值
+     * 添加调试信息：`print(f"数据范围: {y.min()} 到 {y.max()}")`
+
 □ 图形尺寸合适，不拥挤
  □ 所有重要元素都有中文标注
  □ 颜色方案专业、清晰
@@ -898,13 +1145,26 @@ ax.annotate(
     - 检查是否使用了 numpy 生成足够密集的数据点（至少1000个）
     - 检查是否显式设置了坐标轴范围
 
-  4. **刚体约束条件检查**（物理示意图必须检查）：
+  4. **空白图像预防检查**（最重要！对于特殊函数或复杂数据计算必须检查）：
+    - **是否显式指定了绘图颜色**（color='blue' 或类似）？
+    - **是否添加了数据验证代码**？
+      * `if np.all(y == 0): raise ValueError(...)`
+      * `if np.any(np.isnan(y)): ...`
+      * `if np.any(np.isinf(y)): ...`
+    - **是否打印了数据范围**（print(f"Min: {y.min()}, Max: {y.max()}"））？
+    - **坐标轴范围是否根据数据动态设置**（ax.set_ylim(y.min()*0.9, y.max()*1.1)）？
+    - **如果使用了特殊函数（如 scipy.special），是否验证了输出**？
+      * 检查返回值是否包含 NaN 或 Inf
+      * 使用 np.nan_to_num() 清理无效值
+    - **如果是多子图，是否每个子图都单独验证了数据**？
+
+  5. **刚体约束条件检查**（物理示意图必须检查）：
      - 斜面上的物体是否完全贴合斜面，无穿模或间隙
      - 轮子是否接触地面或斜面，轮心到接触面的距离是否等于半径
      - 角度是否与标注一致，使用三角函数精确计算坐标
      - 重力是否严格垂直向下，无偏差
 
-  5. **单摆/摆动系统角度标注检查**（重要，必须检查）：
+  6. **单摆/摆动系统角度标注检查**（重要，必须检查）：
      - 角度θ的顶点是否在支点/转轴坐标处（绝不能在摆球上）
      - 是否绘制了垂直向下的虚线作为角度参考线
      - 角度弧线的圆心参数xy是否设置为支点坐标
@@ -912,10 +1172,10 @@ ax.annotate(
      - 对于单摆：theta1=270（垂直向下），theta2=270+θ度
      - 角度标签是否放置在弧线中点附近，清晰可见
 
- 5. **执行测试**：在脑海中逐行执行一遍代码，确认每一行都完整
+  7. **执行测试**：在脑海中逐行执行一遍代码，确认每一行都完整
 
-**✓ 只有完成以上检查，确认代码无语法错误后，才能输出！**
-**✗ 如果发现任何未闭合的括号或未定义的变量，立即修复后再输出！**
+**✓ 只有完成以上检查，确认代码无语法错误且数据有效后，才能输出！**
+**✗ 如果发现任何未闭合的括号、未定义的变量或可能导致空白图像的问题，立即修复后再输出！**
 
 ---"""
                 },
@@ -1047,6 +1307,22 @@ def execute_code(state: GraphState) -> GraphState:
         # 执行生成的代码，并将目标文件名传入执行环境
         local_vars["target_filename"] = target_filename
 
+        # 准备全局执行环境，确保numpy等库在函数内部也可用
+        import numpy as np_module
+        from mpl_toolkits.mplot3d import Axes3D
+        from mpl_toolkits.mplot3d import art3d
+
+        global_vars = {
+            'np': np_module,
+            'numpy': np_module,
+            'plt': plt,
+            'matplotlib': __import__('matplotlib'),
+            'os': os,
+            'Axes3D': Axes3D,
+            'art3d': art3d,
+            'patches': __import__('matplotlib.patches')
+        }
+
         # 记录执行前的文件列表（使用绝对路径）
         files_before = set(glob.glob(os.path.join(images_dir, "plot_*.png")))
         print(f"   [DEBUG] 执行前存在的 plot 文件: {files_before}")
@@ -1062,9 +1338,10 @@ def execute_code(state: GraphState) -> GraphState:
             print(f"   [DEBUG] 问题代码片段:\n{se.text}")
             return {"error": error_msg}
 
-        # 执行代码
+        # 执行代码（合并全局和局部变量，确保函数内部能访问numpy）
+        exec_vars = {**global_vars, **local_vars}
         print(f"   [DEBUG] 开始执行生成的代码...")
-        exec(state["generated_code"], globals(), local_vars)
+        exec(state["generated_code"], exec_vars)
         print(f"   [DEBUG] 代码执行完成")
 
         # 等待文件写入

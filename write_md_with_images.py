@@ -410,7 +410,107 @@ def generate_images(state: GraphState) -> GraphState:
                 # 生成绘图代码
                 client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
                 
-                drawing_prompt = f"""请根据以下描述生成 Python 绘图代码：
+                # 根据描述类型选择不同的提示策略
+                is_physics_diagram = any(keyword in req['description'] for keyword in
+                    ['力', '受力', '斜面', '支持力', '摩擦力', '重力', '力学', '示意图'])
+                is_flowchart = any(keyword in req['description'] for keyword in
+                    ['流程图', '架构图', '流程', '步骤', '阶段', '流程：', '展示'])
+
+                if is_flowchart:
+                    # 流程图/架构图特殊提示
+                    drawing_prompt = f"""请根据以下描述生成 Python 绘图代码，绘制专业的流程图：
+
+描述：{req['description']}
+
+**重要要求（必须严格遵守）**：
+
+1. **绘图方法**：使用 matplotlib.patches 绘制矩形框和箭头
+   - 每个步骤用一个矩形框表示：`Rectangle((x, y), width, height, facecolor='lightblue', edgecolor='black', linewidth=2)`
+   - 使用 `ax.add_patch()` 添加矩形到图表
+   - 使用 `ax.annotate()` 添加箭头连接，格式：`ax.annotate('', xy=(终点x, 终点y), xytext=(起点x, 起点y), arrowprops=dict(arrowstyle='->', lw=2))`
+   - 使用 `ax.text()` 在矩形框中心添加文字说明
+
+2. **布局要求（最重要）**：
+   - 从上到下或从左到右排列流程步骤
+   - 每个步骤之间留足够间距（建议间距1.5-2个单位）
+   - 矩形框尺寸统一（建议 width=3, height=1）
+   - 整体居中显示，留出适当边距
+
+3. **代码结构（必须遵循）**：
+   ```python
+   import matplotlib.pyplot as plt
+   import matplotlib.patches as patches
+   from matplotlib.patches import Rectangle
+   import matplotlib
+   matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'WenQuanYi Micro Hei']
+
+   fig, ax = plt.subplots(figsize=(12, 8))
+
+   # 定义步骤位置（从上到下）
+   steps = [
+       ('步骤1名称', 4, 7),    # (文字, x中心, y中心)
+       ('步骤2名称', 4, 5.5),
+       ('步骤3名称', 4, 4),
+       # ... 更多步骤
+   ]
+
+   # 绘制矩形框和文字
+   for text, x, y in steps:
+       rect = Rectangle((x-1.5, y-0.5), 3, 1, facecolor='lightblue', edgecolor='black', linewidth=2)
+       ax.add_patch(rect)
+       ax.text(x, y, text, ha='center', va='center', fontsize=12, fontweight='bold')
+
+   # 绘制箭头连接
+   for i in range(len(steps)-1):
+       ax.annotate('', xy=(steps[i+1][1], steps[i+1][2]+0.5),
+                   xytext=(steps[i][1], steps[i][2]-0.5),
+                   arrowprops=dict(arrowstyle='->', lw=2, color='black'))
+
+   ax.set_xlim(0, 8)
+   ax.set_ylim(0, 8)
+   ax.axis('off')
+   plt.tight_layout()
+   plt.savefig(target_filename, dpi=150, bbox_inches='tight', facecolor='white')
+   plt.close()
+   ```
+
+4. **颜色方案**：
+   - 矩形框：浅蓝色填充 'lightblue'，黑色边框
+   - 箭头：黑色，线宽2
+   - 文字：黑色或深灰色，加粗，字号12-14
+
+5. **必须确保**：
+   - 每个步骤都有矩形框
+   - 步骤之间有箭头连接
+   - 文字清晰可读，居中对齐
+   - 整体布局美观，不拥挤
+   - 不要显示坐标轴（使用 ax.axis('off')）
+
+只返回完整的 Python 代码，不要任何解释。
+"""
+                elif is_physics_diagram:
+                    drawing_prompt = f"""请根据以下描述生成 Python 绘图代码：
+
+描述：{req['description']}
+
+要求：
+1. 使用 matplotlib 绘图
+2. **物理规律要求（非常重要）**：
+   - 支持力（法向力）方向必须**垂直于斜面表面**
+   - 重力方向必须**竖直向下**
+   - 摩擦力方向必须**平行于斜面**
+   - 确保所有箭头角度准确反映物理规律
+3. 添加适当的标题、坐标轴标签、图例
+4. 使用清晰的配色方案（建议：重力用红色，支持力用绿色，摩擦力用蓝色）
+5. 图表要专业、美观、易于理解
+6. 只返回可执行的 Python 代码，不要任何解释
+7. 确保中文正常显示
+8. 图表尺寸合适，不拥挤
+9. 必须使用 plt.savefig(target_filename, dpi=150, bbox_inches='tight') 保存图片
+10. 不要调用 plt.show()
+"""
+                else:
+                    drawing_prompt = f"""请根据以下描述生成 Python 绘图代码：
 
 描述：{req['description']}
 
@@ -434,9 +534,9 @@ def generate_images(state: GraphState) -> GraphState:
                             "content": """你是一个专业的数据可视化和绘图专家。请根据用户需求生成高质量的 Python 绘图代码。
 
 技术要求：
-1. 只使用 matplotlib 库
+1. 只使用 matplotlib 库（可配合 numpy）
 2. 代码必须完整可执行
-3. 设置中文字体支持：matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei']
+3. 设置中文字体支持：matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'WenQuanYi Micro Hei']
 4. 图片保存使用变量 target_filename
 5. 不要生成被截断的代码
 6. 确保所有括号都闭合
@@ -448,6 +548,40 @@ def generate_images(state: GraphState) -> GraphState:
 - 使用图例说明
 - 线条粗细有层次
 - 布局合理，使用 tight_layout()
+
+**物理示意图特殊要求（重要）**：
+如果用户需求涉及受力分析、力学示意图等：
+- **支持力（法向力）方向必须垂直于接触面**
+- **重力方向必须竖直向下**
+- **摩擦力方向必须平行于接触面**
+- 使用角度计算确保箭头方向准确（如使用 numpy 的三角函数）
+- 斜面角度 θ 与力的方向关系：
+  * 重力：竖直向下（-90°）
+  * 支持力：垂直于斜面向上（θ - 90°）
+  * 摩擦力：沿斜面向上或向下（θ 或 θ + 180°）
+
+**流程图/架构图特殊要求（重要）**：
+如果用户需求涉及流程图、架构图、步骤说明等：
+- **必须使用 matplotlib.patches.Rectangle 绘制矩形框**
+- **每个步骤用一个矩形框表示**，不要只用文字
+- **使用 ax.annotate() 添加箭头连接**步骤
+- **矩形框必须有填充色**（如 facecolor='lightblue'）和边框
+- **步骤文字必须在矩形框内部**，使用 ax.text() 居中显示
+- **必须隐藏坐标轴**：使用 ax.axis('off')
+- **布局必须清晰**：从上到下或从左到右，步骤间距足够
+- 示例结构：
+  ```python
+  # 定义步骤位置
+  steps = [('步骤1', 4, 7), ('步骤2', 4, 5.5), ...]
+  # 绘制矩形和文字
+  for text, x, y in steps:
+      rect = Rectangle((x-1.5, y-0.5), 3, 1, facecolor='lightblue', edgecolor='black', linewidth=2)
+      ax.add_patch(rect)
+      ax.text(x, y, text, ha='center', va='center', fontsize=12)
+  # 绘制箭头
+  for i in range(len(steps)-1):
+      ax.annotate('', xy=(...), xytext=(...), arrowprops=dict(arrowstyle='->', lw=2))
+  ```
 
 只返回 Python 代码，不要任何解释。"""
                         },
@@ -493,23 +627,36 @@ def generate_images(state: GraphState) -> GraphState:
                     'os': os,
                     'target_filename': target_filename
                 }
-                
+
                 # 先编译代码检查语法
                 compile(generated_code, '<string>', 'exec')
-                
+
                 # 清理 matplotlib 状态（在执行前）
                 plt.close('all')
-                
-                # 执行代码
-                exec(generated_code, globals(), local_vars)
-                
-                # 确保图片被保存（如果 AI 的代码没有调用 savefig，这里强制调用）
+
+                # 保存原始工作目录并切换到 images 目录
+                # 这样即使 AI 生成的代码使用相对路径，文件也会保存到正确的位置
+                original_cwd = os.getcwd()
+                os.chdir(images_dir)
+                print(f"   [DEBUG] 临时切换工作目录到: {images_dir}")
+
                 try:
-                    plt.savefig(target_filename, dpi=150, bbox_inches='tight', facecolor='white')
-                    print(f"   [DEBUG] 强制保存图片到: {target_filename}")
-                except Exception as save_error:
-                    print(f"   [DEBUG] 强制保存失败: {str(save_error)}")
-                
+                    # 执行代码
+                    exec(generated_code, globals(), local_vars)
+
+                    # 确保图片被保存（如果 AI 的代码没有调用 savefig，这里强制调用）
+                    try:
+                        # 使用相对路径文件名，因为当前目录已经是 images_dir
+                        relative_filename = os.path.basename(target_filename)
+                        plt.savefig(relative_filename, dpi=150, bbox_inches='tight', facecolor='white')
+                        print(f"   [DEBUG] 强制保存图片到: {relative_filename}")
+                    except Exception as save_error:
+                        print(f"   [DEBUG] 强制保存失败: {str(save_error)}")
+                finally:
+                    # 恢复原始工作目录
+                    os.chdir(original_cwd)
+                    print(f"   [DEBUG] 恢复工作目录到: {original_cwd}")
+
                 # 强制关闭所有图形，确保文件已写入
                 plt.close('all')
                 
