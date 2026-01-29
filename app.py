@@ -192,6 +192,129 @@ def run_document_with_images_workflow():
 
     return jsonify({'message': '带图片的文档生成工作流已启动'})
 
+@app.route('/api/document/ai-modify', methods=['POST'])
+def ai_modify_selection():
+    """AI修改选中的文本内容"""
+    try:
+        data = request.json
+        selected_text = data.get('selected_text', '')
+        instructions = data.get('instructions', '')
+
+        if not selected_text:
+            return jsonify({'error': '请先选择要修改的内容'}), 400
+
+        if not instructions:
+            return jsonify({'error': '请提供修改指令'}), 400
+
+        # 调用AI修改文本
+        from openai import OpenAI
+        import os
+
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            return jsonify({'error': 'API密钥未配置'}), 500
+
+        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+
+        prompt = f"""请根据以下指令修改这段文本，保持原有的Markdown格式和结构：
+
+原文：
+{selected_text}
+
+修改指令：
+{instructions}
+
+要求：
+1. 保持原有的Markdown格式（标题、列表、代码块等）
+2. 保持原文的结构和逻辑
+3. 严格按照修改指令进行修改
+4. 只返回修改后的文本，不要添加任何解释或说明
+
+修改后的文本："""
+
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "你是一个专业的文本编辑助手，擅长根据用户指令修改文本内容。"
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.3,
+            max_tokens=4000
+        )
+
+        modified_text = response.choices[0].message.content.strip()
+
+        return jsonify({
+            'modified_text': modified_text
+        })
+
+    except Exception as e:
+        import traceback
+        error_msg = f"修改失败: {str(e)}"
+        traceback.print_exc()
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/api/document/generate-image', methods=['POST'])
+def ai_generate_image():
+    """AI生成图片"""
+    try:
+        data = request.json
+        description = data.get('description', '')
+
+        if not description:
+            return jsonify({'error': '请提供图片描述'}), 400
+
+        # 导入绘图工作流
+        from draw_pic import create_graph, GraphState
+
+        print(f"\n[DEBUG] ===== AI生成图片工作流启动 =====")
+        print(f"[DEBUG] 图片描述: '{description}'")
+
+        # 创建工作流图
+        workflow = create_graph()
+
+        # 运行工作流
+        initial_state = {
+            "user_prompt": description,
+            "generated_code": "",
+            "image_path": "",
+            "image_size": 0,
+            "error": ""
+        }
+
+        print(f"[DEBUG] 开始调用绘图工作流...")
+        result = workflow.invoke(initial_state)
+
+        print(f"[DEBUG] ===== AI生成图片工作流执行完成 =====")
+        print(f"[DEBUG] 最终结果: {result}")
+
+        if result.get("error"):
+            print(f"[DEBUG] 图片生成失败: {result['error']}")
+            return jsonify({'error': result['error']}), 500
+
+        # 提取文件名和URL
+        filename = os.path.basename(result['image_path'])
+        image_url = f'/api/images/{filename}'
+
+        print(f"[DEBUG] 图片生成成功: {image_url}")
+
+        return jsonify({
+            'image_url': image_url,
+            'image_path': result['image_path']
+        })
+
+    except Exception as e:
+        import traceback
+        error_msg = f"图片生成失败: {str(e)}"
+        traceback.print_exc()
+        return jsonify({'error': error_msg}), 500
+
 @app.route('/api/documents')
 def list_documents():
     """列出所有生成的文档"""

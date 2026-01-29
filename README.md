@@ -65,7 +65,7 @@ cp .env.example .env
 DEEPSEEK_API_KEY=你的DeepSeek密钥
 ```
 
-> 💡 **提示**：详细的DeepSeek API配置指南请参考 [doc/DEEPSEEK_SETUP.md](doc/DEEPSEEK_SETUP.md)
+> 💡 **提示**：获取DeepSeek API密钥请访问 https://platform.deepseek.com
 
 ## 使用方式
 
@@ -260,8 +260,6 @@ bamboo/
 │   ├── index.html       # Web前端主界面
 │   ├── history.html     # 历史记录页面
 │   └── document.html    # 文档生成页面
-├── doc/
-│   └── DEEPSEEK_SETUP.md # DeepSeek API配置指南
 ├── images/              # 生成的图表保存目录
 ├── docs/                # 生成的文档保存目录
 ├── requirements.txt     # Python依赖包
@@ -283,7 +281,6 @@ bamboo/
 - **templates/index.html**: 响应式Web界面，支持绘图功能
 - **templates/history.html**: 历史记录页面，展示所有生成的图表和文档
 - **templates/document.html**: 文档生成页面，支持带图片的文档生成
-- **doc/DEEPSEEK_SETUP.md**: 详细的DeepSeek API配置和获取指南
 
 ## API 接口
 
@@ -474,7 +471,7 @@ import matplotlib.pyplot as plt
 - 💻 **代码能力强**：特别擅长代码生成和理解
 - 🔌 **兼容性好**：使用标准的OpenAI接口，集成简单
 
-详细配置请参考 [DeepSeek配置指南](doc/DEEPSEEK_SETUP.md)
+获取DeepSeek API密钥请访问 https://platform.deepseek.com
 
 ## 常见问题
 
@@ -492,7 +489,7 @@ socketio.run(app, debug=True, host='0.0.0.0', port=5002)  # 改为5002
 - API密钥是否正确配置在 `.env` 文件中
 - 网络连接是否正常
 - API额度是否充足
-- 是否按照 [DeepSeek配置指南](doc/DEEPSEEK_SETUP.md) 正确配置
+- 获取API密钥请访问 https://platform.deepseek.com
 
 ### 4. 启动脚本无执行权限
 ```bash
