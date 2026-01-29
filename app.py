@@ -58,6 +58,11 @@ def history():
     """历史页面"""
     return render_template('history.html')
 
+@app.route('/document')
+def document():
+    """文档生成页面"""
+    return render_template('document.html')
+
 @app.route('/api/workflow', methods=['POST'])
 def run_workflow():
     """启动绘图工作流（向后兼容）"""

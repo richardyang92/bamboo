@@ -6,6 +6,8 @@
     <title>历史图表 - AI 智能绘图工作流</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cherry-markdown/dist/cherry-markdown.css">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
     <style>
         * {
             margin: 0;
@@ -122,6 +124,19 @@
             align-items: center;
             justify-content: center;
             box-shadow: var(--elevation-2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .navbar-logo:hover {
+            transform: scale(1.1);
+            filter: brightness(1.1);
+            box-shadow: var(--elevation-4);
+        }
+
+        .navbar-logo:active {
+            transform: scale(0.95);
+            filter: brightness(0.95);
         }
 
         .navbar-logo .material-icons {
@@ -690,7 +705,7 @@
 <body>
     <!-- 顶部导航栏 - Material Design -->
     <nav class="navbar">
-        <div class="navbar-brand" onclick="goToHome()">
+        <div class="navbar-brand" onclick="goToHome()" style="cursor: pointer;">
             <div class="navbar-logo">
                 <span class="material-icons">palette</span>
             </div>
@@ -798,7 +813,7 @@
         <div class="image-modal-content" style="max-width: 900px;">
             <div class="image-modal-image-wrapper">
                 <button class="image-modal-close" onclick="closeDocumentModal()"><span class="material-icons">close</span></button>
-                <iframe id="documentModalPreview" style="width: 100%; height: 70vh; border: none; border-radius: 12px;"></iframe>
+                <div id="documentModalPreview" style="width: 100%; height: 70vh; overflow: auto;"></div>
             </div>
             <div class="image-modal-info">
                 <div class="image-modal-filename" id="documentModalFilename">document.md</div>
@@ -847,10 +862,11 @@
         function updateThemeButton() {
             const icon = document.getElementById('themeIcon');
 
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            const actualTheme = currentThemeMode === 'auto' ? systemTheme : currentThemeMode;
-
-            icon.textContent = actualTheme === 'dark' ? 'dark_mode' : 'light_mode';
+            if (currentThemeMode === 'auto') {
+                icon.textContent = 'brightness_auto';
+            } else {
+                icon.textContent = currentThemeMode === 'dark' ? 'dark_mode' : 'light_mode';
+            }
         }
 
         // 切换主题
@@ -862,6 +878,84 @@
             localStorage.setItem(THEME_KEY, currentThemeMode);
             applyTheme(currentThemeMode);
             updateThemeButton();
+
+            // Update Cherry Markdown instances
+            const cherryContainers = document.querySelectorAll('.cherry');
+            cherryContainers.forEach(container => {
+                const cherryInstance = container.__cherry__;
+                if (cherryInstance && cherryInstance.getValue) {
+                    const currentValue = cherryInstance.getValue();
+                    const parent = container.parentElement;
+                    const containerId = parent.id;
+
+                    // Destroy old instance
+                    parent.innerHTML = '';
+
+                    // Recreate with new theme
+                    new Cherry({
+                        id: containerId,
+                        value: currentValue,
+                        locale: 'zh_CN',
+                        theme: currentThemeMode === 'dark' ? 'dark' : 'light',
+                        externals: {
+                            mathjax: window.MathJax,
+                        },
+                        editor: {
+                            defaultModel: 'previewOnly',
+                            keepDocumentScrollAfterInit: true,
+                        },
+                        toolbars: {
+                            toolbar: false,
+                            toc: {
+                                updateLocationHash: false,
+                                defaultModel: 'pure',
+                                position: 'fixed',
+                                cssText: 'right: 20px;',
+                            },
+                        },
+                        engine: {
+                            global: {
+                                formatMoney: false,
+                            },
+                            syntax: {
+                                emoji: { enable: false },
+                                fontEmphasis: { allowWhitespace: true },
+                                footNote: { enable: true },
+                                inlineCode: { enable: true },
+                                mathBlock: {
+                                    engine: 'MathJax',
+                                    src: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js',
+                                },
+                                inlineMath: {
+                                    engine: 'MathJax',
+                                },
+                                table: {
+                                    enableChart: false
+                                },
+                                image: {
+                                    lazyLoad: true
+                                }
+                            }
+                        },
+                        previewer: {
+                            enablePreviewerBubble: false,
+                        },
+                        urlProcessor: function(url, srcType) {
+                            if (srcType === 'image') {
+                                const docPath = currentDocumentData?.url || '';
+                                const docDir = docPath ? docPath.substring(0, docPath.lastIndexOf('/')) : '';
+                                if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/') && !url.startsWith('data:')) {
+                                    if (docDir) {
+                                        return docDir + '/' + url;
+                                    }
+                                    return '/' + url;
+                                }
+                            }
+                            return url;
+                        }
+                    });
+                }
+            });
         }
 
         // 监听系统主题变化
@@ -1176,131 +1270,83 @@
         async function openDocumentModal(doc) {
             currentDocumentData = doc;
             const modal = document.getElementById('documentModal');
-            const preview = document.getElementById('documentModalPreview');
+            const previewContainer = document.getElementById('documentModalPreview');
             const filename = document.getElementById('documentModalFilename');
 
             try {
                 const response = await fetch(doc.url);
-                const content = await response.text();
+                let content = await response.text();
 
-                // 使用 marked.js 解析 Markdown，并添加数学公式支持
-                const htmlContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <!-- Marked.js for Markdown -->
-                        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
-                        <!-- KaTeX for math rendering -->
-                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-                        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
-                        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
-                        <style>
-                            body {
-                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-                                line-height: 1.6;
-                                color: #333;
-                                padding: 40px;
-                                background: #fff;
-                            }
-                            h1, h2, h3, h4 {
-                                border-bottom: 1px solid #eee;
-                                padding-bottom: 0.3em;
-                                margin-top: 1.5em;
-                                margin-bottom: 0.5em;
-                            }
-                            h1 { font-size: 2em; }
-                            h2 { font-size: 1.5em; }
-                            h3 { font-size: 1.25em; }
-                            code {
-                                background: #f6f8fa;
-                                padding: 0.2em 0.4em;
-                                border-radius: 3px;
-                                font-family: 'Monaco', 'Courier New', monospace;
-                                font-size: 0.9em;
-                            }
-                            pre {
-                                background: #f6f8fa;
-                                padding: 16px;
-                                border-radius: 6px;
-                                overflow: auto;
-                                border: 1px solid #e1e4e8;
-                            }
-                            pre code {
-                                background: transparent;
-                                padding: 0;
-                                border: none;
-                            }
-                            blockquote {
-                                border-left: 4px solid #dfe2e5;
-                                padding-left: 16px;
-                                color: #6a737d;
-                                margin: 1em 0;
-                            }
-                            ul, ol {
-                                padding-left: 2em;
-                                margin: 1em 0;
-                            }
-                            li {
-                                margin: 0.5em 0;
-                            }
-                            a {
-                                color: #0366d6;
-                                text-decoration: none;
-                            }
-                            a:hover {
-                                text-decoration: underline;
-                            }
-                            p {
-                                margin: 1em 0;
-                            }
-                            /* KaTeX 样式调整 */
-                            .katex-display {
-                                overflow-x: auto;
-                                overflow-y: hidden;
-                                padding: 0.5em 0;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div id="content"></div>
-                        <script>
-                            const markdownContent = ${JSON.stringify(content)};
+                // Replace /images/ with /api/images/ in markdown content
+                content = content.replace(/\/images\//g, '/api/images/');
 
-                            // 修复双反斜杠问题：将 LaTeX 中错误的双反斜杠替换为单反斜杠
-                            function fixLatexBackslashes(text) {
-                                // 保护真正的双反斜杠换行符
-                                text = text.replace(/\\\\\\n/g, '___NEWLINE___');
-                                // 将所有 \\+字母 替换为 \+字母
-                                text = text.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
-                                // 恢复换行符
-                                text = text.replace(/___NEWLINE___/g, '\\\\\\n');
-                                return text;
+                // Clear previous instance
+                previewContainer.innerHTML = '';
+
+                // Initialize Cherry Markdown (preview-only)
+                new Cherry({
+                    id: 'documentModalPreview',
+                    value: content,
+                    locale: 'zh_CN',
+                    theme: currentThemeMode === 'dark' ? 'dark' : 'light',
+                    externals: {
+                        mathjax: window.MathJax,
+                    },
+                    editor: {
+                        defaultModel: 'previewOnly',
+                        keepDocumentScrollAfterInit: true,
+                    },
+                    toolbars: {
+                        toolbar: false,
+                        toc: {
+                            updateLocationHash: false,
+                            defaultModel: 'pure',
+                            position: 'fixed',
+                            cssText: 'right: 20px;',
+                        },
+                    },
+                    engine: {
+                        global: {
+                            formatMoney: false,
+                        },
+                        syntax: {
+                            emoji: { enable: false },
+                            fontEmphasis: { allowWhitespace: true },
+                            footNote: { enable: true },
+                            inlineCode: { enable: true },
+                            mathBlock: {
+                                engine: 'MathJax',
+                                src: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js',
+                            },
+                            inlineMath: {
+                                engine: 'MathJax',
+                            },
+                            table: {
+                                enableChart: false
+                            },
+                            image: {
+                                lazyLoad: true
                             }
+                        }
+                    },
+                    previewer: {
+                        enablePreviewerBubble: false,
+                    },
+                    urlProcessor: function(url, srcType) {
+                        if (srcType === 'image') {
+                            if (url.startsWith('/images/')) {
+                                return url.replace('/images/', '/api/images/');
+                            }
+                            if (!url.startsWith('http://') && !url.startsWith('https://') && 
+                                !url.startsWith('/') && !url.startsWith('data:') &&
+                                !url.startsWith('/api/images/')) {
+                                return '/api/images/' + url;
+                            }
+                        }
+                        return url;
+                    }
+                });
 
-                            const fixedContent = fixLatexBackslashes(markdownContent);
-
-                            // 第一步：解析 Markdown
-                            const content = document.getElementById('content');
-                            content.innerHTML = marked.parse(fixedContent);
-
-                            // 第二步：使用 KaTeX 自动渲染数学公式
-                            renderMathInElement(content, {
-                                delimiters: [
-                                    {left: '$$', right: '$$', display: true},
-                                    {left: '$', right: '$', display: false},
-                                    {left: '\\[', right: '\\]', display: true},
-                                    {left: '\\(', right: '\\)', display: false}
-                                ],
-                                throwOnError: false
-                            });
-                        <\/script>
-                    </body>
-                    </html>
-                `;
-
-                preview.srcdoc = htmlContent;
                 filename.textContent = doc.name;
                 modal.classList.add('show');
             } catch (error) {
@@ -1368,5 +1414,6 @@
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/cherry-markdown/dist/cherry-markdown.js"></script>
 </body>
 </html>

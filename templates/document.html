@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档生成 - Bamboo AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Material Design Colors */
+            --md-primary: #6200EE;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #FFFFFF;
+            --md-surface: #FFFFFF;
+            --md-error: #B00020;
+            --md-on-primary: #FFFFFF;
+            --md-on-secondary: #000000;
+            --md-on-background: #000000;
+            --md-on-surface: #000000;
+            --md-on-error: #FFFFFF;
+
+            /* Elevation shadows - Material Design */
+            --elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --elevation-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+            --elevation-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+            --elevation-4: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+            --elevation-5: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+
+            --md-success: #4CAF50;
+            --md-warning: #FF9800;
+            --md-info: #2196F3;
+            --md-divider: rgba(0,0,0,0.12);
+        }
+
+        /* 深色主题 */
+        [data-theme="dark"] {
+            --bg-main: #121212;
+            --bg-card: #1E1E1E;
+            --bg-input: #2D2D2D;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --text-muted: #808080;
+            --border: #333333;
+            --border-light: #444444;
+            --md-primary: #BB86FC;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #121212;
+            --md-surface: #1E1E1E;
+            --md-on-primary: #000000;
+            --md-on-background: #FFFFFF;
+            --md-on-surface: #FFFFFF;
+            --md-divider: rgba(255,255,255,0.12);
+        }
+
+        /* 亮色主题 */
+        [data-theme="light"] {
+            --bg-main: #FAFAFA;
+            --bg-card: #FFFFFF;
+            --bg-input: #F5F5F5;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --text-muted: #9E9E9E;
+            --border: #E0E0E0;
+            --border-light: #BDBDBD;
+            --md-primary: #6200EE;
+            --md-primary-variant: #3700B3;
+            --md-secondary: #03DAC6;
+            --md-background: #FAFAFA;
+            --md-surface: #FFFFFF;
+            --md-on-primary: #FFFFFF;
+            --md-on-background: #212121;
+            --md-on-surface: #212121;
+            --md-divider: rgba(0,0,0,0.12);
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* Material Design Button */
+        .md-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 16px;
+            height: 36px;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.25px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        .md-button-contained {
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            box-shadow: var(--elevation-2);
+        }
+
+        .md-button-contained:hover {
+            box-shadow: var(--elevation-4);
+        }
+
+        .md-button-contained:active {
+            box-shadow: var(--elevation-1);
+        }
+
+        .md-button-text {
+            background: transparent;
+            color: var(--md-primary);
+        }
+
+        .md-button-text:hover {
+            background: rgba(98, 0, 238, 0.04);
+        }
+
+        .md-button .material-icons {
+            font-size: 18px;
+        }
+
+        /* Material Design Icon Button */
+        .md-icon-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        .md-icon-button:hover {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .md-icon-button:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .md-icon-button .material-icons {
+            font-size: 24px;
+        }
+
+        /* 顶部导航栏 - Material Design AppBar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: var(--md-surface);
+            box-shadow: var(--elevation-4);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            transition: background 0.3s ease;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .navbar-logo {
+            width: 40px;
+            height: 40px;
+            background: var(--md-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--elevation-2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .navbar-logo:hover {
+            transform: scale(1.1);
+            filter: brightness(1.1);
+            box-shadow: var(--elevation-4);
+        }
+
+        .navbar-logo:active {
+            transform: scale(0.95);
+            filter: brightness(0.95);
+        }
+
+        .navbar-logo .material-icons {
+            color: var(--md-on-primary);
+            font-size: 24px;
+        }
+
+        .navbar-title {
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--md-on-surface);
+            letter-spacing: 0.15px;
+        }
+
+        .navbar-spacer {
+            flex: 1;
+        }
+
+        .navbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        /* 主容器 */
+        .main-container {
+            margin-top: 64px;
+            min-height: calc(100vh - 64px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .empty-text {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        /* ==================== 侧滑栏样式 ==================== */
+
+        /* 侧滑栏遮罩层 */
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 1001;
+            backdrop-filter: blur(2px);
+        }
+
+        .sidebar-backdrop.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 侧滑栏容器 */
+        .sidebar-drawer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            background: var(--md-surface);
+            box-shadow: var(--elevation-8);
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1002;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-drawer.open {
+            transform: translateX(0);
+        }
+
+        /* 侧滑栏头部 */
+        .sidebar-header {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--md-divider);
+            background: var(--md-primary);
+        }
+
+        .sidebar-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--md-on-primary);
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .sidebar-title .material-icons {
+            font-size: 24px;
+        }
+
+        /* 侧滑栏导航 */
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .sidebar-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 24px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            font-family: 'Roboto', sans-serif;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .sidebar-nav-item:hover {
+            background: rgba(98, 0, 238, 0.08);
+            border-left-color: var(--md-primary-variant);
+        }
+
+        .sidebar-nav-item.active {
+            background: rgba(98, 0, 238, 0.12);
+            border-left-color: var(--md-primary);
+            color: var(--md-primary);
+            font-weight: 500;
+        }
+
+        .sidebar-nav-item .material-icons {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 侧滑栏滚动条 */
+        .sidebar-nav::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb:hover {
+            background: var(--border-light);
+        }
+
+        /* 侧滑栏响应式 */
+        @media (max-width: 768px) {
+            .sidebar-drawer {
+                width: 256px;
+            }
+
+            .sidebar-nav-item {
+                padding: 16px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧滑栏遮罩层 -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+    <!-- 侧滑栏 -->
+    <aside class="sidebar-drawer" id="sidebarDrawer">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <span class="material-icons">menu_book</span>
+                <span>功能菜单</span>
+            </div>
+        </div>
+
+        <div class="sidebar-nav">
+            <a href="/" class="sidebar-nav-item" onclick="navigateTo('/')">
+                <span class="material-icons">palette</span>
+                <span>智能绘图</span>
+            </a>
+            <a href="/document" class="sidebar-nav-item active" onclick="navigateTo('/document')">
+                <span class="material-icons">edit_document</span>
+                <span>文档生成</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- 顶部导航栏 - Material Design -->
+    <nav class="navbar">
+        <div class="navbar-brand" onclick="toggleSidebar()" style="cursor: pointer;">
+            <div class="navbar-logo">
+                <span class="material-icons">spa</span>
+            </div>
+            <div class="navbar-title">Bamboo AI</div>
+        </div>
+        <div class="navbar-spacer"></div>
+        <div class="navbar-actions">
+            <button class="md-icon-button" onclick="toggleTheme()" title="切换主题">
+                <span class="material-icons" id="themeIcon">dark_mode</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+        <div class="empty-state">
+            <div class="empty-icon">
+                <span class="material-icons">construction</span>
+            </div>
+            <div class="empty-title">功能开发中</div>
+            <div class="empty-text">
+                文档生成功能正在开发中。此功能将支持与AI共同编写文档，敬请期待！
+            </div>
+            <button class="md-button md-button-contained" onclick="navigateTo('/')">
+                <span class="material-icons">palette</span>
+                <span>返回智能绘图</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 主题管理
+        const THEME_KEY = 'app-theme';
+        const themes = ['light', 'dark', 'auto'];
+        let currentThemeMode = localStorage.getItem(THEME_KEY) || 'auto';
+
+        function initTheme() {
+            applyTheme(currentThemeMode);
+            updateThemeButton();
+        }
+
+        function applyTheme(mode) {
+            const html = document.documentElement;
+            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+            if (mode === 'auto') {
+                html.setAttribute('data-theme', systemTheme);
+            } else {
+                html.setAttribute('data-theme', mode);
+            }
+        }
+
+        function updateThemeButton() {
+            const icon = document.getElementById('themeIcon');
+
+            if (currentThemeMode === 'auto') {
+                icon.textContent = 'brightness_auto';
+            } else {
+                icon.textContent = currentThemeMode === 'dark' ? 'dark_mode' : 'light_mode';
+            }
+        }
+
+        function toggleTheme() {
+            const currentIndex = themes.indexOf(currentThemeMode);
+            const nextIndex = (currentIndex + 1) % themes.length;
+            currentThemeMode = themes[nextIndex];
+
+            localStorage.setItem(THEME_KEY, currentThemeMode);
+            applyTheme(currentThemeMode);
+            updateThemeButton();
+        }
+
+        // 监听系统主题变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (currentThemeMode === 'auto') {
+                applyTheme('auto');
+                updateThemeButton();
+            }
+        });
+
+        // 初始化
+        initTheme();
+
+        // ==================== 侧滑栏控制 ====================
+
+        let isSidebarOpen = false;
+
+        // 打开/关闭侧滑栏
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebarDrawer');
+            const backdrop = document.getElementById('sidebarBackdrop');
+
+            isSidebarOpen = !isSidebarOpen;
+
+            if (isSidebarOpen) {
+                sidebar.classList.add('open');
+                backdrop.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            } else {
+                sidebar.classList.remove('open');
+                backdrop.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 打开侧滑栏
+        function openSidebar() {
+            if (!isSidebarOpen) {
+                toggleSidebar();
+            }
+        }
+
+        // 关闭侧滑栏
+        function closeSidebar() {
+            if (isSidebarOpen) {
+                toggleSidebar();
+            }
+        }
+
+        // 导航到指定页面
+        function navigateTo(path) {
+            event.preventDefault();
+
+            // 关闭侧滑栏
+            closeSidebar();
+
+            // 延迟跳转，等待动画完成
+            setTimeout(() => {
+                window.location.href = path;
+            }, 300);
+        }
+
+        // ESC键关闭侧滑栏
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && isSidebarOpen) {
+                closeSidebar();
+            }
+        });
+
+        // 初始化：高亮当前页面
+        function initSidebar() {
+            const currentPath = window.location.pathname;
+            const navItems = document.querySelectorAll('.sidebar-nav-item');
+
+            navItems.forEach(item => {
+                const href = item.getAttribute('href');
+                if (href === currentPath) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // 页面加载完成后初始化侧滑栏
+        document.addEventListener('DOMContentLoaded', initSidebar);
+    </script>
+</body>
+</html>
