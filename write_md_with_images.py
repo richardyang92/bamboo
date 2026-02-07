@@ -370,345 +370,211 @@ def identify_image_requests(state: GraphState) -> GraphState:
         traceback.print_exc()
         return {"image_requests": []}
 
+# 增强图片描述的函数
+def enhance_image_prompt_with_llm(image_description: str, document_context: str, original_prompt: str) -> str:
+    """使用大模型增强图片描述，使其更适合生成高质量绘图"""
+    try:
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        
+        if not api_key:
+            print(f"   [WARNING] 未设置 DEEPSEEK_API_KEY，跳过图片描述增强")
+            return image_description
+        
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://api.deepseek.com"
+        )
+        
+        print(f"   [DEBUG] 正在增强图片描述: '{image_description}'")
+        
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """你是一个专业的数据可视化专家，需要将简短的图片需求转换为详细的绘图指令。
+
+你的任务是将简单的图片描述转换为专业的绘图指令，添加必要的绘图规范、技术要求和细节。
+
+要求：
+1. 保持原始需求的核心意图
+2. 添加专业的绘图技术要求
+3. 指定图表类型、数据生成方式、视觉效果等
+4. 确保生成的指令可以直接用于高质量的Python代码生成
+5. 保持与文档主题和上下文的一致性
+
+示例：
+输入："展示波函数概率分布的图"
+输出："绘制量子力学波函数的概率分布图，使用numpy生成x轴范围0到5，计算基态和第一激发态的波函数，用不同颜色表示，添加概率密度曲线，标注能级位置，设置中文标题和坐标轴标签"
+
+直接输出增强后的绘图指令，不要添加解释。"""
+                },
+                {
+                    "role": "user",
+                    "content": f"""原始用户需求：{original_prompt}
+
+文档上下文：{document_context}
+
+图片需求：{image_description}
+
+请提供增强后的绘图指令："""
+                }
+            ],
+            temperature=0.3,
+            max_tokens=500
+        )
+        
+        enhanced_description = response.choices[0].message.content.strip()
+        print(f"   [DEBUG] 图片描述增强完成: '{enhanced_description[:100]}...'")
+        return enhanced_description
+        
+    except Exception as e:
+        print(f"   [WARNING] 图片描述增强失败: {str(e)}，使用原始描述")
+        return image_description
+
+# 提取文档上下文的辅助函数
+def extract_document_context(state: GraphState, image_request: dict) -> str:
+    """提取图片相关的文档上下文"""
+    try:
+        # 获取文档大纲和润色后的提示词
+        document_outline = state.get("document_outline", "")
+        refined_prompt = state.get("refined_prompt", "")
+        
+        # 提取图片占位符周围的上下文
+        markdown_content = state.get("markdown_content", "")
+        placeholder = image_request.get("placeholder", "")
+        
+        # 查找占位符在文档中的位置
+        placeholder_index = markdown_content.find(placeholder)
+        if placeholder_index == -1:
+            return f"文档主题: {state.get('user_prompt', '')}\n文档大纲: {document_outline[:200]}..."
+        
+        # 提取占位符前后各5行作为上下文
+        lines_before = []
+        lines_after = []
+        
+        # 分割文档为行
+        all_lines = markdown_content.split('\n')
+        
+        # 找到占位符所在行
+        placeholder_line_index = -1
+        for i, line in enumerate(all_lines):
+            if placeholder in line:
+                placeholder_line_index = i
+                break
+        
+        if placeholder_line_index != -1:
+            # 获取前5行
+            start_index = max(0, placeholder_line_index - 5)
+            lines_before = all_lines[start_index:placeholder_line_index]
+            
+            # 获取后5行
+            end_index = min(len(all_lines), placeholder_line_index + 6)
+            lines_after = all_lines[placeholder_line_index + 1:end_index]
+        
+        context_lines = lines_before + lines_after
+        context_text = '\n'.join(context_lines)
+        
+        # 组合上下文信息
+        full_context = f"""文档主题: {state.get('user_prompt', '')}
+文档大纲: {document_outline[:300]}...
+图片所在上下文:
+{context_text}"""
+        
+        return full_context
+        
+    except Exception as e:
+        print(f"   [WARNING] 提取文档上下文失败: {str(e)}")
+        return f"文档主题: {state.get('user_prompt', '')}"
+
 # 生成所有图片的节点
 def generate_images(state: GraphState) -> GraphState:
-    """根据图片请求生成所有需要的图片"""
+    """根据图片请求生成所有需要的图片(复用绘图工作流)"""
     print("5. 正在生成图表...")
 
     try:
+        # 导入公共的图片生成函数
+        from draw_pic import generate_single_image
+
         image_requests = state["image_requests"]
         generated_images = []
-        
+
         if not image_requests:
             print(f"   [INFO] 没有需要生成的图片")
             return {"generated_images": []}
-        
-        api_key = os.getenv("DEEPSEEK_API_KEY")
-        if not api_key:
-            return {"error": "未设置 DEEPSEEK_API_KEY，请在 .env 文件中配置"}
-        
-        # 准备绘图环境（确保在函数内部设置）
-        import matplotlib
-        # 设置非交互式后端
-        if matplotlib.get_backend() != 'Agg':
-            matplotlib.use('Agg', force=True)
-        import matplotlib.pyplot as plt
-        import matplotlib.patches as patches
-        
-        # 获取脚本目录
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        images_dir = os.path.join(script_dir, "images")
-        if not os.path.exists(images_dir):
-            os.makedirs(images_dir)
-            print(f"   [DEBUG] 创建 images 目录: {images_dir}")
-        
+
         # 生成每张图片
         for i, req in enumerate(image_requests, 1):
             print(f"   [DEBUG] 正在生成图片 {i}/{len(image_requests)}: {req['description']}")
-            
+
             try:
-                # 生成绘图代码
-                client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+                # 提取文档上下文
+                document_context = extract_document_context(state, req)
+                original_prompt = state.get("user_prompt", "")
                 
-                # 根据描述类型选择不同的提示策略
-                is_physics_diagram = any(keyword in req['description'] for keyword in
-                    ['力', '受力', '斜面', '支持力', '摩擦力', '重力', '力学', '示意图'])
-                is_flowchart = any(keyword in req['description'] for keyword in
-                    ['流程图', '架构图', '流程', '步骤', '阶段', '流程：', '展示'])
-
-                if is_flowchart:
-                    # 流程图/架构图特殊提示
-                    drawing_prompt = f"""请根据以下描述生成 Python 绘图代码，绘制专业的流程图：
-
-描述：{req['description']}
-
-**重要要求（必须严格遵守）**：
-
-1. **绘图方法**：使用 matplotlib.patches 绘制矩形框和箭头
-   - 每个步骤用一个矩形框表示：`Rectangle((x, y), width, height, facecolor='lightblue', edgecolor='black', linewidth=2)`
-   - 使用 `ax.add_patch()` 添加矩形到图表
-   - 使用 `ax.annotate()` 添加箭头连接，格式：`ax.annotate('', xy=(终点x, 终点y), xytext=(起点x, 起点y), arrowprops=dict(arrowstyle='->', lw=2))`
-   - 使用 `ax.text()` 在矩形框中心添加文字说明
-
-2. **布局要求（最重要）**：
-   - 从上到下或从左到右排列流程步骤
-   - 每个步骤之间留足够间距（建议间距1.5-2个单位）
-   - 矩形框尺寸统一（建议 width=3, height=1）
-   - 整体居中显示，留出适当边距
-
-3. **代码结构（必须遵循）**：
-   ```python
-   import matplotlib.pyplot as plt
-   import matplotlib.patches as patches
-   from matplotlib.patches import Rectangle
-   import matplotlib
-   matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'WenQuanYi Micro Hei']
-
-   fig, ax = plt.subplots(figsize=(12, 8))
-
-   # 定义步骤位置（从上到下）
-   steps = [
-       ('步骤1名称', 4, 7),    # (文字, x中心, y中心)
-       ('步骤2名称', 4, 5.5),
-       ('步骤3名称', 4, 4),
-       # ... 更多步骤
-   ]
-
-   # 绘制矩形框和文字
-   for text, x, y in steps:
-       rect = Rectangle((x-1.5, y-0.5), 3, 1, facecolor='lightblue', edgecolor='black', linewidth=2)
-       ax.add_patch(rect)
-       ax.text(x, y, text, ha='center', va='center', fontsize=12, fontweight='bold')
-
-   # 绘制箭头连接
-   for i in range(len(steps)-1):
-       ax.annotate('', xy=(steps[i+1][1], steps[i+1][2]+0.5),
-                   xytext=(steps[i][1], steps[i][2]-0.5),
-                   arrowprops=dict(arrowstyle='->', lw=2, color='black'))
-
-   ax.set_xlim(0, 8)
-   ax.set_ylim(0, 8)
-   ax.axis('off')
-   plt.tight_layout()
-   plt.savefig(target_filename, dpi=150, bbox_inches='tight', facecolor='white')
-   plt.close()
-   ```
-
-4. **颜色方案**：
-   - 矩形框：浅蓝色填充 'lightblue'，黑色边框
-   - 箭头：黑色，线宽2
-   - 文字：黑色或深灰色，加粗，字号12-14
-
-5. **必须确保**：
-   - 每个步骤都有矩形框
-   - 步骤之间有箭头连接
-   - 文字清晰可读，居中对齐
-   - 整体布局美观，不拥挤
-   - 不要显示坐标轴（使用 ax.axis('off')）
-
-只返回完整的 Python 代码，不要任何解释。
-"""
-                elif is_physics_diagram:
-                    drawing_prompt = f"""请根据以下描述生成 Python 绘图代码：
-
-描述：{req['description']}
-
-要求：
-1. 使用 matplotlib 绘图
-2. **物理规律要求（非常重要）**：
-   - 支持力（法向力）方向必须**垂直于斜面表面**
-   - 重力方向必须**竖直向下**
-   - 摩擦力方向必须**平行于斜面**
-   - 确保所有箭头角度准确反映物理规律
-3. 添加适当的标题、坐标轴标签、图例
-4. 使用清晰的配色方案（建议：重力用红色，支持力用绿色，摩擦力用蓝色）
-5. 图表要专业、美观、易于理解
-6. 只返回可执行的 Python 代码，不要任何解释
-7. 确保中文正常显示
-8. 图表尺寸合适，不拥挤
-9. 必须使用 plt.savefig(target_filename, dpi=150, bbox_inches='tight') 保存图片
-10. 不要调用 plt.show()
-"""
-                else:
-                    drawing_prompt = f"""请根据以下描述生成 Python 绘图代码：
-
-描述：{req['description']}
-
-要求：
-1. 使用 matplotlib 绘图
-2. 添加适当的标题、坐标轴标签、图例
-3. 使用清晰的配色方案
-4. 图表要专业、美观、易于理解
-5. 只返回可执行的 Python 代码，不要任何解释
-6. 确保中文正常显示
-7. 图表尺寸合适，不拥挤
-8. 必须使用 plt.savefig(target_filename, dpi=150, bbox_inches='tight') 保存图片
-9. 不要调用 plt.show()
-"""
-                
-                response = client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": """你是一个专业的数据可视化和绘图专家。请根据用户需求生成高质量的 Python 绘图代码。
-
-技术要求：
-1. 只使用 matplotlib 库（可配合 numpy）
-2. 代码必须完整可执行
-3. 设置中文字体支持：matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'WenQuanYi Micro Hei']
-4. 图片保存使用变量 target_filename
-5. 不要生成被截断的代码
-6. 确保所有括号都闭合
-7. 重要：不要使用 plt.show()，直接使用 plt.savefig() 保存图片
-
-绘图规范：
-- 使用清晰的配色方案
-- 添加适当的标题和标签
-- 使用图例说明
-- 线条粗细有层次
-- 布局合理，使用 tight_layout()
-
-**物理示意图特殊要求（重要）**：
-如果用户需求涉及受力分析、力学示意图等：
-- **支持力（法向力）方向必须垂直于接触面**
-- **重力方向必须竖直向下**
-- **摩擦力方向必须平行于接触面**
-- 使用角度计算确保箭头方向准确（如使用 numpy 的三角函数）
-- 斜面角度 θ 与力的方向关系：
-  * 重力：竖直向下（-90°）
-  * 支持力：垂直于斜面向上（θ - 90°）
-  * 摩擦力：沿斜面向上或向下（θ 或 θ + 180°）
-
-**流程图/架构图特殊要求（重要）**：
-如果用户需求涉及流程图、架构图、步骤说明等：
-- **必须使用 matplotlib.patches.Rectangle 绘制矩形框**
-- **每个步骤用一个矩形框表示**，不要只用文字
-- **使用 ax.annotate() 添加箭头连接**步骤
-- **矩形框必须有填充色**（如 facecolor='lightblue'）和边框
-- **步骤文字必须在矩形框内部**，使用 ax.text() 居中显示
-- **必须隐藏坐标轴**：使用 ax.axis('off')
-- **布局必须清晰**：从上到下或从左到右，步骤间距足够
-- 示例结构：
-  ```python
-  # 定义步骤位置
-  steps = [('步骤1', 4, 7), ('步骤2', 4, 5.5), ...]
-  # 绘制矩形和文字
-  for text, x, y in steps:
-      rect = Rectangle((x-1.5, y-0.5), 3, 1, facecolor='lightblue', edgecolor='black', linewidth=2)
-      ax.add_patch(rect)
-      ax.text(x, y, text, ha='center', va='center', fontsize=12)
-  # 绘制箭头
-  for i in range(len(steps)-1):
-      ax.annotate('', xy=(...), xytext=(...), arrowprops=dict(arrowstyle='->', lw=2))
-  ```
-
-只返回 Python 代码，不要任何解释。"""
-                        },
-                        {
-                            "role": "user",
-                            "content": drawing_prompt
-                        }
-                    ],
-                    temperature=0.3,
-                    max_tokens=3000
+                # 使用大模型增强图片描述
+                enhanced_description = enhance_image_prompt_with_llm(
+                    req['description'], 
+                    document_context, 
+                    original_prompt
                 )
                 
-                generated_code = response.choices[0].message.content.strip()
-                
-                # 去除 markdown 标记
-                if generated_code.startswith('```python'):
-                    generated_code = generated_code[10:-3].strip()
-                elif generated_code.startswith('```'):
-                    generated_code = generated_code[3:-3].strip()
-                
-                # 移除 plt.show() 调用（非交互式环境不支持）
-                import re
-                generated_code = re.sub(r'plt\.show\(\)', '# plt.show()  # 已禁用（非交互式环境）', generated_code)
-                generated_code = re.sub(r'plt\.show\(\s*\)', '# plt.show()  # 已禁用（非交互式环境）', generated_code)
-                
-                # 添加调试日志
-                print(f"   [DEBUG] 生成的代码长度: {len(generated_code)} 字符")
-                if len(generated_code) < 500:
-                    print(f"   [DEBUG] 生成代码: {generated_code}")
-                
-                # 生成文件名
+                # 生成自定义文件名（基于原始描述）
                 from datetime import datetime
+                import re
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 safe_description = re.sub(r'[^\w\u4e00-\u9fa5]', '_', req['description'][:20])
-                target_filename = os.path.join(images_dir, f"plot_{safe_description}_{timestamp}.png")
-                
-                # 执行代码生成图片（每个图片使用独立的图形）
-                local_vars = {
-                    'plt': plt,
-                    'matplotlib': matplotlib,
-                    'patches': patches,
-                    'np': __import__('numpy'),
-                    'os': os,
-                    'target_filename': target_filename
-                }
+                custom_filename = f"plot_{safe_description}_{timestamp}.png"
 
-                # 先编译代码检查语法
-                compile(generated_code, '<string>', 'exec')
+                # 调用统一的绘图工作流（使用增强后的描述）
+                result = generate_single_image(enhanced_description, custom_filename)
 
-                # 清理 matplotlib 状态（在执行前）
-                plt.close('all')
-
-                # 保存原始工作目录并切换到 images 目录
-                # 这样即使 AI 生成的代码使用相对路径，文件也会保存到正确的位置
-                original_cwd = os.getcwd()
-                os.chdir(images_dir)
-                print(f"   [DEBUG] 临时切换工作目录到: {images_dir}")
-
-                try:
-                    # 执行代码
-                    exec(generated_code, globals(), local_vars)
-
-                    # 确保图片被保存（如果 AI 的代码没有调用 savefig，这里强制调用）
-                    try:
-                        # 使用相对路径文件名，因为当前目录已经是 images_dir
-                        relative_filename = os.path.basename(target_filename)
-                        plt.savefig(relative_filename, dpi=150, bbox_inches='tight', facecolor='white')
-                        print(f"   [DEBUG] 强制保存图片到: {relative_filename}")
-                    except Exception as save_error:
-                        print(f"   [DEBUG] 强制保存失败: {str(save_error)}")
-                finally:
-                    # 恢复原始工作目录
-                    os.chdir(original_cwd)
-                    print(f"   [DEBUG] 恢复工作目录到: {original_cwd}")
-
-                # 强制关闭所有图形，确保文件已写入
-                plt.close('all')
-                
-                # 验证图片生成
-                if os.path.exists(target_filename):
-                    file_size = os.path.getsize(target_filename)
-                    # 计算相对于 docs 目录的路径
-                    relative_path = f"../images/{os.path.basename(target_filename)}"
-                    
+                if result['success']:
+                    # 图片生成成功
                     generated_images.append({
                         "number": req['number'],
                         "description": req['description'],
+                        "enhanced_description": enhanced_description,
                         "placeholder": req['placeholder'],
-                        "path": target_filename,
-                        "relative_path": relative_path,
-                        "size": file_size
+                        "path": result['image_path'],
+                        "relative_path": result['relative_path'],
+                        "size": result['image_size']
                     })
-                    print(f"   [DEBUG] ✓ 图片 {i} 生成成功: {os.path.basename(target_filename)} (大小: {file_size} 字节)")
+                    print(f"   [DEBUG] ✓ 图片 {i} 生成成功: {custom_filename} (大小: {result['image_size']} 字节)")
+                    print(f"   [DEBUG]   原始描述: {req['description']}")
+                    print(f"   [DEBUG]   增强描述: {enhanced_description[:100]}...")
                 else:
-                    print(f"   [DEBUG] ✗ 图片 {i} 生成失败: 文件未创建")
-                    print(f"   [DEBUG] 目标路径: {target_filename}")
-                    print(f"   [DEBUG] 生成的代码:")
-                    print("-" * 80)
-                    print(generated_code)
-                    print("-" * 80)
-                    # 即使图片生成失败，也记录以便后续处理
+                    # 图片生成失败
+                    print(f"   [DEBUG] ✗ 图片 {i} 生成失败: {result.get('error', '未知错误')}")
                     generated_images.append({
                         "number": req['number'],
                         "description": req['description'],
+                        "enhanced_description": enhanced_description,
                         "placeholder": req['placeholder'],
                         "path": None,
                         "relative_path": None,
                         "size": 0
                     })
-                    
+
             except Exception as e:
                 print(f"   [DEBUG] ✗ 图片 {i} 生成失败: {str(e)}")
                 import traceback
                 traceback.print_exc()
-                print(f"   [DEBUG] 生成的代码:")
-                print("-" * 80)
-                print(generated_code)
-                print("-" * 80)
+                enhanced_description = enhance_image_prompt_with_llm(
+                    req['description'], 
+                    extract_document_context(state, req), 
+                    state.get("user_prompt", "")
+                )
                 generated_images.append({
                     "number": req['number'],
                     "description": req['description'],
+                    "enhanced_description": enhanced_description,
                     "placeholder": req['placeholder'],
                     "path": None,
                     "relative_path": None,
                     "size": 0
                 })
-        
+
         print(f"✅ 图表生成完成，共 {len(generated_images)} 张")
         return {"generated_images": generated_images}
     except Exception as e:
