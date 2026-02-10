@@ -36,6 +36,8 @@
 - 📄 **文档预览**：支持Markdown文档预览和内容查看
 - 🗑️ **文件管理**：支持删除单个文档或图片
 - 🚀 **快速启动**：提供便捷的启动脚本
+- ✏️ **AI编辑器**：智能文档编辑，支持AI修改选中文本内容
+- 🎨 **图片生成**：在文档编辑器中直接生成图表并插入
 
 ## 快速开始
 
@@ -103,6 +105,9 @@ Web界面功能：
 - 📜 **历史记录**：访问 `/history` 页面查看所有生成内容
 - 📥 **一键下载**：下载生成的图片和文档
 - 🗑️ **管理功能**：删除不需要的历史记录
+- ✏️ **AI编辑器**：选中文本后使用AI进行智能修改
+- 🎨 **图片生成**：在编辑器中直接生成图表并插入
+- 🔧 **WebSocket测试**：访问 `/test` 页面测试WebSocket连接
 
 ### 方式三：命令行模式
 
@@ -259,7 +264,7 @@ bamboo/
 ├── templates/
 │   ├── index.html       # Web前端主界面
 │   ├── history.html     # 历史记录页面
-│   └── document.html    # 文档生成页面
+│   └── test.html        # WebSocket测试页面
 ├── images/              # 生成的图表保存目录
 ├── docs/                # 生成的文档保存目录
 ├── requirements.txt     # Python依赖包
@@ -278,9 +283,9 @@ bamboo/
 - **app.py**: Flask Web服务器，提供RESTful API和WebSocket支持
 - **AGENTS.md**: 开发指南，包含代码风格规范、工作流模式和API集成说明
 - **start.sh**: 快速启动脚本，自动检查环境并启动服务
-- **templates/index.html**: 响应式Web界面，支持绘图功能
+- **templates/index.html**: 响应式Web界面，支持绘图和文档编辑功能
 - **templates/history.html**: 历史记录页面，展示所有生成的图表和文档
-- **templates/document.html**: 文档生成页面，支持带图片的文档生成
+- **templates/test.html**: WebSocket连接测试页面，用于调试实时通信
 
 ## API 接口
 
@@ -314,6 +319,46 @@ Web服务器提供以下API接口：
 ```
 
 该接口会自动识别文档中需要图表的部分，并生成相关图表整合到文档中。
+
+#### POST /api/document/ai-modify
+AI修改选中的文本内容
+
+**请求体**：
+```json
+{
+  "selected_text": "需要修改的文本内容",
+  "instructions": "修改指令"
+}
+```
+
+**响应**：
+```json
+{
+  "modified_text": "修改后的文本内容"
+}
+```
+
+此接口用于文档编辑器中的AI辅助编辑功能。
+
+#### POST /api/document/generate-image
+AI生成图片（用于文档编辑器中插入图表）
+
+**请求体**：
+```json
+{
+  "description": "图片描述"
+}
+```
+
+**响应**：
+```json
+{
+  "image_url": "/api/images/plot_xxx.png",
+  "image_path": "/path/to/images/plot_xxx.png"
+}
+```
+
+此接口调用绘图工作流生成指定描述的图表。
 
 #### GET /api/documents/<filename>
 获取指定的文档文件
