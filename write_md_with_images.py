@@ -92,8 +92,13 @@ def refine_prompt(state: GraphState) -> GraphState:
         return {"refined_prompt": user_prompt}
 
 # 生成文档大纲的节点
-def generate_outline(state: GraphState) -> GraphState:
-    """根据润色后的需求生成文档大纲"""
+def generate_outline(state: GraphState, stream_callback=None) -> GraphState:
+    """根据润色后的需求生成文档大纲
+    
+    Args:
+        state: 工作流状态
+        stream_callback: 可选的回调函数，用于发送流式响应内容
+    """
     print("2. 正在生成文档大纲...")
     user_prompt = state["refined_prompt"]
 
@@ -109,8 +114,8 @@ def generate_outline(state: GraphState) -> GraphState:
             base_url="https://api.deepseek.com"
         )
 
-        print(f"   [DEBUG] 正在调用 DeepSeek 模型生成大纲...")
-        response = client.chat.completions.create(
+        print(f"   [DEBUG] 正在调用 DeepSeek 模型生成大纲（流式模式）...")
+        stream = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
                 {
@@ -158,11 +163,24 @@ def generate_outline(state: GraphState) -> GraphState:
                 }
             ],
             temperature=0.5,
-            max_tokens=3000
+            max_tokens=3000,
+            stream=True
         )
 
-        outline = response.choices[0].message.content.strip()
+        # 收集流式响应
+        outline = ""
+        print(f"   [DEBUG] 开始接收流式响应...")
+        for chunk in stream:
+            if chunk.choices[0].delta.content is not None:
+                content = chunk.choices[0].delta.content
+                outline += content
+                # 如果有流式回调，实时发送内容
+                if stream_callback:
+                    stream_callback(content)
+                
+        outline = outline.strip()
         print(f"   [DEBUG] 大纲生成完成，长度: {len(outline)} 字符")
+        print(f"   [DEBUG] 流式响应接收完成")
 
         if outline.startswith('```markdown'):
             outline = outline[12:-3].strip()
@@ -181,8 +199,13 @@ def generate_outline(state: GraphState) -> GraphState:
         return {"document_outline": default_outline}
 
 # 生成Markdown文档内容的节点
-def generate_content(state: GraphState) -> GraphState:
-    """根据大纲生成完整的Markdown文档内容（包含图片占位符）"""
+def generate_content(state: GraphState, stream_callback=None) -> GraphState:
+    """根据大纲生成完整的Markdown文档内容（包含图片占位符）
+    
+    Args:
+        state: 工作流状态
+        stream_callback: 可选的回调函数，用于发送流式响应内容
+    """
     print("3. 正在生成文档内容...")
 
     try:
@@ -199,8 +222,8 @@ def generate_content(state: GraphState) -> GraphState:
         outline = state["document_outline"]
         user_prompt = state["refined_prompt"]
 
-        print(f"   [DEBUG] 正在调用 DeepSeek 模型生成完整文档...")
-        response = client.chat.completions.create(
+        print(f"   [DEBUG] 正在调用 DeepSeek 模型生成完整文档（流式模式）...")
+        stream = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
                 {
@@ -288,19 +311,24 @@ def generate_content(state: GraphState) -> GraphState:
                 }
             ],
             temperature=0.4,
-            max_tokens=8000
+            max_tokens=8000,
+            stream=True
         )
 
-        content = response.choices[0].message.content.strip()
+        # 收集流式响应
+        content = ""
+        print(f"   [DEBUG] 开始接收流式响应...")
+        for chunk in stream:
+            if chunk.choices[0].delta.content is not None:
+                chunk_content = chunk.choices[0].delta.content
+                content += chunk_content
+                # 如果有流式回调，实时发送内容
+                if stream_callback:
+                    stream_callback(chunk_content)
+                
+        content = content.strip()
         print(f"   [DEBUG] 文档生成完成，长度: {len(content)} 字符")
-
-        if hasattr(response, 'usage') and response.usage:
-            total_tokens = response.usage.total_tokens
-            completion_tokens = response.usage.completion_tokens
-            print(f"   [DEBUG] Token使用情况 - 总计: {total_tokens}, 生成: {completion_tokens}")
-
-            if completion_tokens >= 7800:
-                print(f"   [WARNING] ⚠️ 文档接近token限制，可能被截断！")
+        print(f"   [DEBUG] 流式响应接收完成")
 
         if content.startswith('```markdown'):
             content = content[12:-3].strip()
@@ -387,7 +415,7 @@ def enhance_image_prompt_with_llm(image_description: str, document_context: str,
         
         print(f"   [DEBUG] 正在增强图片描述: '{image_description}'")
         
-        response = client.chat.completions.create(
+        stream = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
                 {
@@ -421,11 +449,21 @@ def enhance_image_prompt_with_llm(image_description: str, document_context: str,
                 }
             ],
             temperature=0.3,
-            max_tokens=500
+            max_tokens=500,
+            stream=True
         )
         
-        enhanced_description = response.choices[0].message.content.strip()
+        # 收集流式响应
+        enhanced_description = ""
+        print(f"   [DEBUG] 开始接收流式响应...")
+        for chunk in stream:
+            if chunk.choices[0].delta.content is not None:
+                chunk_content = chunk.choices[0].delta.content
+                enhanced_description += chunk_content
+                
+        enhanced_description = enhanced_description.strip()
         print(f"   [DEBUG] 图片描述增强完成: '{enhanced_description[:100]}...'")
+        print(f"   [DEBUG] 流式响应接收完成")
         return enhanced_description
         
     except Exception as e:

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 智能绘图工作流</title>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cherry-markdown/dist/cherry-markdown.css">
@@ -944,6 +943,26 @@
         .step-status.completed {
             background: rgba(76, 175, 80, 0.15);
             color: var(--md-success);
+        }
+
+        .step-stream-content {
+            margin-top: 8px;
+            padding: 12px;
+            background: var(--bg-input);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: 'Roboto Mono', 'Consolas', monospace;
+            max-height: 150px;
+            overflow-y: auto;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: none;
+        }
+
+        .step-stream-content.show {
+            display: block;
         }
 
         /* 结果面板 */
@@ -2087,11 +2106,6 @@
             <button class="md-icon-button" onclick="toggleTheme()" title="切换主题">
                 <span class="material-icons" id="themeIcon">dark_mode</span>
             </button>
-
-            <!-- 清除历史 - Material Design Icon Button -->
-            <button class="md-icon-button" onclick="clearHistory()" title="清除历史">
-                <span class="material-icons">delete</span>
-            </button>
         </div>
     </nav>
 
@@ -2143,6 +2157,10 @@
                         <span class="material-icons">rocket_launch</span>
                         <span>生成图表</span>
                     </button>
+                    <button class="md-button md-button-outlined" onclick="clearHistory()" style="width: 100%;">
+                        <span class="material-icons">delete</span>
+                        <span>清除历史</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -2172,9 +2190,9 @@
                 </div>
 
                 <div class="steps-list" id="stepsContainer">
-                    <div class="step-card">
+                    <div class="step-card" data-step="refine_prompt">
                         <div class="step-header">
-                            <div class="step-icon">1</div>
+                            <div class="step-icon"><span class="material-icons">auto_fix_high</span></div>
                             <div class="step-info">
                                 <div class="step-title">润色提示词</div>
                                 <div class="step-time">等待中</div>
@@ -2182,19 +2200,20 @@
                             <div class="step-status pending">等待</div>
                         </div>
                     </div>
-                    <div class="step-card">
+                    <div class="step-card" data-step="generate_code">
                         <div class="step-header">
-                            <div class="step-icon">2</div>
+                            <div class="step-icon"><span class="material-icons">smart_toy</span></div>
                             <div class="step-info">
                                 <div class="step-title">生成绘图代码</div>
                                 <div class="step-time">等待中</div>
                             </div>
                             <div class="step-status pending">等待</div>
                         </div>
+                        <div class="step-stream-content"></div>
                     </div>
-                    <div class="step-card">
+                    <div class="step-card" data-step="execute_code">
                         <div class="step-header">
-                            <div class="step-icon">3</div>
+                            <div class="step-icon"><span class="material-icons">play_circle</span></div>
                             <div class="step-info">
                                 <div class="step-title">执行绘图代码</div>
                                 <div class="step-time">等待中</div>
@@ -2202,9 +2221,9 @@
                             <div class="step-status pending">等待</div>
                         </div>
                     </div>
-                    <div class="step-card">
+                    <div class="step-card" data-step="save_image">
                         <div class="step-header">
-                            <div class="step-icon">4</div>
+                            <div class="step-icon"><span class="material-icons">save</span></div>
                             <div class="step-info">
                                 <div class="step-title">验证图片保存</div>
                                 <div class="step-time">等待中</div>
@@ -2352,7 +2371,7 @@
                     </div>
 
                     <div class="steps-list" id="docStepsContainer">
-                        <div class="step-card">
+                        <div class="step-card" data-step="refine_prompt">
                             <div class="step-header">
                                 <div class="step-icon"><span class="material-icons">auto_fix_high</span></div>
                                 <div class="step-info">
@@ -2362,7 +2381,7 @@
                                 <div class="step-status pending">等待</div>
                             </div>
                         </div>
-                        <div class="step-card">
+                        <div class="step-card" data-step="generate_outline">
                             <div class="step-header">
                                 <div class="step-icon"><span class="material-icons">view_list</span></div>
                                 <div class="step-info">
@@ -2371,8 +2390,9 @@
                                 </div>
                                 <div class="step-status pending">等待</div>
                             </div>
+                            <div class="step-stream-content"></div>
                         </div>
-                        <div class="step-card">
+                        <div class="step-card" data-step="generate_content">
                             <div class="step-header">
                                 <div class="step-icon"><span class="material-icons">edit</span></div>
                                 <div class="step-info">
@@ -2381,18 +2401,29 @@
                                 </div>
                                 <div class="step-status pending">等待</div>
                             </div>
+                            <div class="step-stream-content"></div>
                         </div>
-                        <div class="step-card">
+                        <div class="step-card" data-step="identify_image_requests">
                             <div class="step-header">
-                                <div class="step-icon"><span class="material-icons">bar_chart</span></div>
+                                <div class="step-icon"><span class="material-icons">find_in_page</span></div>
                                 <div class="step-info">
-                                    <div class="step-title">识别并生成图表</div>
+                                    <div class="step-title">识别图片需求</div>
                                     <div class="step-time">等待中</div>
                                 </div>
                                 <div class="step-status pending">等待</div>
                             </div>
                         </div>
-                        <div class="step-card">
+                        <div class="step-card" data-step="generate_images">
+                            <div class="step-header">
+                                <div class="step-icon"><span class="material-icons">bar_chart</span></div>
+                                <div class="step-info">
+                                    <div class="step-title">生成图表</div>
+                                    <div class="step-time">等待中</div>
+                                </div>
+                                <div class="step-status pending">等待</div>
+                            </div>
+                        </div>
+                        <div class="step-card" data-step="save_document">
                             <div class="step-header">
                                 <div class="step-icon"><span class="material-icons">save</span></div>
                                 <div class="step-info">
@@ -2402,7 +2433,7 @@
                                 <div class="step-status pending">等待</div>
                             </div>
                         </div>
-                        <div class="step-card">
+                        <div class="step-card" data-step="verify_document">
                             <div class="step-header">
                                 <div class="step-icon"><span class="material-icons">check_circle</span></div>
                                 <div class="step-info">
@@ -2562,16 +2593,285 @@
     </div>
 
     <script>
-        const socket = io();
-        let currentStatus = null;
-        let generatedCode = '';
+        // WebSocket 客户端类
+        class WorkflowWebSocket {
+            constructor() {
+                this.ws = null;
+                this.messageHandlers = {};
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.workflowType = 'drawing';
+                this.destroyed = false;
+                this.connect();
+            }
+
+            connect() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws`;
+                
+                console.log('尝试连接 WebSocket:', wsUrl);
+                
+                // 关闭旧连接（如果存在）
+                if (this.ws) {
+                    this.ws.onopen = null;
+                    this.ws.onmessage = null;
+                    this.ws.onclose = null;
+                    this.ws.onerror = null;
+                    if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+                        this.ws.close();
+                    }
+                }
+                
+                this.ws = new WebSocket(wsUrl);
+
+                this.ws.onopen = () => {
+                    console.log('WebSocket 已连接');
+                    this.reconnectAttempts = 0;
+                    
+                    // 发送工作流类型
+                    this.ws.send(JSON.stringify({
+                        workflow_type: this.workflowType
+                    }));
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        const messageType = data.type;
+                        
+                        if (this.messageHandlers[messageType]) {
+                            this.messageHandlers[messageType](data);
+                        }
+                    } catch (e) {
+                        console.error('解析消息失败:', e);
+                    }
+                };
+
+                this.ws.onclose = (event) => {
+                    console.log('WebSocket 连接关闭, code:', event.code);
+                    
+                    // 只有非正常关闭时才重连（1000 是正常关闭）
+                    if (event.code !== 1000) {
+                        this.attemptReconnect();
+                    }
+                };
+
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket 错误:', error);
+                };
+            }
+
+            attemptReconnect() {
+                if (this.destroyed) {
+                    console.log('WebSocket 已销毁，停止重连');
+                    return;
+                }
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    console.log(`尝试重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+                    setTimeout(() => this.connect(), 2000 * this.reconnectAttempts);
+                }
+            }
+
+            on(messageType, handler) {
+                this.messageHandlers[messageType] = handler;
+            }
+
+            send(data) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(data));
+                }
+            }
+
+            setWorkflowType(type) {
+                console.log('设置工作流类型:', type);
+                this.workflowType = type;
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({ workflow_type: type }));
+                    console.log('已发送工作流类型到服务器:', type);
+                } else {
+                    console.warn('WebSocket 未连接，无法发送工作流类型');
+                }
+            }
+
+            close() {
+                this.destroyed = true;
+                if (this.ws) {
+                    try {
+                        // 发送正常关闭状态码 1000
+                        if (this.ws.readyState === WebSocket.OPEN) {
+                            this.ws.close(1000, 'Client closing');
+                        } else {
+                            this.ws.close();
+                        }
+                    } catch (e) {
+                        console.error('关闭 WebSocket 时出错:', e);
+                    }
+                }
+            }
+        }
+
+    // 创建全局 WebSocket 实例
+    const wsClient = new WorkflowWebSocket();
+
+    // 页面卸载时关闭WebSocket连接
+    window.addEventListener('beforeunload', () => {
+        if (wsClient) {
+            wsClient.destroyed = true;
+            wsClient.close();
+        }
+    });
+
+    // 主题管理
+    const THEME_KEY = 'app-theme';
+    const themes = ['light', 'dark', 'auto'];
+    let currentThemeMode = localStorage.getItem(THEME_KEY) || 'auto';
+
+    // 初始化主题
+    function initTheme() {
+        applyTheme(currentThemeMode);
+        updateThemeButton();
+    }
+
+    // 应用主题
+    function applyTheme(mode) {
+        const html = document.documentElement;
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+        if (mode === 'auto') {
+            html.setAttribute('data-theme', systemTheme);
+        } else {
+            html.setAttribute('data-theme', mode);
+        }
+    }
+
+    // 更新主题按钮
+    function updateThemeButton() {
+        const icon = document.getElementById('themeIcon');
+
+        if (currentThemeMode === 'auto') {
+            icon.textContent = 'brightness_auto';
+        } else {
+            icon.textContent = currentThemeMode === 'dark' ? 'dark_mode' : 'light_mode';
+        }
+    }
+
+    // 切换主题
+    function toggleTheme() {
+        const currentIndex = themes.indexOf(currentThemeMode);
+        const nextIndex = (currentIndex + 1) % themes.length;
+        currentThemeMode = themes[nextIndex];
+
+        localStorage.setItem(THEME_KEY, currentThemeMode);
+        applyTheme(currentThemeMode);
+        updateThemeButton();
+
+        // Update Cherry Markdown instances
+        const cherryContainers = document.querySelectorAll('.cherry');
+        cherryContainers.forEach(container => {
+            const cherryInstance = container.__cherry__;
+            if (cherryInstance && cherryInstance.getValue) {
+                const currentValue = cherryInstance.getValue();
+                const parent = container.parentElement;
+                const containerId = parent.id;
+
+                // Destroy old instance
+                parent.innerHTML = '';
+
+                // Recreate with new theme
+                new Cherry({
+                    id: containerId,
+                    value: currentValue,
+                    locale: 'zh_CN',
+                    theme: currentThemeMode === 'dark' ? 'dark' : 'light',
+                    externals: {
+                        mathjax: window.MathJax,
+                    },
+                    editor: {
+                        defaultModel: 'previewOnly',
+                        keepDocumentScrollAfterInit: true,
+                    },
+                    toolbars: {
+                        toolbar: false,
+                        toc: {
+                            updateLocationHash: false,
+                            defaultModel: 'pure',
+                            position: 'fixed',
+                            cssText: 'right: 20px;',
+                        },
+                    },
+                    engine: {
+                        global: {
+                            formatMoney: false,
+                        },
+                        syntax: {
+                            emoji: { enable: false },
+                            fontEmphasis: { allowWhitespace: true },
+                            footNote: { enable: true },
+                            inlineCode: { enable: true },
+                            mathBlock: {
+                                engine: 'MathJax',
+                                src: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js',
+                            },
+                            inlineMath: {
+                                engine: 'MathJax',
+                            },
+                            table: {
+                                enableChart: false
+                            },
+                            image: {
+                                lazyLoad: true
+                            }
+                        }
+                    },
+                    previewer: {
+                        enablePreviewerBubble: false,
+                    },
+                    urlProcessor: function(url, srcType) {
+                        if (srcType === 'image') {
+                            if (url.startsWith('/images/')) {
+                                return url.replace('/images/', '/api/images/');
+                            }
+                            if (!url.startsWith('http://') && !url.startsWith('https://') &&
+                                !url.startsWith('/') && !url.startsWith('data:') &&
+                                !url.startsWith('/api/images/')) {
+                                return '/api/images/' + url;
+                            }
+                        }
+                        return url;
+                    }
+                });
+            }
+        });
+    }
+
+        // 监听系统主题变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (currentThemeMode === 'auto') {
+                applyTheme('auto');
+                updateThemeButton();
+            }
+        });
+
+        // 初始化
+        initTheme();
 
         // 特性模式管理
         let currentFeatureMode = 'drawing';
 
         // 特性模式切换
         function switchFeatureMode(mode) {
+            console.log('切换特性模式:', mode);
             currentFeatureMode = mode;
+
+            // 通知服务器切换工作流类型
+            if (mode === 'document_with_images' && wsClient) {
+                wsClient.setWorkflowType('document_with_images');
+                console.log('已通知服务器切换到文档+图模式');
+            } else if (mode === 'drawing' && wsClient) {
+                wsClient.setWorkflowType('drawing');
+                console.log('已通知服务器切换到绘图模式');
+            }
 
             document.getElementById('drawingMode').classList.remove('active');
             document.getElementById('documentMode').classList.remove('active');
@@ -2588,135 +2888,6 @@
                 document.getElementById('documentMode').classList.add('active');
             }
         }
-
-        // 主题管理
-        const THEME_KEY = 'app-theme';
-        const themes = ['light', 'dark', 'auto'];
-        let currentThemeMode = localStorage.getItem(THEME_KEY) || 'auto';
-
-        // 初始化主题
-        function initTheme() {
-            applyTheme(currentThemeMode);
-            updateThemeButton();
-        }
-
-        // 应用主题
-        function applyTheme(mode) {
-            const html = document.documentElement;
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-
-            if (mode === 'auto') {
-                html.setAttribute('data-theme', systemTheme);
-            } else {
-                html.setAttribute('data-theme', mode);
-            }
-        }
-
-        // 更新主题按钮
-        function updateThemeButton() {
-            const icon = document.getElementById('themeIcon');
-
-            if (currentThemeMode === 'auto') {
-                icon.textContent = 'brightness_auto';
-            } else {
-                icon.textContent = currentThemeMode === 'dark' ? 'dark_mode' : 'light_mode';
-            }
-        }
-
-        // 切换主题
-        function toggleTheme() {
-            const currentIndex = themes.indexOf(currentThemeMode);
-            const nextIndex = (currentIndex + 1) % themes.length;
-            currentThemeMode = themes[nextIndex];
-
-            localStorage.setItem(THEME_KEY, currentThemeMode);
-            applyTheme(currentThemeMode);
-            updateThemeButton();
-
-            // Update Cherry Markdown instances
-            const cherryContainers = document.querySelectorAll('.cherry');
-            cherryContainers.forEach(container => {
-                const cherryInstance = container.__cherry__;
-                if (cherryInstance && cherryInstance.getValue) {
-                    const currentValue = cherryInstance.getValue();
-                    const parent = container.parentElement;
-                    const containerId = parent.id;
-
-                    // Destroy old instance
-                    parent.innerHTML = '';
-
-                    // Recreate with new theme
-                    new Cherry({
-                        id: containerId,
-                        value: currentValue,
-                        locale: 'zh_CN',
-                        theme: currentThemeMode === 'dark' ? 'dark' : 'light',
-                        externals: {
-                            mathjax: window.MathJax,
-                        },
-                        editor: {
-                            defaultModel: 'previewOnly',
-                            keepDocumentScrollAfterInit: true,
-                        },
-                        toolbars: {
-                            toolbar: false,
-                            toc: {
-                                updateLocationHash: false,
-                                defaultModel: 'pure',
-                                position: 'fixed',
-                                cssText: 'right: 20px;',
-                            },
-                        },
-                        engine: {
-                            global: {
-                                formatMoney: false,
-                            },
-                            syntax: {
-                                emoji: { enable: false },
-                                fontEmphasis: { allowWhitespace: true },
-                                footNote: { enable: true },
-                                inlineCode: { enable: true },
-                                mathBlock: {
-                                    engine: 'MathJax',
-                                    src: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js',
-                                },
-                                inlineMath: {
-                                    engine: 'MathJax',
-                                },
-                                table: {
-                                    enableChart: false
-                                },
-                                image: {
-                                    lazyLoad: true
-                                }
-                            }
-                        },
-                        previewer: {
-                            enablePreviewerBubble: false,
-                        },
-                        urlProcessor: function(url, srcType) {
-                            if (srcType === 'image') {
-                                if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/') && !url.startsWith('data:')) {
-                                    return '/' + url;
-                                }
-                            }
-                            return url;
-                        }
-                    });
-                }
-            });
-        }
-
-        // 监听系统主题变化
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-            if (currentThemeMode === 'auto') {
-                applyTheme('auto');
-                updateThemeButton();
-            }
-        });
-
-        // 初始化
-        initTheme();
 
         // 同步输入框的内容（标准视图不需要modalPromptInput）
         document.getElementById('promptInput').addEventListener('input', function(e) {
@@ -2899,22 +3070,70 @@
         // 文档工作流状态
         let currentDocumentResult = null;
 
-        // 连接成功
-        socket.on('connect', () => {
-            console.log('已连接到服务器');
+        // 接收状态更新
+        wsClient.on('status_update', (data) => {
+            console.log('收到状态更新:', data); // 添加调试日志
+            
+            // 立即更新UI，不等待
+            requestAnimationFrame(() => {
+                // 根据工作流类型路由到不同的处理函数
+                if (data.workflow_type === 'drawing') {
+                    currentStatus = data;
+                    updateDrawingUI(data);
+                } else if (data.workflow_type === 'document_with_images') {
+                    currentDocumentResult = data.result;
+                    updateDocumentUI(data);
+                }
+            });
         });
 
-        // 接收状态更新
-        socket.on('status_update', (status) => {
-            // 根据工作流类型路由到不同的处理函数
-            if (status.type === 'drawing') {
-                currentStatus = status;
-                updateDrawingUI(status);
-            } else if (status.type === 'document_with_images') {
-                currentDocumentResult = status.result;
-                updateDocumentUI(status);
-            }
+        // 接收流式响应内容
+        wsClient.on('stream_content', (data) => {
+            console.log('收到流式内容:', data.workflow_type, data.node);
+            
+            requestAnimationFrame(() => {
+                if (data.workflow_type === 'drawing') {
+                    handleStreamContent('stepsContainer', data.node, data.content);
+                } else if (data.workflow_type === 'document_with_images') {
+                    handleStreamContent('docStepsContainer', data.node, data.content);
+                }
+            });
         });
+
+        // 处理流式内容显示
+        function handleStreamContent(containerId, nodeName, content) {
+            console.log(`[DEBUG] handleStreamContent: containerId=${containerId}, nodeName=${nodeName}, contentLength=${content.length}`);
+            
+            const container = document.getElementById(containerId);
+            if (!container) {
+                console.warn(`[WARNING] 找不到容器: ${containerId}`);
+                return;
+            }
+
+            const stepCard = container.querySelector(`.step-card[data-step="${nodeName}"]`);
+            if (!stepCard) {
+                console.warn(`[WARNING] 找不到步骤卡片: ${nodeName}`);
+                return;
+            }
+
+            const streamContentDiv = stepCard.querySelector('.step-stream-content');
+            if (!streamContentDiv) {
+                console.warn(`[WARNING] 找不到流式内容div: ${nodeName}`);
+                return;
+            }
+
+            // 检查是否是第一次收到内容（通过检查是否有data-first-content标记）
+            if (!streamContentDiv.dataset.firstContent) {
+                console.log(`[DEBUG] 第一次收到流式内容，清空显示区域: ${nodeName}`);
+                streamContentDiv.textContent = '';
+                streamContentDiv.dataset.firstContent = 'true';
+            }
+
+            streamContentDiv.classList.add('show');
+            streamContentDiv.textContent += content;
+            streamContentDiv.scrollTop = streamContentDiv.scrollHeight;
+            console.log(`[DEBUG] 流式内容已更新，当前长度: ${streamContentDiv.textContent.length}`);
+        }
 
         // 渲染文档预览（使用 Cherry Markdown）
         function renderDocumentPreview(markdownContent) {
@@ -2993,10 +3212,93 @@
             });
         }
 
+        // 更新文档步骤列表
+        function updateDocumentSteps(steps) {
+            console.log('🔄 更新文档步骤列表:', steps); // 添加调试日志
+            
+            const container = document.getElementById('docStepsContainer');
+
+            if (!container) {
+                console.warn('⚠️ 文档步骤容器元素未加载，跳过更新');
+                return;
+            }
+
+            const docStepIcons = {
+                'refine_prompt': 'auto_fix_high',
+                'generate_outline': 'view_list',
+                'generate_content': 'edit',
+                'identify_image_requests': 'find_in_page',
+                'generate_images': 'bar_chart',
+                'save_document': 'save',
+                'verify_document': 'check_circle'
+            };
+
+            // 遍历所有状态步骤，更新对应的卡片
+            steps.forEach(step => {
+                const stepKey = step.step;
+                const status = step.status;
+                const time = new Date(step.timestamp).toLocaleTimeString();
+                
+                // 使用 data-step 属性精确查找对应的卡片
+                const stepCard = container.querySelector(`.step-card[data-step="${stepKey}"]`);
+                
+                if (stepCard) {
+                    console.log(`📝 更新文档步骤卡片: ${stepKey} - 状态: ${status}`);
+                    
+                    // 更新卡片状态类
+                    stepCard.className = `step-card ${status}`;
+                    
+                    // 更新图标
+                    const iconElement = stepCard.querySelector('.step-icon span.material-icons');
+                    if (iconElement) {
+                        iconElement.textContent = status === 'completed' ? 'check' : (status === 'running' ? 'refresh' : docStepIcons[stepKey]);
+                    }
+                    
+                    // 更新时间
+                    const timeElement = stepCard.querySelector('.step-time');
+                    if (timeElement) {
+                        timeElement.textContent = time;
+                    }
+                    
+                    // 更新状态文本
+                    const statusElement = stepCard.querySelector('.step-status');
+                    if (statusElement) {
+                        statusElement.textContent = status === 'completed' ? '完成' : (status === 'running' ? '进行中' : (status === 'error' ? '失败' : '等待'));
+                        statusElement.className = `step-status ${status}`;
+                    }
+                    
+                    // 控制流式内容显示区域的显示/隐藏
+                    const streamContentDiv = stepCard.querySelector('.step-stream-content');
+                    if (streamContentDiv) {
+                        if (status === 'completed') {
+                            // 清除firstContent标记，下次运行时可以重新清空
+                            delete streamContentDiv.dataset.firstContent;
+                            // 延迟隐藏，让用户能看到最终内容
+                            setTimeout(() => {
+                                streamContentDiv.classList.remove('show');
+                            }, 3000);
+                        }
+                    }
+                } else {
+                    console.warn(`⚠️ 找不到文档步骤卡片: ${stepKey}`);
+                }
+            });
+        }
+
         // 更新文档界面
         function updateDocumentUI(status) {
-            // 更新状态徽章
+            // 获取必需的 DOM 元素
             const statusBadge = document.getElementById('docStatusBadge');
+            const docProgressBar = document.getElementById('docProgressBar');
+            const docProgressPercent = document.getElementById('docProgressPercent');
+
+            // 检查必需元素是否存在
+            if (!statusBadge || !docProgressBar || !docProgressPercent) {
+                console.warn('⚠️ 部分文档 UI 元素未加载，跳过更新');
+                return;
+            }
+
+            // 更新状态徽章
             const statusConfig = {
                 'idle': { class: 'idle', icon: 'radio_button_unchecked', text: '就绪' },
                 'running': { class: 'running', icon: 'adjust', text: '生成中' },
@@ -3006,38 +3308,27 @@
 
             const config = statusConfig[status.status];
             statusBadge.className = `status-badge ${config.class}`;
-            document.getElementById('docStatusIcon').textContent = config.icon;
-            document.getElementById('docStatusText').textContent = config.text;
+            const docStatusIcon = document.getElementById('docStatusIcon');
+            const docStatusText = document.getElementById('docStatusText');
+            if (docStatusIcon) docStatusIcon.textContent = config.icon;
+            if (docStatusText) docStatusText.textContent = config.text;
 
             // 更新进度条
+            console.log(`[DEBUG] updateDocumentUI: status=${status.status}, steps=${JSON.stringify(status.steps)}`);
             const progress = status.steps.length > 0 ?
                 (status.steps.filter(s => s.status === 'completed').length / status.steps.length * 100) : 0;
-            document.getElementById('docProgressBar').style.width = `${progress}%`;
-            document.getElementById('docProgressPercent').textContent = `${Math.round(progress)}%`;
+            const completedSteps = status.steps.filter(s => s.status === 'completed').length;
+            console.log(`[DEBUG] 文档进度更新: 已完成=${completedSteps}/${status.steps.length}, 进度=${progress}%`);
+            docProgressBar.style.width = `${progress}%`;
+            docProgressPercent.textContent = `${Math.round(progress)}%`;
 
             // 更新标准视图的步骤
             if (status.steps && status.steps.length > 0) {
-                status.steps.forEach((step, index) => {
-                    const stepCards = document.querySelectorAll('#docStepsContainer .step-card');
-                    if (stepCards[index]) {
-                        const statusEl = stepCards[index].querySelector('.step-status');
-                        const timeEl = stepCards[index].querySelector('.step-time');
-
-                        statusEl.textContent = step.status === 'completed' ? '完成' :
-                                               step.status === 'running' ? '进行中' :
-                                               step.status === 'error' ? '失败' : '等待';
-                        statusEl.className = `step-status ${step.status}`;
-
-                        if (step.timestamp) {
-                            const time = new Date(step.timestamp);
-                            timeEl.textContent = time.toLocaleTimeString();
-                        }
-                    }
-                });
+                updateDocumentSteps(status.steps);
             }
 
-            // 显示结果
-            if (status.status === 'completed' && status.result) {
+            // 显示结果（添加更严格的检查）
+            if (status.status === 'completed' && status.result && (status.result.content || status.result.final_content)) {
                 currentDocumentResult = status.result;
 
                 // 隐藏空状态，显示结果
@@ -3176,8 +3467,18 @@
 
         // 更新绘图界面
         function updateDrawingUI(status) {
-            // 更新状态徽章
+            // 获取必需的 DOM 元素
             const statusBadge = document.getElementById('statusBadge');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const startBtn = document.getElementById('startBtn');
+
+            // 检查必需元素是否存在
+            if (!statusBadge || !progressBar || !progressText || !startBtn) {
+                console.warn('⚠️ 部分绘图 UI 元素未加载，跳过更新');
+                return;
+            }
+
             const statusConfig = {
                 'idle': { class: 'idle', icon: 'radio_button_unchecked', text: '空闲' },
                 'running': { class: 'running', icon: 'adjust', text: '运行中' },
@@ -3190,15 +3491,18 @@
             statusBadge.innerHTML = `<span class="material-icons">${config.icon}</span><span>${config.text}</span>`;
 
             // 更新进度条
-            const progress = (status.steps.filter(s => s.status === 'completed').length / 4) * 100;
-            document.getElementById('progressBar').style.width = `${progress}%`;
-            document.getElementById('progressText').textContent = `${Math.round(progress)}%`;
+            const steps = status.steps || [];
+            console.log(`[DEBUG] updateDrawingUI: status=${status.status}, steps=${JSON.stringify(steps)}`);
+            const completedSteps = steps.filter(s => s.status === 'completed').length;
+            const progress = (completedSteps / 4) * 100;
+            console.log(`[DEBUG] 进度更新: 已完成=${completedSteps}/4, 进度=${progress}%`);
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${Math.round(progress)}%`;
 
             // 更新步骤列表
-            updateSteps(status.steps);
+            updateSteps(steps);
 
             // 更新按钮状态
-            const startBtn = document.getElementById('startBtn');
             if (status.status === 'running') {
                 startBtn.disabled = true;
                 startBtn.innerHTML = '<span class="material-icons">cached</span><span>生成中...</span>';
@@ -3208,7 +3512,7 @@
             }
 
             // 显示结果
-            if (status.status === 'completed' && status.result) {
+            if (status.status === 'completed' && status.result && status.result.image_url) {
                 showResult(status.result);
             } else if (status.status === 'error' && status.error) {
                 showError(status.error);
@@ -3217,14 +3521,15 @@
 
         // 更新步骤列表
         function updateSteps(steps) {
+            console.log('🔄 更新步骤列表:', steps); // 添加调试日志
+            
             const container = document.getElementById('stepsContainer');
-            const allSteps = ['refine_prompt', 'generate_code', 'execute_code', 'save_image'];
-            const stepNames = {
-                'refine_prompt': '润色提示词',
-                'generate_code': '生成绘图代码',
-                'execute_code': '执行绘图代码',
-                'save_image': '验证图片保存'
-            };
+
+            if (!container) {
+                console.warn('⚠️ 步骤容器元素未加载，跳过更新');
+                return;
+            }
+
             const stepIcons = {
                 'refine_prompt': 'auto_fix_high',
                 'generate_code': 'smart_toy',
@@ -3232,27 +3537,56 @@
                 'save_image': 'save'
             };
 
-            let html = '';
-            allSteps.forEach((stepKey, index) => {
-                const step = steps.find(s => s.step === stepKey);
-                const status = step ? step.status : 'pending';
-                const time = step ? new Date(step.timestamp).toLocaleTimeString() : '等待中';
-
-                html += `
-                    <div class="step-card ${status}">
-                        <div class="step-header">
-                            <div class="step-icon"><span class="material-icons">${status === 'completed' ? 'check' : (status === 'running' ? 'refresh' : stepIcons[stepKey])}</span></div>
-                            <div class="step-info">
-                                <div class="step-title">${stepNames[stepKey]}</div>
-                                <div class="step-time">${time}</div>
-                            </div>
-                            <div class="step-status ${status}">${status === 'running' ? '进行中' : (status === 'completed' ? '完成' : '等待')}</div>
-                        </div>
-                    </div>
-                `;
+            // 遍历所有状态步骤，更新对应的卡片
+            steps.forEach(step => {
+                const stepKey = step.step;
+                const status = step.status;
+                const time = new Date(step.timestamp).toLocaleTimeString();
+                
+                // 使用 data-step 属性精确查找对应的卡片
+                const stepCard = container.querySelector(`.step-card[data-step="${stepKey}"]`);
+                
+                if (stepCard) {
+                    console.log(`📝 更新步骤卡片: ${stepKey} - 状态: ${status}`);
+                    
+                    // 更新卡片状态类
+                    stepCard.className = `step-card ${status}`;
+                    
+                    // 更新图标
+                    const iconElement = stepCard.querySelector('.step-icon span.material-icons');
+                    if (iconElement) {
+                        iconElement.textContent = status === 'completed' ? 'check' : (status === 'running' ? 'refresh' : stepIcons[stepKey]);
+                    }
+                    
+                    // 更新时间
+                    const timeElement = stepCard.querySelector('.step-time');
+                    if (timeElement) {
+                        timeElement.textContent = time;
+                    }
+                    
+                    // 更新状态文本
+                    const statusElement = stepCard.querySelector('.step-status');
+                    if (statusElement) {
+                        statusElement.textContent = status === 'running' ? '进行中' : (status === 'completed' ? '完成' : '等待');
+                        statusElement.className = `step-status ${status}`;
+                    }
+                    
+                    // 控制流式内容显示区域的显示/隐藏
+                    const streamContentDiv = stepCard.querySelector('.step-stream-content');
+                    if (streamContentDiv) {
+                        if (status === 'completed') {
+                            // 清除firstContent标记，下次运行时可以重新清空
+                            delete streamContentDiv.dataset.firstContent;
+                            // 延迟隐藏，让用户能看到最终内容
+                            setTimeout(() => {
+                                streamContentDiv.classList.remove('show');
+                            }, 3000);
+                        }
+                    }
+                } else {
+                    console.warn(`⚠️ 找不到步骤卡片: ${stepKey}`);
+                }
             });
-
-            container.innerHTML = html;
         }
 
         // 显示结果
@@ -3261,6 +3595,13 @@
             document.getElementById('resultContent').classList.add('active');
 
             const resultImage = document.getElementById('resultImage');
+
+            // 检查 resultImage 元素是否存在
+            if (!resultImage) {
+                console.error('❌ resultImage 元素不存在');
+                return;
+            }
+
             const imageUrl = result.image_url + '?t=' + Date.now();
 
             // 先显示加载状态
@@ -3292,10 +3633,18 @@
 
         // 显示错误
         function showError(error) {
-            document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('resultContent').classList.add('active');
+            const emptyState = document.getElementById('emptyState');
+            const resultContent = document.getElementById('resultContent');
 
-            document.getElementById('resultContent').innerHTML = `
+            if (!emptyState || !resultContent) {
+                console.error('❌ 必需的 DOM 元素不存在');
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            resultContent.classList.add('active');
+
+            resultContent.innerHTML = `
                 <div class="error-container">
                     <div class="error-header">
                         <div class="error-icon"><span class="material-icons">warning</span></div>
@@ -3363,6 +3712,10 @@
 
         // 清除历史
         async function clearHistory() {
+            if (!confirm('确定要清除绘图历史吗？')) {
+                return;
+            }
+
             try {
                 const response = await fetch('/api/clear', {
                     method: 'POST'

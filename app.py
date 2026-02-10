@@ -1,20 +1,33 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
-from flask_socketio import SocketIO, emit
+from flask_sock import Sock
 import os
 import threading
 import time
+import json
 from draw_pic import create_graph, GraphState
 from datetime import datetime
-import eventlet
 
 # 初始化 Flask 应用
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
-socketio = SocketIO(app, cors_allowed_origins="*")
+sock = Sock(app)
+
+# WebSocket 连接池 (按工作流类型分组)
+websocket_clients = {
+    'drawing': [],
+    'document_with_images': []
+}
 
 # 全局变量存储工作流状态（支持多个工作流类型）
 workflow_statuses = {
     'drawing': {
+        'status': 'idle',
+        'current_step': '',
+        'steps': [],
+        'result': None,
+        'error': None
+    },
+    'document_with_images': {
         'status': 'idle',
         'current_step': '',
         'steps': [],
@@ -29,16 +42,56 @@ status_lock = threading.Lock()
 # 为了向后兼容，保留旧的 workflow_status 引用
 workflow_status = workflow_statuses['drawing']
 
+def broadcast_to_workflow(workflow_type, message):
+    """向指定工作流类型的所有客户端发送消息"""
+    clients = websocket_clients.get(workflow_type, [])
+    if not clients:
+        print(f"[DEBUG] 无客户端连接，跳过发送: {workflow_type}")
+        return
+    
+    print(f"[DEBUG] 向 {len(clients)} 个客户端发送消息: {workflow_type}")
+    
+    for ws in clients[:]:  # 使用切片避免迭代时修改列表
+        try:
+            data = json.dumps(message)
+            print(f"[DEBUG] 发送消息内容长度: {len(data)} 字符")
+            ws.send(data)
+            print(f"[DEBUG] 消息发送成功")
+        except Exception as e:
+            print(f"[WARNING] 发送消息失败: {e}")
+            import traceback
+            traceback.print_exc()
+            try:
+                if ws in clients:
+                    clients.remove(ws)
+            except:
+                pass
+
 # 辅助函数：安全地更新和发送状态
 def update_and_emit_status(workflow_type):
-    """安全地更新并发射状态更新（避免 greenlet 切换错误）"""
+    """安全地更新并发送状态更新"""
     with status_lock:
         status = workflow_statuses.get(workflow_type, {}).copy()
     
-    try:
-        socketio.emit('status_update', {'type': workflow_type, **status})
-    except Exception as e:
-        print(f"[WARNING] 状态更新发送失败: {e}")
+    message = {
+        'type': 'status_update',
+        'workflow_type': workflow_type,
+        **status
+    }
+    broadcast_to_workflow(workflow_type, message)
+    print(f"[DEBUG] 状态更新已发送: {workflow_type} - {status.get('status', 'unknown')}")
+
+# 辅助函数：发送流式响应内容
+def emit_stream_content(workflow_type, node_name, content):
+    """发送AI流式响应内容到前端"""
+    message = {
+        'type': 'stream_content',
+        'workflow_type': workflow_type,
+        'node': node_name,
+        'content': content
+    }
+    broadcast_to_workflow(workflow_type, message)
+    print(f"[DEBUG] 流式内容已发送: {workflow_type}/{node_name}, 长度: {len(content)} 字符")
 
 # 状态映射
 DRAWING_STEP_NAMES = {
@@ -53,12 +106,15 @@ def index():
     """主页"""
     return render_template('index.html')
 
+@app.route('/test')
+def test():
+    """测试页面"""
+    return render_template('test.html')
+
 @app.route('/history')
 def history():
     """历史页面"""
     return render_template('history.html')
-
-
 
 @app.route('/api/workflow', methods=['POST'])
 def run_workflow():
@@ -85,6 +141,7 @@ def run_drawing_workflow():
 
     # 立即推送状态到客户端，确保无延迟
     update_and_emit_status('drawing')
+    print(f"[DEBUG] 初始绘图状态已发送到客户端")
 
     # 在新线程中运行工作流
     thread = threading.Thread(target=run_drawing_workflow_thread, args=(user_prompt,))
@@ -147,6 +204,7 @@ def clear_drawing_history():
     workflow_statuses['drawing']['result'] = None
     workflow_statuses['drawing']['error'] = None
     update_and_emit_status('drawing')
+    print("[DEBUG] 绘图历史已清除，状态已发送")
     return jsonify({'message': '绘图历史记录已清除'})
 
 # ==================== 文档工作流端点 ====================
@@ -160,16 +218,6 @@ def run_document_with_images_workflow():
     if not user_prompt:
         return jsonify({'error': '请输入文档主题'}), 400
 
-    # 初始化新的工作流状态（用于带图片的文档生成）
-    if 'document_with_images' not in workflow_statuses:
-        workflow_statuses['document_with_images'] = {
-            'status': 'idle',
-            'current_step': '',
-            'steps': [],
-            'result': None,
-            'error': None
-        }
-
     # 立即更新状态为运行中
     workflow_statuses['document_with_images'] = {
         'status': 'running',
@@ -181,6 +229,7 @@ def run_document_with_images_workflow():
 
     # 立即推送状态到客户端
     update_and_emit_status('document_with_images')
+    print(f"[DEBUG] 初始文档状态已发送到客户端")
 
     # 在新线程中运行工作流
     thread = threading.Thread(target=run_document_with_images_thread, args=(user_prompt,))
@@ -401,6 +450,99 @@ def list_history():
     items.sort(key=lambda x: x['created'], reverse=True)
     return jsonify(items)
 
+# WebSocket 端点
+@sock.route('/ws')
+def websocket_connection(ws):
+    """处理 WebSocket 连接"""
+    print(f"[DEBUG] WebSocket 客户端连接")
+    
+    # 默认连接到 drawing
+    ws.workflow_type = 'drawing'
+    
+    try:
+        # 将客户端添加到连接池
+        if ws.workflow_type not in websocket_clients:
+            websocket_clients[ws.workflow_type] = []
+        websocket_clients[ws.workflow_type].append(ws)
+        print(f"[DEBUG] 客户端已添加到 {ws.workflow_type} 连接池，当前连接数: {len(websocket_clients[ws.workflow_type])}")
+        
+        # 发送初始状态（先获取数据，释放锁后再发送）
+        with status_lock:
+            drawing_status = workflow_statuses['drawing'].copy()
+            doc_status = workflow_statuses.get('document_with_images', {}).copy() if 'document_with_images' in workflow_statuses else None
+        
+        print(f"[DEBUG] 准备发送初始状态...")
+        ws.send(json.dumps({
+            'type': 'status_update',
+            'workflow_type': 'drawing',
+            **drawing_status
+        }))
+        print(f"[DEBUG] 绘图状态已发送")
+        
+        if doc_status:
+            ws.send(json.dumps({
+                'type': 'status_update',
+                'workflow_type': 'document_with_images',
+                **doc_status
+            }))
+            print(f"[DEBUG] 文档状态已发送")
+        
+        # 接收消息（使用 while 循环而不是 for 迭代）
+        print(f"[DEBUG] 开始监听客户端消息...")
+        while True:
+            try:
+                message = ws.receive()
+                if message is None:
+                    print(f"[DEBUG] 客户端断开连接（消息为 None）")
+                    break
+                
+                data = json.loads(message)
+                if 'workflow_type' in data:
+                    # 更新客户端的工作流类型
+                    old_type = ws.workflow_type
+                    new_type = data['workflow_type']
+                    
+                    # 只有当类型真正改变时才处理
+                    if old_type != new_type:
+                        ws.workflow_type = new_type
+                        
+                        # 从旧的连接池中移除
+                        if old_type in websocket_clients and ws in websocket_clients[old_type]:
+                            websocket_clients[old_type].remove(ws)
+                        
+                        # 添加到新的连接池
+                        if ws.workflow_type not in websocket_clients:
+                            websocket_clients[ws.workflow_type] = []
+                        if ws not in websocket_clients[ws.workflow_type]:
+                            websocket_clients[ws.workflow_type].append(ws)
+                        
+                        print(f"[DEBUG] 客户端工作流类型变更: {old_type} -> {ws.workflow_type}")
+                    else:
+                        print(f"[DEBUG] 客户端工作流类型未改变: {old_type}")
+            except ConnectionError as e:
+                # 连接关闭时的正常情况
+                print(f"[DEBUG] WebSocket 连接已关闭: {e}")
+                break
+            except Exception as e:
+                # 其他异常情况
+                error_msg = str(e)
+                if '1005' in error_msg or 'Connection closed' in error_msg:
+                    # 这是客户端断开连接的常见情况，不算错误
+                    print(f"[DEBUG] 客户端断开连接: {e}")
+                    break
+                else:
+                    print(f"[WARNING] 处理消息失败: {e}")
+                    break
+    
+    except Exception as e:
+        print(f"[DEBUG] WebSocket 错误: {e}")
+    finally:
+        # 从连接池中移除客户端
+        if hasattr(ws, 'workflow_type') and ws.workflow_type in websocket_clients:
+            if ws in websocket_clients[ws.workflow_type]:
+                websocket_clients[ws.workflow_type].remove(ws)
+        print(f"[DEBUG] WebSocket 客户端断开")
+
 def run_drawing_workflow_thread(user_prompt):
     """在工作流线程中运行绘图工作流"""
     print(f"\n[DEBUG] ===== 绘图工作流线程启动 =====")
@@ -421,6 +563,8 @@ def run_drawing_workflow_thread(user_prompt):
             # 包装节点以添加进度报告
             def monitored_refine_prompt(state):
                 print(f"\n[DEBUG] >>> 节点 'refine_prompt' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['drawing']['current_step'] = 'refine_prompt'
                 workflow_statuses['drawing']['steps'].append({
                     'step': 'refine_prompt',
@@ -429,8 +573,13 @@ def run_drawing_workflow_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('drawing')
+                
+                # 执行节点逻辑
                 result = refine_prompt(state)
+                
+                # 节点完成时立即更新状态
                 workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('drawing')
                 print(f"[DEBUG] <<< 节点 'refine_prompt' 执行完成")
                 print(f"[DEBUG] 润色后的提示词: {result.get('refined_prompt', 'N/A')[:100]}...")
@@ -438,6 +587,8 @@ def run_drawing_workflow_thread(user_prompt):
 
             def monitored_generate_code(state):
                 print(f"\n[DEBUG] >>> 节点 'generate_code' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['drawing']['current_step'] = 'generate_code'
                 workflow_statuses['drawing']['steps'].append({
                     'step': 'generate_code',
@@ -446,9 +597,22 @@ def run_drawing_workflow_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('drawing')
-                result = generate_code(state)
-                workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                
+                # 定义流式回调函数
+                def stream_callback(content):
+                    emit_stream_content('drawing', 'generate_code', content)
+                
+                # 执行节点逻辑，传入流式回调
+                result = generate_code(state, stream_callback=stream_callback)
+                
+                # 节点完成时立即更新状态
+                if result.get('error'):
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'error'
+                else:
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('drawing')
+                
                 print(f"[DEBUG] <<< 节点 'generate_code' 执行完成")
                 if result.get('error'):
                     print(f"[DEBUG] generate_code 返回错误: {result['error']}")
@@ -458,6 +622,8 @@ def run_drawing_workflow_thread(user_prompt):
 
             def monitored_execute_code(state):
                 print(f"\n[DEBUG] >>> 节点 'execute_code' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['drawing']['current_step'] = 'execute_code'
                 workflow_statuses['drawing']['steps'].append({
                     'step': 'execute_code',
@@ -466,9 +632,18 @@ def run_drawing_workflow_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('drawing')
+                
+                # 执行节点逻辑
                 result = execute_code(state)
-                workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                
+                # 节点完成时立即更新状态
+                if result.get('error'):
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'error'
+                else:
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('drawing')
+                
                 print(f"[DEBUG] <<< 节点 'execute_code' 执行完成")
                 if result.get('error'):
                     print(f"[DEBUG] execute_code 返回错误: {result['error']}")
@@ -478,6 +653,8 @@ def run_drawing_workflow_thread(user_prompt):
 
             def monitored_save_image(state):
                 print(f"\n[DEBUG] >>> 节点 'save_image' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['drawing']['current_step'] = 'save_image'
                 workflow_statuses['drawing']['steps'].append({
                     'step': 'save_image',
@@ -486,9 +663,18 @@ def run_drawing_workflow_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('drawing')
+                
+                # 执行节点逻辑
                 result = save_image(state)
-                workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                
+                # 节点完成时立即更新状态
+                if result.get('error'):
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'error'
+                else:
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('drawing')
+                
                 print(f"[DEBUG] <<< 节点 'save_image' 执行完成")
                 if result.get('error'):
                     print(f"[DEBUG] save_image 返回错误: {result['error']}")
@@ -513,8 +699,8 @@ def run_drawing_workflow_thread(user_prompt):
         graph = create_monitored_drawing_graph()
         print(f"[DEBUG] 绘图工作流图已创建并编译")
 
-        # 运行工作流
-        print(f"[DEBUG] 开始调用绘图工作流...")
+        # 运行工作流（使用流式执行）
+        print(f"[DEBUG] 开始调用绘图工作流（流式模式）...")
         initial_state = {
             "user_prompt": user_prompt,
             "generated_code": "",
@@ -524,7 +710,26 @@ def run_drawing_workflow_thread(user_prompt):
         }
         print(f"[DEBUG] 初始状态: {initial_state}")
 
-        result = graph.invoke(initial_state)
+        # 使用流式执行
+        result = {}
+        try:
+            for event in graph.stream(initial_state):
+                # event 是一个字典，包含节点名称和更新的状态
+                for node_name, node_output in event.items():
+                    print(f"[DEBUG] 节点 '{node_name}' 完成输出")
+                    # 合并输出到结果中
+                    result.update(node_output)
+
+                    # 实时发送进度更新到前端
+                    update_and_emit_status('drawing')
+                    
+        except Exception as stream_error:
+            print(f"[ERROR] 流式执行过程中出错: {str(stream_error)}")
+            import traceback
+            traceback.print_exc()
+            result["error"] = str(stream_error)
+            # 立即发送错误状态
+            update_and_emit_status('drawing')
 
         print(f"\n[DEBUG] ===== 绘图工作流执行完成 =====")
         print(f"[DEBUG] 最终结果: {result}")
@@ -605,6 +810,8 @@ def run_document_with_images_thread(user_prompt):
             # 包装节点以添加进度报告
             def monitored_refine_prompt(state):
                 print(f"\n[DEBUG] >>> 带图片文档节点 'refine_prompt' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['document_with_images']['current_step'] = 'refine_prompt'
                 workflow_statuses['document_with_images']['steps'].append({
                     'step': 'refine_prompt',
@@ -613,14 +820,25 @@ def run_document_with_images_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('document_with_images')
+                
+                # 执行节点逻辑
                 result = refine_prompt(state)
-                workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                
+                # 节点完成时立即更新状态
+                if result.get('error'):
+                    workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                else:
+                    workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+                
                 print(f"[DEBUG] <<< 带图片文档节点 'refine_prompt' 执行完成")
                 return result
 
             def monitored_generate_outline(state):
                 print(f"\n[DEBUG] >>> 带图片文档节点 'generate_outline' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['document_with_images']['current_step'] = 'generate_outline'
                 workflow_statuses['document_with_images']['steps'].append({
                     'step': 'generate_outline',
@@ -629,17 +847,29 @@ def run_document_with_images_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('document_with_images')
-                result = generate_outline(state)
+                
+                # 定义流式回调函数
+                def stream_callback(content):
+                    emit_stream_content('document_with_images', 'generate_outline', content)
+                
+                # 执行节点逻辑，传入流式回调
+                result = generate_outline(state, stream_callback=stream_callback)
+                
+                # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+                
                 print(f"[DEBUG] <<< 带图片文档节点 'generate_outline' 执行完成")
                 return result
 
             def monitored_generate_content(state):
                 print(f"\n[DEBUG] >>> 带图片文档节点 'generate_content' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['document_with_images']['current_step'] = 'generate_content'
                 workflow_statuses['document_with_images']['steps'].append({
                     'step': 'generate_content',
@@ -648,17 +878,29 @@ def run_document_with_images_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('document_with_images')
-                result = generate_content(state)
+                
+                # 定义流式回调函数
+                def stream_callback(content):
+                    emit_stream_content('document_with_images', 'generate_content', content)
+                
+                # 执行节点逻辑，传入流式回调
+                result = generate_content(state, stream_callback=stream_callback)
+                
+                # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+                
                 print(f"[DEBUG] <<< 带图片文档节点 'generate_content' 执行完成")
                 return result
 
             def monitored_identify_image_requests(state):
                 print(f"\n[DEBUG] >>> 带图片文档节点 'identify_image_requests' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['document_with_images']['current_step'] = 'identify_image_requests'
                 workflow_statuses['document_with_images']['steps'].append({
                     'step': 'identify_image_requests',
@@ -667,17 +909,25 @@ def run_document_with_images_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('document_with_images')
+                
+                # 执行节点逻辑
                 result = identify_image_requests(state)
+                
+                # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+                
                 print(f"[DEBUG] <<< 带图片文档节点 'identify_image_requests' 执行完成")
                 return result
 
             def monitored_generate_images(state):
                 print(f"\n[DEBUG] >>> 带图片文档节点 'generate_images' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['document_with_images']['current_step'] = 'generate_images'
                 workflow_statuses['document_with_images']['steps'].append({
                     'step': 'generate_images',
@@ -686,17 +936,25 @@ def run_document_with_images_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('document_with_images')
+                
+                # 执行节点逻辑
                 result = generate_images(state)
+                
+                # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+                
                 print(f"[DEBUG] <<< 带图片文档节点 'generate_images' 执行完成")
                 return result
 
             def monitored_embed_images(state):
                 print(f"\n[DEBUG] >>> 带图片文档节点 'embed_images' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['document_with_images']['current_step'] = 'embed_images'
                 workflow_statuses['document_with_images']['steps'].append({
                     'step': 'embed_images',
@@ -705,17 +963,25 @@ def run_document_with_images_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('document_with_images')
+                
+                # 执行节点逻辑
                 result = embed_images(state)
+                
+                # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+                
                 print(f"[DEBUG] <<< 带图片文档节点 'embed_images' 执行完成")
                 return result
 
             def monitored_save_document(state):
                 print(f"\n[DEBUG] >>> 带图片文档节点 'save_document' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['document_with_images']['current_step'] = 'save_document'
                 workflow_statuses['document_with_images']['steps'].append({
                     'step': 'save_document',
@@ -724,17 +990,25 @@ def run_document_with_images_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('document_with_images')
+                
+                # 执行节点逻辑
                 result = save_document(state)
+                
+                # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+                
                 print(f"[DEBUG] <<< 带图片文档节点 'save_document' 执行完成")
                 return result
 
             def monitored_verify_document(state):
                 print(f"\n[DEBUG] >>> 带图片文档节点 'verify_document' 开始执行")
+                
+                # 立即设置状态并发送更新
                 workflow_statuses['document_with_images']['current_step'] = 'verify_document'
                 workflow_statuses['document_with_images']['steps'].append({
                     'step': 'verify_document',
@@ -743,12 +1017,18 @@ def run_document_with_images_thread(user_prompt):
                     'timestamp': datetime.now().isoformat()
                 })
                 update_and_emit_status('document_with_images')
+                
+                # 执行节点逻辑
                 result = verify_document(state)
+                
+                # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+                
                 print(f"[DEBUG] <<< 带图片文档节点 'verify_document' 执行完成")
                 return result
 
@@ -777,7 +1057,7 @@ def run_document_with_images_thread(user_prompt):
         graph = create_monitored_doc_with_images_graph()
         print(f"[DEBUG] 带图片的文档工作流图已创建并编译")
 
-        print(f"[DEBUG] 开始调用带图片的文档工作流...")
+        print(f"[DEBUG] 开始调用带图片的文档工作流（流式模式）...")
         initial_state = {
             "user_prompt": user_prompt,
             "refined_prompt": "",
@@ -792,7 +1072,26 @@ def run_document_with_images_thread(user_prompt):
         }
         print(f"[DEBUG] 初始状态: {initial_state}")
 
-        result = graph.invoke(initial_state)
+        # 使用流式执行
+        result = {}
+        try:
+            for event in graph.stream(initial_state):
+                # event 是一个字典，包含节点名称和更新的状态
+                for node_name, node_output in event.items():
+                    print(f"[DEBUG] 节点 '{node_name}' 完成输出")
+                    # 合并输出到结果中
+                    result.update(node_output)
+
+                    # 实时发送进度更新到前端
+                    update_and_emit_status('document_with_images')
+                    
+        except Exception as stream_error:
+            print(f"[ERROR] 流式执行过程中出错: {str(stream_error)}")
+            import traceback
+            traceback.print_exc()
+            result["error"] = str(stream_error)
+            # 立即发送错误状态
+            update_and_emit_status('document_with_images')
 
         print(f"\n[DEBUG] ===== 带图片的文档工作流执行完成 =====")
         print(f"[DEBUG] 最终结果: {result}")
@@ -837,20 +1136,10 @@ def run_document_with_images_thread(user_prompt):
         update_and_emit_status('document_with_images')
         print(f"[DEBUG] 带图片的文档错误状态已发送到客户端")
 
-@socketio.on('connect')
-def handle_connect():
-    """处理客户端连接 - 发送所有工作流状态"""
-    emit('status_update', {'type': 'drawing', **workflow_statuses['drawing']})
-    if 'document_with_images' in workflow_statuses:
-        emit('status_update', {'type': 'document_with_images', **workflow_statuses['document_with_images']})
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    """处理客户端断开"""
-    pass
-
 if __name__ == '__main__':
+    from werkzeug.serving import run_simple
     print("🚀 启动 Web 服务器...")
     print("📝 绘图模式: http://localhost:5001")
     print("📄 文档模式: http://localhost:5001")
-    socketio.run(app, debug=True, host='0.0.0.0', port=5001)
+    # 开发环境使用自动重载，生产环境可设置为 False
+    run_simple('0.0.0.0', 5001, app, use_reloader=False, use_debugger=False, use_evalex=False, threaded=True)
