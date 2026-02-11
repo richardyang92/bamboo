@@ -69,6 +69,16 @@ def refine_prompt(state: ManimState) -> ManimState:
 - **组合对象**: VGroup(), VDict()
 - **3D对象**: ThreeDScene, Cube(), Sphere()
 
+### 性能优化要求（关键！）
+1. **限制self.play()调用**: 整个场景的 `self.play()` 调用次数应控制在 10-15 次以内，包括所有元素的创建、变换和淡出
+2. **限制3D对象数量**: 3D场景中对象总数不超过30个
+3. **绝对禁止UpdateFromAlphaFunc**: 对于任何涉及场可视化（电场、磁场、向量场）的3D动画，**绝对禁止使用 UpdateFromAlphaFunc**！这会导致每帧重新计算所有箭头，渲染时间可能超过10分钟
+4. **推荐动画方式**: 对于振动/变化的场，只显示2-3个关键状态，不要用循环创建太多动画帧
+5. **简化可视化**: 电场线、磁场线等使用少量箭头（<8个）表示即可
+6. **采样点限制**: 任何场可视化，采样点不超过8个
+7. **避免复杂计算**: 动画中避免复杂的数学计算循环
+8. **优先静态展示**: 复杂3D场景应静态展示，然后整体旋转相机
+
 ### 常用动画方法
 - **创建动画**: Create(), DrawBorderThenFill()
 - **出现消失**: FadeIn(), FadeOut(), Write()
@@ -89,8 +99,24 @@ def refine_prompt(state: ManimState) -> ManimState:
 ### 3D 场景要求
 1. 继承 ThreeDScene: `class AnimationScene(ThreeDScene):`
 2. 使用 `self.set_camera_orientation()` 设置相机角度
-3. 使用 `self.move_camera()` 移动相机
-4. 3D 对象使用 `ThreeDAxes()`, `ThreeDCube()` 等
+3. 使用 `self.move_camera()` 移动相机 - **直接调用，不要放在 self.play() 中**
+4. 3D 对象使用 `ThreeDAxes()`, `Sphere()`, `Cube()` 等
+5. **重要**: 相机方法返回 None，不能放在 self.play() 中使用
+
+### 3D场景对象使用规则（关键！防止 IndexError）
+- **ThreeDScene 必须使用 3D 专用对象**:
+  - 线条: `Line3D(start, end, color, thickness)` - **绝对禁止使用 `DashedLine`, `Line`**
+  - 箭头: `Arrow3D(start, end, color, thickness)` - **绝对禁止使用 `Arrow`**
+  - 几何体: `Sphere()`, `Cube()`, `Dot3D()`
+- **原因**: 2D对象（DashedLine等）在3D场景中会导致 IndexError "too many indices for array"
+
+### 3D 相机方法正确用法（关键！）
+```python
+# ✓ 正确 - 直接调用
+self.move_camera(phi=60*DEGREES, theta=45*DEGREES, run_time=2)
+
+# ✗ 错误 - 不要放在 self.play() 中
+# self.play(self.move_camera(phi=60*DEGREES, theta=45*DEGREES))
 """
 
         return {"refined_prompt": enhanced_prompt}
@@ -138,8 +164,21 @@ class AnimationScene(Scene):  # 对于3D场景使用 ThreeDScene
 - 正方形: `Square(side_length=2, color=RED)`
 - 文本: `Text("Hello", font_size=48, color=WHITE)`
 - 数学公式: `MathTex("x^2", font_size=72, color=YELLOW)`
-- 箭头: `Arrow(LEFT*2, RIGHT*2, buff=0.2, color=GREEN)`  # 使用坐标控制，buff只影响箭头尖端
-- 线条: `Line(LEFT*2, RIGHT*2, stroke_width=4)`
+- 2D箭头: `Arrow(LEFT*2, RIGHT*2, buff=0.2, color=GREEN)`  # 仅用于 Scene（2D）
+- 3D箭头: `Arrow3D(start=LEFT*2, end=RIGHT*2, color=GREEN, thickness=0.02)`  # 用于 ThreeDScene
+- 2D线条: `Line(LEFT*2, RIGHT*2, stroke_width=4)`  # 仅用于 Scene（2D）
+- 3D线条: `Line3D(start=LEFT*2, end=RIGHT*2, color=WHITE, thickness=0.02)`  # 用于 ThreeDScene
+
+**🚫 重要：2D与3D对象分离**
+- **Scene（2D场景）**: 使用 `Arrow`, `Line`, `DashedLine`, `Circle`, `Square` 等2D对象
+- **ThreeDScene（3D场景）**: 使用 `Arrow3D`, `Line3D`, `Sphere`, `Cube` 等3D对象
+- **绝对禁止**: 在 ThreeDScene 中使用 `DashedLine`, `Line`, `Arrow` 等2D对象！这会导致 IndexError
+- **3D场景线条**: 使用 `Line3D` 代替 `DashedLine` 或 `Line`
+
+**Arrow3D 重要限制**：
+- 不支持 `tip_length` 参数！使用默认箭头大小
+- 只支持: `start`, `end`, `color`, `thickness` 参数
+- 示例: `Arrow3D(start=point1, end=point2, color=GREEN, thickness=0.02)`
 
 ### 6. 颜色常量
 - BLACK, WHITE, BLUE, RED, GREEN, YELLOW, PURPLE, ORANGE, PINK
@@ -243,13 +282,39 @@ class AnimationScene(ThreeDScene):
         self.wait(2)
 ```
 
-### 10.1 ThreeDScene 相机动画方法（重要！）
+### 10.1 ThreeDScene 相机动画方法（非常重要！）
 对于 3D 场景，必须使用以下相机动画方法：
-- ✓ **正确**: `self.move_camera(phi=60*DEGREES, theta=45*DEGREES, distance=6, run_time=2)`
-- ✓ **正确**: `self.begin_ambient_camera_rotation(rate=0.2)` 开始自动旋转
-- ✓ **正确**: `self.stop_ambient_camera_rotation()` 停止自动旋转
+
+#### 相机移动（直接调用，不要放在 self.play() 中！）
+```python
+# ✓ 正确：直接调用 self.move_camera()
+self.move_camera(phi=60*DEGREES, theta=45*DEGREES, distance=6, run_time=2)
+self.wait(1)
+
+# ✗ 错误：不要把 move_camera 放在 self.play() 中
+# self.play(self.move_camera(...))  # 这会报错！move_camera 返回 None
+```
+
+#### 自动相机旋转（直接调用）
+```python
+# ✓ 正确：直接调用
+self.begin_ambient_camera_rotation(rate=0.2)
+self.wait(3)
+self.stop_ambient_camera_rotation()
+
+# ✗ 错误：不要放在 self.play() 中
+# self.play(self.begin_ambient_camera_rotation(...))
+```
+
+#### 关键规则总结
+- ✓ **正确**: `self.move_camera(phi=60*DEGREES, theta=45*DEGREES, distance=6, run_time=2)` - **直接调用**
+- ✓ **正确**: `self.begin_ambient_camera_rotation(rate=0.2)` - **直接调用**
+- ✓ **正确**: `self.stop_ambient_camera_rotation()` - **直接调用**
+- ✗ **错误**: `self.play(self.move_camera(...))` - **不要在 self.play() 中调用相机方法！**
 - ✗ **错误**: `self.camera.animate.set_theta()` - ThreeDCamera 没有 animate 属性
 - ✗ **错误**: `self.camera.animate` - 不适用于 ThreeDCamera
+
+**原因**: `self.move_camera()`, `self.begin_ambient_camera_rotation()`, `self.stop_ambient_camera_rotation()` 这些方法直接操作场景，不返回动画对象。它们必须作为独立语句调用，不能放在 `self.play()` 中。
 
 ### 11. 数学公式动画
 ```python
@@ -278,8 +343,14 @@ for bar in bars:
 ✓ **变量定义**: 所有变量在使用前必须定义
 ✓ **场景完整**: `construct()` 必须有完整的动画序列
 ✓ **输出文件名**: 必须使用 `target_filename` 变量
-✓ **3D相机动画**: ThreeDScene 必须使用 `self.move_camera()` 或 `self.begin_ambient_camera_rotation()`，绝对不能使用 `self.camera.animate.*()`
+✓ **3D相机动画**: `self.move_camera()` 和 `self.begin_ambient_camera_rotation()` 必须直接调用，**不能放在 `self.play()` 中**！
+✓ **3D相机方法**: 绝对不能使用 `self.camera.animate.*()` - ThreeDCamera 没有 animate 属性
+✓ **Arrow3D参数**: `Arrow3D` 不支持 `tip_length` 参数！只使用 `start`, `end`, `color`, `thickness`
+✓ **性能限制**: 3D对象总数 <30个，场可视化采样点 <10个
+✓ **绝对禁止UpdateFromAlphaFunc**: 对于任何场可视化（电场、磁场），**绝对禁止使用 UpdateFromAlphaFunc 更新箭头**！使用静态场+相机旋转代替
+✓ **限制self.play()调用**: 整个场景的 `self.play()` 调用次数应控制在 10-15 次以内，避免用循环创建太多动画帧
 ✓ **元素无重叠**: 所有 `next_to()` 必须指定 `buff>=0.5`，或使用 `VGroup.arrange()` 自动布局
+✓ **2D/3D对象分离**: ThreeDScene 中必须使用 `Line3D`, `Arrow3D` 等3D对象，**绝对禁止使用 `DashedLine`, `Line`, `Arrow` 等2D对象**
 
 ### 14. 质量检查清单
 - [ ] 代码语法正确（所有括号、引号配对）
@@ -290,8 +361,11 @@ for bar in bars:
 - [ ] 使用 target_filename 输出
 - [ ] 没有未使用的导入
 - [ ] 没有死代码
-- [ ] **如果是 ThreeDScene，相机动画必须使用 self.move_camera() 或 self.begin_ambient_camera_rotation()**
+- [ ] **如果是 ThreeDScene，相机方法（move_camera, begin_ambient_camera_rotation）必须直接调用，不能放在 self.play() 中**
+- [ ] **Arrow3D 只使用有效参数 (start, end, color, thickness)，不使用 tip_length**
 - [ ] **所有元素之间有足够间距，无重叠现象** - 每个 next_to() 指定了 buff>=0.5，或使用了 VGroup.arrange()
+- [ ] **如果是 ThreeDScene，必须使用3D对象（Line3D, Arrow3D），禁止使用2D对象（DashedLine, Line, Arrow）**
+- [ ] **场可视化不使用 UpdateFromAlphaFunc** - 使用静态场+相机旋转，绝对禁止每帧更新箭头方向
 
 ## 输出要求
 - 只返回 Python 代码
@@ -337,7 +411,9 @@ def generate_code(state: ManimState, stream_callback=None) -> ManimState:
 4. 所有变量在使用前必须定义
 5. construct() 方法必须有完整的动画序列
 6. 使用 target_filename 作为输出文件名变量
-7. **如果使用 ThreeDScene，相机动画必须使用 self.move_camera() 或 self.begin_ambient_camera_rotation()，绝对不能使用 self.camera.animate**
+7. **如果使用 ThreeDScene，相机方法（self.move_camera, self.begin_ambient_camera_rotation）必须直接调用，绝对不能放在 self.play() 中！**
+   - ✓ 正确: `self.move_camera(phi=60*DEGREES, theta=45*DEGREES, run_time=2)`
+   - ✗ 错误: `self.play(self.move_camera(phi=60*DEGREES, theta=45*DEGREES))`
 
 【🎨 布局与防重叠要求】
 8. **所有元素之间必须保持足够间距，绝对不能重叠！**
@@ -346,6 +422,55 @@ def generate_code(state: ManimState, stream_callback=None) -> ManimState:
    - 不同区域元素使用明确的 shift() 分隔（例如：left_group.shift(LEFT*3)）
    - 文本和图形之间至少保持 0.8 单位距离
    - 避免多个元素堆积在屏幕中央，合理分区布局
+
+【⚡ 性能要求】
+9. **确保动画能在合理时间内渲染完成！**
+   - 3D场景总对象数不超过30个（包括箭头、球体、线等）
+   - 电场线、磁场线等可视化使用<10个箭头表示即可
+   - **绝对禁止使用 UpdateFromAlphaFunc 实时更新场可视化！这会导致渲染时间超过10分钟！**
+   - **场可视化的正确做法**: 静态显示场分布，然后整体移动/旋转场景，不要每帧更新箭头方向
+   - 场可视化采样点总数不超过10个（不要用 5x5x5=125个点）
+   - 复杂3D场景应静态展示后整体旋转，不要每帧重新计算
+
+【🎬 3D 场景动画推荐模式】
+对于电场/磁场等物理可视化，使用以下模式：
+```python
+# ✓ 正确 - 静态场 + 相机旋转（推荐！）
+field_arrows = VGroup(*[Arrow3D(...) for _ in range(6)])  # 仅6个箭头
+self.play(Create(field_arrows))
+self.begin_ambient_camera_rotation(rate=0.1)  # 旋转相机而不是更新箭头
+self.wait(2)
+self.stop_ambient_camera_rotation()
+
+# ✓ 可接受 - 仅显示2-3个关键状态
+# 对于振动系统，只显示起始状态和1-2个位移状态，不要做平滑动画
+self.play(dipole.animate.shift(UP*0.5), run_time=1)  # 一个位移
+self.play(dipole.animate.shift(DOWN*1.0), run_time=1)  # 第二个位移
+
+# ✗ 错误 - 实时更新所有箭头（极慢！）
+# UpdateFromAlphaFunc 更新20个箭头会需要10+分钟渲染
+self.play(UpdateFromAlphaFunc(field_group, update_field))  # 不要这样做！
+
+# ✗ 错误 - 用循环创建太多动画帧
+for i in range(10):  # 这会创建10个self.play()调用，渲染很慢
+    self.play(obj.animate.move_to(new_pos))
+```
+
+**重要**: 整个场景的 `self.play()` 调用次数应控制在 10-15 次以内，包括所有元素的创建、变换和淡出。
+
+【🚫 Arrow3D 参数限制】
+10. **Arrow3D 类不支持 tip_length 参数！**
+   - Arrow3D 只支持: start, end, color, thickness
+   - 错误示例: `Arrow3D(..., tip_length=0.1)`  # 这会导致 TypeError
+   - 正确示例: `Arrow3D(start=point1, end=point2, color=GREEN, thickness=0.02)`
+
+【🚫 2D/3D 对象混用限制】
+11. **ThreeDScene 中绝对禁止使用 2D 对象！**
+   - ThreeDScene 必须使用: `Line3D`, `Arrow3D`, `Sphere`, `Cube`, `ThreeDAxes` 等
+   - ThreeDScene 禁止使用: `DashedLine`, `Line`, `Arrow`, `Circle`, `Square` 等 2D 对象
+   - 错误示例（ThreeDScene 中使用）: `DashedLine(start=[-2,0,0], end=[2,0,0])`  # 会导致 IndexError
+   - 正确示例: `Line3D(start=[-2,0,0], end=[2,0,0], color=GRAY, thickness=0.02)`
+   - 如果使用继承自 ThreeDScene，所有线条和箭头必须使用3D版本
 
 请直接输出可执行的 Python 代码，不要包含任何解释。"""
                 }
@@ -537,6 +662,8 @@ def execute_code(state: ManimState) -> ManimState:
                 env["PATH"] = f"{tex_bin}:{env.get('PATH', '')}"
 
             # 使用 communicate 直接获取所有输出，避免死锁
+            # 设置超时：300秒（5分钟）- 复杂3D场景可能需要较长时间
+            # 如果超时，可能是 Manim 死锁或 LaTeX 卡住
             process = subprocess.Popen(
                 cmd,
                 cwd=videos_dir,
@@ -546,10 +673,22 @@ def execute_code(state: ManimState) -> ManimState:
                 env=env  # 传递修改后的环境变量
             )
 
-            # 等待进程完成并获取所有输出
-            stdout_data, stderr_data = process.communicate()
+            # 等待进程完成并获取所有输出，带超时保护
+            try:
+                stdout_data, stderr_data = process.communicate(timeout=300)
+                returncode = process.returncode
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout_data, stderr_data = process.communicate()
+                returncode = -1  # 自定义超时返回码
 
-            returncode = process.returncode
+                error_msg = "Manim 渲染超时（>300秒），可能是死锁或 LaTeX 卡住"
+                print(f"⏱️ {error_msg}")
+                print(f"   已终止进程，尝试使用已生成的部分视频文件...")
+
+                # 即使超时，也尝试找已生成的视频
+                import time as time_module
+                time_module.sleep(1)  # 给文件系统一点时间
 
             # 打印 stderr 错误输出（如果有）
             if stderr_data:
