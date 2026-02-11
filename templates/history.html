@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>历史图表 - AI 智能绘图工作流</title>
+    <title>历史记录 - Bamboo AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cherry-markdown/dist/cherry-markdown.css">
@@ -423,6 +423,11 @@
             border-color: var(--primary-light);
         }
 
+        /* 视频卡片样式 */
+        .gallery-item.video {
+            border-color: #E91E63;
+        }
+
         .document-preview {
             width: 100%;
             height: 240px;
@@ -433,6 +438,28 @@
             justify-content: center;
             color: white;
             font-size: 48px;
+        }
+
+        .video-preview {
+            width: 100%;
+            height: 240px;
+            background: linear-gradient(135deg, #E91E63 0%, #9C27B0 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+        }
+
+        .video-preview-icon {
+            font-size: 64px;
+            margin-bottom: 8px;
+        }
+
+        .video-preview-text {
+            font-size: 14px;
+            opacity: 0.9;
         }
 
         .gallery-info {
@@ -731,8 +758,8 @@
         <!-- 页面标题 -->
         <div class="page-header">
             <div>
-                <h1 class="page-title">历史图表</h1>
-                <p class="page-subtitle">查看和管理所有生成的图表</p>
+                <h1 class="page-title">历史记录</h1>
+                <p class="page-subtitle">查看和管理所有生成的图表、文档和视频</p>
             </div>
             <button class="md-button md-button-contained" onclick="loadImages()">
                 <span class="material-icons">refresh</span>
@@ -746,7 +773,7 @@
                 <div class="stat-icon"><span class="material-icons">bar_chart</span></div>
                 <div class="stat-content">
                     <div class="stat-value" id="totalCount">0</div>
-                    <div class="stat-label">总图表数</div>
+                    <div class="stat-label">总项目数</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -761,14 +788,14 @@
         <!-- 加载状态 -->
         <div class="loading-container" id="loadingState">
             <div class="loading-spinner"></div>
-            <div class="loading-text">加载历史图表中...</div>
+            <div class="loading-text">加载历史记录中...</div>
         </div>
 
         <!-- 空状态 -->
         <div class="empty-state" id="emptyState" style="display: none;">
             <div class="empty-icon"><span class="material-icons">folder_open</span></div>
-            <div class="empty-title">暂无历史图表</div>
-            <div class="empty-text">还没有生成任何图表，快去创建第一个吧！</div>
+            <div class="empty-title">暂无历史记录</div>
+            <div class="empty-text">还没有生成任何内容，快去创建第一个图表、文档或视频吧！</div>
             <button class="md-button md-button-contained" onclick="goToHome()">
                 <span class="material-icons">rocket_launch</span>
                 <span>开始生成</span>
@@ -831,6 +858,30 @@
         </div>
     </div>
 
+    <!-- 视频预览模态框 -->
+    <div class="image-modal" id="videoModal">
+        <div class="image-modal-backdrop" onclick="closeVideoModal()"></div>
+        <div class="image-modal-content" style="max-width: 1000px;">
+            <div class="image-modal-image-wrapper">
+                <button class="image-modal-close" onclick="closeVideoModal()"><span class="material-icons">close</span></button>
+                <video id="videoModalPreview" controls autoplay style="max-width: 100%; max-height: 75vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);"></video>
+            </div>
+            <div class="image-modal-info">
+                <div class="image-modal-filename" id="videoModalFilename">video.mp4</div>
+                <div class="image-modal-actions">
+                    <button class="image-modal-btn" onclick="downloadCurrentVideo()">
+                        <span class="material-icons">download</span>
+                        <span>下载</span>
+                    </button>
+                    <button class="image-modal-btn delete" onclick="deleteCurrentVideo()">
+                        <span class="material-icons">delete</span>
+                        <span>删除</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 主题管理
         const THEME_KEY = 'app-theme';
@@ -838,6 +889,7 @@
         let currentThemeMode = localStorage.getItem(THEME_KEY) || 'auto';
         let currentImageData = null;
         let currentDocumentData = null;
+        let currentVideoData = null;
         let allImages = [];
 
         // 初始化主题
@@ -1003,7 +1055,8 @@
                 // 更新统计信息
                 const imageCount = items.filter(item => item.type === 'image').length;
                 const documentCount = items.filter(item => item.type === 'document').length;
-                totalCount.textContent = `${imageCount} 图表 / ${documentCount} 文档`;
+                const videoCount = items.filter(item => item.type === 'video').length;
+                totalCount.textContent = `${imageCount} 图表 / ${documentCount} 文档 / ${videoCount} 视频`;
                 const totalBytes = items.reduce((sum, item) => sum + item.size, 0);
                 totalSize.textContent = formatFileSize(totalBytes);
 
@@ -1037,6 +1090,8 @@
             // 根据类型添加class
             if (item.type === 'document') {
                 div.classList.add('document');
+            } else if (item.type === 'video') {
+                div.classList.add('video');
             }
 
             div.onclick = (e) => {
@@ -1046,6 +1101,8 @@
                 // 根据类型打开不同的预览
                 if (item.type === 'document') {
                     openDocumentModal(item);
+                } else if (item.type === 'video') {
+                    openVideoModal(item);
                 } else {
                     openImageModal(item);
                 }
@@ -1058,6 +1115,12 @@
             let previewHTML = '';
             if (item.type === 'document') {
                 previewHTML = `<div class="document-preview">📄</div>`;
+            } else if (item.type === 'video') {
+                previewHTML = `
+                    <div class="video-preview">
+                        <div class="video-preview-icon"><span class="material-icons" style="font-size: inherit;">play_circle</span></div>
+                        <div class="video-preview-text">点击播放</div>
+                    </div>`;
             } else {
                 previewHTML = `<img class="gallery-image" src="${item.url}?t=${Date.now()}" alt="${item.name}" loading="lazy">`;
             }
@@ -1075,6 +1138,21 @@
                         <span>下载</span>
                     </button>
                     <button class="gallery-action-btn delete" onclick="deleteDocument('${item.name}', ${index})">
+                        <span class="material-icons">delete</span>
+                        <span>删除</span>
+                    </button>
+                `;
+            } else if (item.type === 'video') {
+                actionButtons = `
+                    <button class="gallery-action-btn" onclick="viewVideo(${index})">
+                        <span class="material-icons">play_arrow</span>
+                        <span>播放</span>
+                    </button>
+                    <button class="gallery-action-btn" onclick="downloadVideo('${item.url}', '${item.name}')">
+                        <span class="material-icons">download</span>
+                        <span>下载</span>
+                    </button>
+                    <button class="gallery-action-btn delete" onclick="deleteVideo('${item.name}', ${index})">
                         <span class="material-icons">delete</span>
                         <span>删除</span>
                     </button>
@@ -1261,6 +1339,7 @@
             if (e.key === 'Escape') {
                 closeImageModal();
                 closeDocumentModal();
+                closeVideoModal();
             }
         });
 
@@ -1411,6 +1490,82 @@
         async function deleteCurrentDocument() {
             if (currentDocumentData) {
                 await deleteDocument(currentDocumentData.name, -1);
+            }
+        }
+
+        // ========== 视频相关函数 ==========
+
+        // 打开视频预览
+        function openVideoModal(video) {
+            currentVideoData = video;
+            const modal = document.getElementById('videoModal');
+            const preview = document.getElementById('videoModalPreview');
+            const filename = document.getElementById('videoModalFilename');
+
+            preview.src = video.url + '?t=' + Date.now();
+            filename.textContent = video.name;
+            modal.classList.add('show');
+        }
+
+        // 关闭视频预览
+        function closeVideoModal() {
+            const modal = document.getElementById('videoModal');
+            const preview = document.getElementById('videoModalPreview');
+            preview.pause();
+            preview.src = '';
+            modal.classList.remove('show');
+            currentVideoData = null;
+        }
+
+        // 查看视频
+        function viewVideo(index) {
+            if (allImages[index]) {
+                openVideoModal(allImages[index]);
+            }
+        }
+
+        // 下载视频
+        function downloadVideo(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+        }
+
+        // 下载当前预览的视频
+        function downloadCurrentVideo() {
+            if (currentVideoData) {
+                downloadVideo(currentVideoData.url, currentVideoData.name);
+            }
+        }
+
+        // 删除视频
+        async function deleteVideo(filename, index) {
+            if (!confirm(`确定要删除 "${filename}" 吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/manim/videos/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadImages();
+                    closeVideoModal();
+                } else {
+                    alert('删除失败');
+                }
+            } catch (error) {
+                console.error('删除视频失败:', error);
+                alert('删除失败');
+            }
+        }
+
+        // 删除当前预览的视频
+        async function deleteCurrentVideo() {
+            if (currentVideoData) {
+                await deleteVideo(currentVideoData.name, -1);
             }
         }
     </script>

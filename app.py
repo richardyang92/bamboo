@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sock import Sock
 import os
 import threading
-import time
 import json
 from draw_pic import create_graph, GraphState
 from datetime import datetime
@@ -15,7 +14,8 @@ sock = Sock(app)
 # WebSocket 连接池 (按工作流类型分组)
 websocket_clients = {
     'drawing': [],
-    'document_with_images': []
+    'document_with_images': [],
+    'manim': []
 }
 
 # 全局变量存储工作流状态（支持多个工作流类型）
@@ -28,6 +28,13 @@ workflow_statuses = {
         'error': None
     },
     'document_with_images': {
+        'status': 'idle',
+        'current_step': '',
+        'steps': [],
+        'result': None,
+        'error': None
+    },
+    'manim': {
         'status': 'idle',
         'current_step': '',
         'steps': [],
@@ -100,6 +107,13 @@ DRAWING_STEP_NAMES = {
     'execute_code': '执行绘图代码',
     'save_image': '验证图片保存'
 }
+
+MANIM_STEP_NAMES = {
+     'refine_prompt': '润色动画需求',
+     'generate_code': '生成动画代码',
+     'execute_code': '渲染动画视频',
+     'save_video': '验证视频保存'
+ }
 
 @app.route('/')
 def index():
@@ -413,11 +427,89 @@ def delete_document(filename):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ==================== 统一历史记录端点 ====================
+# ==================== Manim 动画工作流端点 ====================
+
+@app.route('/api/manim/workflow', methods=['POST'])
+def run_manim_workflow():
+    """启动 Manim 动画工作流"""
+    data = request.json
+    user_prompt = data.get('prompt', '')
+    quality = data.get('quality', 'medium')
+
+    if not user_prompt:
+        return jsonify({'error': '请输入动画需求'}), 400
+
+    # 立即更新状态为运行中
+    workflow_statuses['manim'] = {
+        'status': 'running',
+        'current_step': '',
+        'steps': [],
+        'result': None,
+        'error': None
+    }
+
+    # 立即推送状态到客户端
+    update_and_emit_status('manim')
+    print(f"[DEBUG] 初始 Manim 状态已发送到客户端")
+
+    # 在新线程中运行工作流
+    thread = threading.Thread(target=run_manim_workflow_thread, args=(user_prompt, quality,))
+    thread.daemon = True
+    thread.start()
+
+    return jsonify({'message': 'Manim 动画工作流已启动'})
+
+@app.route('/api/manim/videos')
+def list_manim_videos():
+    """列出所有生成的视频"""
+    video_files = []
+    if os.path.exists('videos'):
+        for file in os.listdir('videos'):
+            if file.startswith('manim_') and file.endswith('.mp4'):
+                filepath = os.path.join('videos', file)
+                video_files.append({
+                    'name': file,
+                    'path': f'/api/manim/videos/{file}',
+                    'size': os.path.getsize(filepath),
+                    'created': os.path.getmtime(filepath)
+                })
+
+    video_files.sort(key=lambda x: x['created'], reverse=True)
+    return jsonify(video_files)
+
+@app.route('/api/manim/videos/<filename>')
+def get_manim_video(filename):
+    """获取视频文件"""
+    return send_from_directory('videos', filename)
+
+@app.route('/api/manim/videos/<filename>', methods=['DELETE'])
+def delete_manim_video(filename):
+    """删除视频文件"""
+    try:
+        filepath = os.path.join('videos', filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            return jsonify({'message': '视频已删除'})
+        else:
+            return jsonify({'error': '文件不存在'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/manim/clear', methods=['POST'])
+def clear_manim_history():
+    """清除 Manim 历史记录"""
+    workflow_statuses['manim']['steps'] = []
+    workflow_statuses['manim']['result'] = None
+    workflow_statuses['manim']['error'] = None
+    update_and_emit_status('manim')
+    print("[DEBUG] Manim 历史已清除，状态已发送")
+    return jsonify({'message': 'Manim 历史记录已清除'})
+
+ # ==================== 统一历史记录端点 ====================
 
 @app.route('/api/history')
 def list_history():
-    """列出所有项目（图片 + 文档）"""
+    """列出所有项目（图片 + 文档 + 视频）"""
     items = []
 
     # 添加图片
@@ -446,6 +538,19 @@ def list_history():
                     'created': os.path.getmtime(filepath)
                 })
 
+    # 添加视频
+    if os.path.exists('videos'):
+        for file in os.listdir('videos'):
+            if file.startswith('manim_') and file.endswith('.mp4'):
+                filepath = os.path.join('videos', file)
+                items.append({
+                    'type': 'video',
+                    'name': file,
+                    'url': f'/api/manim/videos/{file}',
+                    'size': os.path.getsize(filepath),
+                    'created': os.path.getmtime(filepath)
+                })
+
     # 按创建时间排序
     items.sort(key=lambda x: x['created'], reverse=True)
     return jsonify(items)
@@ -470,7 +575,8 @@ def websocket_connection(ws):
         with status_lock:
             drawing_status = workflow_statuses['drawing'].copy()
             doc_status = workflow_statuses.get('document_with_images', {}).copy() if 'document_with_images' in workflow_statuses else None
-        
+            manim_status = workflow_statuses.get('manim', {}).copy() if 'manim' in workflow_statuses else None
+
         print(f"[DEBUG] 准备发送初始状态...")
         ws.send(json.dumps({
             'type': 'status_update',
@@ -478,7 +584,7 @@ def websocket_connection(ws):
             **drawing_status
         }))
         print(f"[DEBUG] 绘图状态已发送")
-        
+
         if doc_status:
             ws.send(json.dumps({
                 'type': 'status_update',
@@ -486,6 +592,14 @@ def websocket_connection(ws):
                 **doc_status
             }))
             print(f"[DEBUG] 文档状态已发送")
+
+        if manim_status:
+            ws.send(json.dumps({
+                'type': 'status_update',
+                'workflow_type': 'manim',
+                **manim_status
+            }))
+            print(f"[DEBUG] Manim 状态已发送")
         
         # 接收消息（使用 while 循环而不是 for 迭代）
         print(f"[DEBUG] 开始监听客户端消息...")
@@ -1135,6 +1249,223 @@ def run_document_with_images_thread(user_prompt):
         workflow_statuses['document_with_images']['error'] = str(e)
         update_and_emit_status('document_with_images')
         print(f"[DEBUG] 带图片的文档错误状态已发送到客户端")
+
+def run_manim_workflow_thread(user_prompt, quality):
+    """在工作流线程中运行 Manim 动画工作流"""
+    print(f"\n[DEBUG] ===== Manim 动画工作流线程启动 =====")
+    print(f"[DEBUG] 用户提示词: '{user_prompt}'")
+    print(f"[DEBUG] 渲染质量: '{quality}'")
+
+    try:
+        # 导入 Manim 动画工作流
+        from manim_gen import create_graph as create_manim_graph, ManimState
+
+        # 创建监控的工作流
+        def create_monitored_manim_graph():
+            """创建带监控的 Manim 动画工作流图"""
+            from langgraph.graph import StateGraph, END
+
+            # 导入原始节点函数
+            from manim_gen import (
+                refine_prompt, generate_code, execute_code, save_video
+            )
+
+            # 包装节点以添加进度报告
+            def monitored_refine_prompt(state):
+                print(f"\n[DEBUG] >>> Manim 节点 'refine_prompt' 开始执行")
+
+                workflow_statuses['manim']['current_step'] = 'refine_prompt'
+                workflow_statuses['manim']['steps'].append({
+                    'step': 'refine_prompt',
+                    'name': MANIM_STEP_NAMES['refine_prompt'],
+                    'status': 'running',
+                    'timestamp': datetime.now().isoformat()
+                })
+                update_and_emit_status('manim')
+
+                result = refine_prompt(state)
+
+                if result.get('error'):
+                    workflow_statuses['manim']['steps'][-1]['status'] = 'error'
+                else:
+                    workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
+                    workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
+                update_and_emit_status('manim')
+
+                print(f"[DEBUG] <<< Manim 节点 'refine_prompt' 执行完成")
+                return result
+
+            def monitored_generate_code(state):
+                print(f"\n[DEBUG] >>> Manim 节点 'generate_code' 开始执行")
+
+                workflow_statuses['manim']['current_step'] = 'generate_code'
+                workflow_statuses['manim']['steps'].append({
+                    'step': 'generate_code',
+                    'name': MANIM_STEP_NAMES['generate_code'],
+                    'status': 'running',
+                    'timestamp': datetime.now().isoformat()
+                })
+                update_and_emit_status('manim')
+
+                def stream_callback(content):
+                    emit_stream_content('manim', 'generate_code', content)
+
+                result = generate_code(state, stream_callback=stream_callback)
+
+                if result.get('error'):
+                    workflow_statuses['manim']['steps'][-1]['status'] = 'error'
+                else:
+                    workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
+                    workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
+                update_and_emit_status('manim')
+
+                print(f"[DEBUG] <<< Manim 节点 'generate_code' 执行完成")
+                if result.get('error'):
+                    print(f"[DEBUG] generate_code 返回错误: {result['error']}")
+                else:
+                    print(f"[DEBUG] 生成的代码长度: {len(result.get('generated_code', ''))} 字符")
+                return result
+
+            def monitored_execute_code(state):
+                print(f"\n[DEBUG] >>> Manim 节点 'execute_code' 开始执行")
+
+                workflow_statuses['manim']['current_step'] = 'execute_code'
+                workflow_statuses['manim']['steps'].append({
+                    'step': 'execute_code',
+                    'name': MANIM_STEP_NAMES['execute_code'],
+                    'status': 'running',
+                    'timestamp': datetime.now().isoformat()
+                })
+                update_and_emit_status('manim')
+
+                result = execute_code(state)
+
+                if result.get('error'):
+                    workflow_statuses['manim']['steps'][-1]['status'] = 'error'
+                else:
+                    workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
+                    workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
+                update_and_emit_status('manim')
+
+                print(f"[DEBUG] <<< Manim 节点 'execute_code' 执行完成")
+                if result.get('error'):
+                    print(f"[DEBUG] execute_code 返回错误: {result['error']}")
+                else:
+                    print(f"[DEBUG] 生成的视频路径: {result.get('video_path', 'N/A')}")
+                return result
+
+            def monitored_save_video(state):
+                print(f"\n[DEBUG] >>> Manim 节点 'save_video' 开始执行")
+
+                workflow_statuses['manim']['current_step'] = 'save_video'
+                workflow_statuses['manim']['steps'].append({
+                    'step': 'save_video',
+                    'name': MANIM_STEP_NAMES['save_video'],
+                    'status': 'running',
+                    'timestamp': datetime.now().isoformat()
+                })
+                update_and_emit_status('manim')
+
+                result = save_video(state)
+
+                if result.get('error'):
+                    workflow_statuses['manim']['steps'][-1]['status'] = 'error'
+                else:
+                    workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
+                    workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
+                update_and_emit_status('manim')
+
+                print(f"[DEBUG] <<< Manim 节点 'save_video' 执行完成")
+                if result.get('error'):
+                    print(f"[DEBUG] save_video 返回错误: {result['error']}")
+                else:
+                    print(f"[DEBUG] 视频大小: {result.get('video_size', 0)} 字节")
+                return result
+
+            # 构建图
+            workflow = StateGraph(ManimState)
+            workflow.add_node("refine_prompt", monitored_refine_prompt)
+            workflow.add_node("generate_code", monitored_generate_code)
+            workflow.add_node("execute_code", monitored_execute_code)
+            workflow.add_node("save_video", monitored_save_video)
+            workflow.set_entry_point("refine_prompt")
+            workflow.add_edge("refine_prompt", "generate_code")
+            workflow.add_edge("generate_code", "execute_code")
+            workflow.add_edge("execute_code", "save_video")
+            workflow.add_edge("save_video", END)
+
+            return workflow.compile()
+
+        graph = create_monitored_manim_graph()
+        print(f"[DEBUG] Manim 工作流图已创建并编译")
+
+        print(f"[DEBUG] 开始调用 Manim 工作流（流式模式）...")
+        initial_state = {
+            "user_prompt": user_prompt,
+            "refined_prompt": "",
+            "generated_code": "",
+            "video_path": "",
+            "video_size": 0,
+            "render_quality": quality,
+            "error": ""
+        }
+        print(f"[DEBUG] 初始状态: {initial_state}")
+
+        # 使用流式执行
+        result = {}
+        try:
+            for event in graph.stream(initial_state):
+                for node_name, node_output in event.items():
+                    print(f"[DEBUG] 节点 '{node_name}' 完成输出")
+                    result.update(node_output)
+
+                    update_and_emit_status('manim')
+
+        except Exception as stream_error:
+            print(f"[ERROR] 流式执行过程中出错: {str(stream_error)}")
+            import traceback
+            traceback.print_exc()
+            result["error"] = str(stream_error)
+            update_and_emit_status('manim')
+
+        print(f"\n[DEBUG] ===== Manim 工作流执行完成 =====")
+        print(f"[DEBUG] 最终结果: {result}")
+
+        # 更新最终状态
+        if result.get("error"):
+            print(f"[DEBUG] Manim 工作流执行失败，错误信息: {result['error']}")
+            workflow_statuses['manim']['status'] = 'error'
+            workflow_statuses['manim']['error'] = result['error']
+        else:
+            print(f"[DEBUG] Manim 工作流执行成功")
+            workflow_statuses['manim']['status'] = 'completed'
+            filename = os.path.basename(result['video_path'])
+            workflow_statuses['manim']['result'] = {
+                'type': 'video',
+                'video_path': result['video_path'],
+                'video_url': f'/api/manim/videos/{filename}',
+                'video_size': result['video_size'],
+                'generated_code': result['generated_code']
+            }
+            print(f"[DEBUG] 结果视频路径: {result['video_path']}")
+            print(f"[DEBUG] 结果视频 URL: /api/manim/videos/{filename}")
+
+        workflow_statuses['manim']['current_step'] = ''
+        update_and_emit_status('manim')
+        print(f"[DEBUG] Manim 状态更新已发送到客户端")
+
+    except Exception as e:
+        import traceback
+        print(f"\n[DEBUG] ===== Manim 动画工作流异常 =====")
+        print(f"[DEBUG] 异常类型: {type(e).__name__}")
+        print(f"[DEBUG] 异常信息: {str(e)}")
+        print(f"[DEBUG] 完整堆栈跟踪:")
+        traceback.print_exc()
+
+        workflow_statuses['manim']['status'] = 'error'
+        workflow_statuses['manim']['error'] = str(e)
+        update_and_emit_status('manim')
+        print(f"[DEBUG] Manim 错误状态已发送到客户端")
 
 if __name__ == '__main__':
     from werkzeug.serving import run_simple

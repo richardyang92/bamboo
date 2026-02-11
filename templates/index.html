@@ -2094,6 +2094,10 @@
                     <span class="material-icons">article</span>
                     <span>文档+图</span>
                 </button>
+                <button class="md-segmented-item" data-mode="manim" onclick="switchFeatureMode('manim')">
+                    <span class="material-icons">movie</span>
+                    <span>Manim动画</span>
+                </button>
             </div>
 
             <!-- 历史记录 - Material Design Text Button -->
@@ -2583,7 +2587,231 @@
 
 
 
-    <!-- 图片预览模态框 -->
+    
+    <!-- Manim动画模式容器 -->
+    <div class="mode-container" id="manimMode">
+        <!-- Manim标准视图 -->
+        <div class="main-container" id="manimStandardView">
+            <!-- 左侧：动画输入面板 -->
+            <div class="panel input-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="material-icons">movie_creation</span>
+                        <span>动画配置</span>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <!-- Manim模板 -->
+                    <div class="templates-section">
+                        <label class="input-label">动画模板</label>
+                        <div class="templates-grid">
+                            <div class="md-chip" onclick="useManimTemplate('function_plot')">
+                                <span class="material-icons">show_chart</span>
+                                <span>函数绘图</span>
+                            </div>
+                            <div class="md-chip" onclick="useManimTemplate('geometry_transform')">
+                                <span class="material-icons">category</span>
+                                <span>几何变换</span>
+                            </div>
+                            <div class="md-chip" onclick="useManimTemplate('math_formula')">
+                                <span class="material-icons">calculate</span>
+                                <span>数学公式</span>
+                            </div>
+                            <div class="md-chip" onclick="useManimTemplate('physics_sim')">
+                                <span class="material-icons">science</span>
+                                <span>物理模拟</span>
+                            </div>
+                            <div class="md-chip" onclick="useManimTemplate('data_vis')">
+                                <span class="material-icons">bar_chart</span>
+                                <span>数据可视化</span>
+                            </div>
+                            <div class="md-chip" onclick="useManimTemplate('flow_chart')">
+                                <span class="material-icons">account_tree</span>
+                                <span>流程图</span>
+                            </div>
+                            <div class="md-chip" onclick="useManimTemplate('coord_transform')">
+                                <span class="material-icons">grid_on</span>
+                                <span>坐标变换</span>
+                            </div>
+                            <div class="md-chip" onclick="useManimTemplate('three_d')">
+                                <span class="material-icons">view_in_ar</span>
+                                <span>3D场景</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 质量选择器 -->
+                    <div class="input-wrapper">
+                        <label class="input-label">输出质量</label>
+                        <div class="md-segmented" id="manimQualitySelector">
+                            <button class="md-segmented-item active" data-quality="low">
+                                <span>低</span>
+                            </button>
+                            <button class="md-segmented-item" data-quality="medium">
+                                <span>中</span>
+                            </button>
+                            <button class="md-segmented-item" data-quality="high">
+                                <span>高</span>
+                            </button>
+                            <button class="md-segmented-item" data-quality="4k">
+                                <span>4K</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 动画需求输入 -->
+                    <div class="input-wrapper">
+                        <label class="input-label">动画需求</label>
+                        <textarea id="manimPromptInput" placeholder="描述您想要生成的动画，例如：&#10;&#10;• 绘制正弦函数 y=sin(x) 在x∈[0,4π]区间的动态展示&#10;• 展示一个立方体在三维空间中的旋转动画&#10;• 演示物理中的单摆运动过程"></textarea>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="button-group">
+                        <button class="md-button md-button-contained" onclick="startManimWorkflow()" id="manimStartBtn" style="width: 100%;">
+                            <span class="material-icons">play_circle</span>
+                            <span>生成动画</span>
+                        </button>
+                        <button class="md-button md-button-outlined" onclick="clearManimHistory()" style="width: 100%;">
+                            <span class="material-icons">delete</span>
+                            <span>清除历史</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间：Manim状态面板 -->
+            <div class="panel status-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="material-icons">movie_filter</span>
+                        <span>动画状态</span>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div id="manimStatusBadge" class="status-badge idle">
+                        <span>⚪</span>
+                        <span>空闲</span>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-header">
+                            <span>进度</span>
+                            <span id="manimProgressText">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="manimProgressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="steps-list" id="manimStepsContainer">
+                        <div class="step-card" data-step="refine_prompt">
+                            <div class="step-header">
+                                <div class="step-icon"><span class="material-icons">auto_fix_high</span></div>
+                                <div class="step-info">
+                                    <div class="step-title">润色动画需求</div>
+                                    <div class="step-time">等待中</div>
+                                </div>
+                                <div class="step-status pending">等待</div>
+                            </div>
+                        </div>
+                        <div class="step-card" data-step="generate_code">
+                            <div class="step-header">
+                                <div class="step-icon"><span class="material-icons">code</span></div>
+                                <div class="step-info">
+                                    <div class="step-title">生成动画代码</div>
+                                    <div class="step-time">等待中</div>
+                                </div>
+                                <div class="step-status pending">等待</div>
+                            </div>
+                            <div class="step-stream-content"></div>
+                        </div>
+                        <div class="step-card" data-step="execute_code">
+                            <div class="step-header">
+                                <div class="step-icon"><span class="material-icons">videocam</span></div>
+                                <div class="step-info">
+                                    <div class="step-title">渲染动画视频</div>
+                                    <div class="step-time">等待中</div>
+                                </div>
+                                <div class="step-status pending">等待</div>
+                            </div>
+                        </div>
+                        <div class="step-card" data-step="save_video">
+                            <div class="step-header">
+                                <div class="step-icon"><span class="material-icons">check_circle</span></div>
+                                <div class="step-info">
+                                    <div class="step-title">验证视频保存</div>
+                                    <div class="step-time">等待中</div>
+                                </div>
+                                <div class="step-status pending">等待</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：Manim结果面板 -->
+            <div class="panel result-panel">
+                <div class="result-container">
+                    <!-- 空状态 -->
+                    <div class="empty-state" id="manimEmptyState">
+                        <div class="empty-icon">🎬</div>
+                        <div class="empty-title">开始创作动画</div>
+                        <div class="empty-text">在左侧输入您的动画需求，AI将为您生成专业的数学动画视频</div>
+                    </div>
+
+                    <!-- 结果内容 -->
+                    <div class="result-content" id="manimResultContent">
+                        <div class="result-tabs">
+                            <button class="result-tab active" onclick="switchManimTab('video', event)">
+                                <span class="material-icons">play_circle</span>
+                                <span>视频</span>
+                            </button>
+                            <button class="result-tab" onclick="switchManimTab('code', event)">
+                                <span class="material-icons">code</span>
+                                <span>代码</span>
+                            </button>
+                        </div>
+
+                        <!-- 视频视图 -->
+                        <div class="result-view active" id="manimVideoView">
+                            <div style="background: var(--bg-card); border-radius: 8px; overflow: hidden; box-shadow: var(--elevation-1);">
+                                <video id="manimResultVideo" controls style="width: 100%; display: block;">
+                                    <source src="" type="video/mp4">
+                                    您的浏览器不支持视频播放。
+                                </video>
+                                <div style="padding: 16px; display: flex; gap: 24px; border-top: 1px solid var(--md-divider); font-size: 14px; color: var(--text-secondary);">
+                                    <span id="manimVideoSize"><span class="material-icons">straighten</span> <span>-- MB</span></span>
+                                    <span id="manimVideoPath"><span class="material-icons">folder</span> <span>--</span></span>
+                                    <span id="manimVideoDuration"><span class="material-icons">schedule</span> <span>--s</span></span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 20px;">
+                                <button class="md-button md-button-contained" onclick="downloadVideo()" style="width: 100%;">
+                                    <span class="material-icons">download</span>
+                                    <span>下载视频</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 代码视图 -->
+                        <div class="result-view" id="manimCodeView">
+                            <div class="code-container">
+                                <div class="code-header">
+                                    <span class="code-lang">Python (Manim)</span>
+                                    <button class="code-copy" onclick="copyManimCode()"><span class="material-icons" style="font-size:16px;">content_copy</span> <span>复制</span></button>
+                                </div>
+                                <div class="code-content">
+                                    <pre id="manimCodeContent"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- 图片预览模态框 -->
     <div class="image-modal" id="imageModal">
         <div class="image-modal-backdrop" onclick="closeImageModal()"></div>
         <div class="image-modal-content">
@@ -2865,7 +3093,10 @@
             currentFeatureMode = mode;
 
             // 通知服务器切换工作流类型
-            if (mode === 'document_with_images' && wsClient) {
+            if (mode === 'manim' && wsClient) {
+                wsClient.setWorkflowType('manim');
+                console.log('已通知服务器切换到 Manim 动画模式');
+            } else if (mode === 'document_with_images' && wsClient) {
                 wsClient.setWorkflowType('document_with_images');
                 console.log('已通知服务器切换到文档+图模式');
             } else if (mode === 'drawing' && wsClient) {
@@ -2875,6 +3106,7 @@
 
             document.getElementById('drawingMode').classList.remove('active');
             document.getElementById('documentMode').classList.remove('active');
+            document.getElementById('manimMode').classList.remove('active');
 
             // 更新特性标签激活状态
             document.querySelectorAll('.md-segmented-item[data-mode]').forEach(tab => {
@@ -2882,10 +3114,12 @@
             });
 
             // 切换到相应的模式容器（标准视图）
-            if (mode === 'drawing') {
-                document.getElementById('drawingMode').classList.add('active');
+            if (mode === 'manim') {
+                document.getElementById('manimMode').classList.add('active');
             } else if (mode === 'document_with_images') {
                 document.getElementById('documentMode').classList.add('active');
+            } else if (mode === 'drawing') {
+                document.getElementById('drawingMode').classList.add('active');
             }
         }
 
@@ -3083,19 +3317,35 @@
                 } else if (data.workflow_type === 'document_with_images') {
                     currentDocumentResult = data.result;
                     updateDocumentUI(data);
+                } else if (data.workflow_type === 'manim') {
+                    manimCurrentResult = data.result;
+                    updateManimUI(data);
                 }
             });
         });
 
         // 接收流式响应内容
         wsClient.on('stream_content', (data) => {
-            console.log('收到流式内容:', data.workflow_type, data.node);
-            
+            console.log('📥 [WS] 收到流式内容:', {
+                workflow: data.workflow_type,
+                node: data.node,
+                contentLength: data.content?.length || 0,
+                contentPreview: data.content?.substring(0, 50) || ''
+            });
+
             requestAnimationFrame(() => {
                 if (data.workflow_type === 'drawing') {
                     handleStreamContent('stepsContainer', data.node, data.content);
                 } else if (data.workflow_type === 'document_with_images') {
                     handleStreamContent('docStepsContainer', data.node, data.content);
+                } else if (data.workflow_type === 'manim') {
+                    console.log('🎬 [Manim] 处理流式内容...');
+                    handleStreamContent('manimStepsContainer', data.node, data.content);
+                    // 对于 Manim 的 generate_code 节点，同时更新代码显示面板
+                    if (data.node === 'generate_code') {
+                        console.log('💻 [Manim] 调用 updateManimCodePanel...');
+                        updateManimCodePanel(data.content, false);
+                    }
                 }
             });
         });
@@ -3133,6 +3383,60 @@
             streamContentDiv.textContent += content;
             streamContentDiv.scrollTop = streamContentDiv.scrollHeight;
             console.log(`[DEBUG] 流式内容已更新，当前长度: ${streamContentDiv.textContent.length}`);
+        }
+
+        // 更新 Manim 代码显示面板（支持流式更新）
+        function updateManimCodePanel(content, isComplete = false) {
+            console.log('💻 [updateManimCodePanel] 开始执行...', {
+                contentLength: content?.length || 0,
+                isComplete,
+                preview: content?.substring(0, 100) || ''
+            });
+
+            const codeContentEl = document.getElementById('manimCodeContent');
+            if (!codeContentEl) {
+                console.error('❌ [updateManimCodePanel] 找不到 manimCodeContent 元素');
+                return;
+            }
+
+            console.log('✅ [updateManimCodePanel] 找到代码元素，当前内容长度:', codeContentEl.textContent.length);
+
+            // 检查是否是第一次收到代码内容
+            if (!codeContentEl.dataset.firstContent && !isComplete) {
+                console.log('🎯 [updateManimCodePanel] 第一次收到代码，初始化面板...');
+                codeContentEl.textContent = '';
+                codeContentEl.dataset.firstContent = 'true';
+
+                // 确保结果显示面板可见（强制显示）
+                const resultContent = document.getElementById('manimResultContent');
+                const emptyState = document.getElementById('manimEmptyState');
+                if (resultContent && emptyState) {
+                    console.log('📺 [updateManimCodePanel] 显示结果面板，隐藏空状态');
+                    console.log('   - resultContent classes before:', resultContent.className);
+                    emptyState.style.display = 'none';
+                    resultContent.classList.add('active');
+                    console.log('   - resultContent classes after:', resultContent.className);
+                } else {
+                    console.error('❌ [updateManimCodePanel] 找不到结果面板或空状态元素');
+                }
+
+                // 切换到代码标签页
+                console.log('🔄 [updateManimCodePanel] 切换到代码标签页...');
+                switchManimTab('code');
+                console.log('✅ [updateManimCodePanel] 标签页切换完成');
+            } else {
+                console.log('📝 [updateManimCodePanel] 追加内容到现有面板...');
+            }
+
+            // 追加内容
+            codeContentEl.textContent += content;
+            console.log(`✅ [updateManimCodePanel] 代码面板已更新，总长度: ${codeContentEl.textContent.length} 字符`);
+
+            // 如果是完成状态，清除标记以便下次重新开始
+            if (isComplete) {
+                delete codeContentEl.dataset.firstContent;
+                console.log('🏁 [updateManimCodePanel] 完成，已清除 firstContent 标记');
+            }
         }
 
         // 渲染文档预览（使用 Cherry Markdown）
@@ -3868,7 +4172,353 @@
             });
         }
 
-    </script>
+    
+        // Manim动画模板数据
+        const manimTemplates = {
+            'function_plot': '绘制正弦函数 y=sin(x) 在x∈[0,4π]区间的动态展示，包括坐标轴、函数曲线和动画演示',
+            'geometry_transform': '展示一个正方形在二维平面上的旋转变换，从0度旋转到360度',
+            'math_formula': '演示欧拉公式 e^(iπ) + 1 = 0 的可视化过程，展示复平面上的单位圆',
+            'physics_sim': '模拟单摆运动，展示周期性摆动过程，包括摆线、摆球和轨迹',
+            'data_vis': '创建柱状图的动态生长动画，展示5个类别的数据变化过程',
+            'flow_chart': '绘制一个简单的算法流程图，包括开始、处理步骤和结束节点',
+            'coord_transform': '展示二维坐标系到三维坐标系的变换过程',
+            'three_d': '创建一个旋转的三维立方体，展示不同视角的透视效果'
+        };
+
+        // Manim当前质量选择
+        let manimQuality = 'low';
+
+        // Manim当前结果
+        let manimCurrentResult = null;
+
+        // 使用Manim模板
+        function useManimTemplate(type) {
+            const textarea = document.getElementById('manimPromptInput');
+            if (textarea && manimTemplates[type]) {
+                textarea.value = manimTemplates[type];
+                textarea.focus();
+            }
+        }
+
+        // 质量选择器点击处理
+        document.querySelectorAll('#manimQualitySelector .md-segmented-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // 移除所有active类
+                document.querySelectorAll('#manimQualitySelector .md-segmented-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                // 添加active类到当前点击项
+                this.classList.add('active');
+                // 更新质量选择
+                manimQuality = this.dataset.quality;
+                console.log('Manim质量选择:', manimQuality);
+            });
+        });
+
+        // 启动Manim工作流
+        async function startManimWorkflow() {
+            const prompt = document.getElementById('manimPromptInput').value.trim();
+            if (!prompt) {
+                alert('请输入动画需求');
+                return;
+            }
+
+            // 禁用按钮
+            const startBtn = document.getElementById('manimStartBtn');
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<span class="material-icons">cached</span><span>生成中...</span>';
+
+            // 清空代码面板并清除流式更新标记（但不隐藏结果面板）
+            const codeContentEl = document.getElementById('manimCodeContent');
+            if (codeContentEl) {
+                console.log('🧹 [startManimWorkflow] 清空代码面板');
+                codeContentEl.textContent = '';
+                delete codeContentEl.dataset.firstContent;
+            }
+
+            console.log('🚀 [startManimWorkflow] 发送请求到后端...');
+
+            try {
+                const response = await fetch('/api/manim/workflow', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        quality: manimQuality
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '启动失败');
+                }
+            } catch (error) {
+                alert('启动Manim工作流失败: ' + error.message);
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<span class="material-icons">play_circle</span><span>生成动画</span>';
+            }
+        }
+
+        // 清除Manim历史
+        async function clearManimHistory() {
+            if (!confirm('确定要清除动画生成历史吗？')) {
+                return;
+            }
+
+            // 清空输入
+            document.getElementById('manimPromptInput').value = '';
+
+            // 重置界面状态
+            document.getElementById('manimEmptyState').style.display = 'flex';
+            document.getElementById('manimResultContent').classList.remove('active');
+            
+            // 重置步骤状态
+            document.querySelectorAll('#manimStepsContainer .step-card').forEach(card => {
+                card.className = 'step-card';
+                const statusEl = card.querySelector('.step-status');
+                if (statusEl) {
+                    statusEl.textContent = '等待';
+                    statusEl.className = 'step-status pending';
+                }
+                const timeEl = card.querySelector('.step-time');
+                if (timeEl) {
+                    timeEl.textContent = '等待中';
+                }
+            });
+
+            // 重置进度条
+            document.getElementById('manimProgressBar').style.width = '0%';
+            document.getElementById('manimProgressText').textContent = '0%';
+
+            // 重置状态徽章
+            const statusBadge = document.getElementById('manimStatusBadge');
+            statusBadge.className = 'status-badge idle';
+            statusBadge.innerHTML = '<span>⚪</span><span>空闲</span>';
+
+            // 重置当前结果
+            manimCurrentResult = null;
+
+            // 清空代码面板并清除流式更新标记
+            const codeContentEl = document.getElementById('manimCodeContent');
+            if (codeContentEl) {
+                codeContentEl.textContent = '';
+                delete codeContentEl.dataset.firstContent;
+            }
+
+            // 停止视频播放
+            const video = document.getElementById('manimResultVideo');
+            if (video) {
+                video.pause();
+                video.src = '';
+            }
+        }
+
+        // 切换Manim结果标签页
+        function switchManimTab(tab, eventObj) {
+            document.querySelectorAll('#manimResultContent .result-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('#manimResultContent .result-view').forEach(el => el.classList.remove('active'));
+
+            // 如果提供了事件对象（从点击事件触发），使用它；否则通过选择器找到对应的标签
+            const targetTab = eventObj ? eventObj.target.closest('.result-tab') :
+                             document.querySelector(`#manimResultContent .result-tab[onclick*="'${tab}'"]`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+
+            document.getElementById('manim' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'View').classList.add('active');
+        }
+
+        // 下载视频
+        function downloadVideo() {
+            if (manimCurrentResult && manimCurrentResult.video_url) {
+                const a = document.createElement('a');
+                a.href = manimCurrentResult.video_url;
+                a.download = manimCurrentResult.filename || 'animation.mp4';
+                a.click();
+            } else {
+                alert('暂无可下载的视频');
+            }
+        }
+
+        // 复制Manim代码
+        async function copyManimCode() {
+            const code = document.getElementById('manimCodeContent').textContent;
+            if (code) {
+                try {
+                    await navigator.clipboard.writeText(code);
+                    alert('Manim代码已复制到剪贴板');
+                } catch (err) {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制');
+                }
+            } else {
+                alert('暂无可复制的代码');
+            }
+        }
+
+        // 更新Manim界面
+        function updateManimUI(status) {
+            const statusBadge = document.getElementById('manimStatusBadge');
+            const progressBar = document.getElementById('manimProgressBar');
+            const progressText = document.getElementById('manimProgressText');
+            const startBtn = document.getElementById('manimStartBtn');
+
+            if (!statusBadge || !progressBar || !progressText || !startBtn) {
+                console.warn('⚠️ 部分Manim UI元素未加载，跳过更新');
+                return;
+            }
+
+            const statusConfig = {
+                'idle': { class: 'idle', icon: 'radio_button_unchecked', text: '空闲' },
+                'running': { class: 'running', icon: 'adjust', text: '运行中' },
+                'completed': { class: 'completed', icon: 'check_circle', text: '已完成' },
+                'error': { class: 'error', icon: 'error', text: '错误' }
+            };
+
+            const config = statusConfig[status.status] || statusConfig.idle;
+            statusBadge.className = `status-badge ${config.class}`;
+            statusBadge.innerHTML = `<span class="material-icons">${config.icon}</span><span>${config.text}</span>`;
+
+            // 更新进度条
+            const steps = status.steps || [];
+            const completedSteps = steps.filter(s => s.status === 'completed').length;
+            const progress = (completedSteps / 4) * 100;
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${Math.round(progress)}%`;
+
+            // 更新步骤列表
+            updateManimSteps(steps);
+
+            // 更新按钮状态
+            if (status.status === 'running') {
+                startBtn.disabled = true;
+                startBtn.innerHTML = '<span class="material-icons">cached</span><span>生成中...</span>';
+            } else {
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<span class="material-icons">play_circle</span><span>生成动画</span>';
+            }
+
+            // 显示结果
+            if (status.status === 'completed' && status.result && status.result.video_url) {
+                showManimResult(status.result);
+            } else if (status.status === 'error' && status.error) {
+                showManimError(status.error);
+            }
+        }
+
+        // 更新Manim步骤列表
+        function updateManimSteps(steps) {
+            const container = document.getElementById('manimStepsContainer');
+            if (!container) {
+                console.warn('⚠️ Manim步骤容器未加载，跳过更新');
+                return;
+            }
+
+            const stepIcons = {
+                'refine_prompt': 'auto_fix_high',
+                'generate_code': 'code',
+                'execute_code': 'videocam',
+                'save_video': 'check_circle'
+            };
+
+            steps.forEach(step => {
+                const stepKey = step.step;
+                const status = step.status;
+                const time = new Date(step.timestamp).toLocaleTimeString();
+
+                const stepCard = container.querySelector(`.step-card[data-step="${stepKey}"]`);
+                if (stepCard) {
+                    stepCard.className = `step-card ${status}`;
+
+                    const iconElement = stepCard.querySelector('.step-icon span.material-icons');
+                    if (iconElement) {
+                        iconElement.textContent = status === 'completed' ? 'check' : (status === 'running' ? 'refresh' : stepIcons[stepKey]);
+                    }
+
+                    const timeElement = stepCard.querySelector('.step-time');
+                    if (timeElement) {
+                        timeElement.textContent = time;
+                    }
+
+                    const statusElement = stepCard.querySelector('.step-status');
+                    if (statusElement) {
+                        statusElement.textContent = status === 'running' ? '进行中' : (status === 'completed' ? '完成' : '等待');
+                        statusElement.className = `step-status ${status}`;
+                    }
+
+                    const streamContentDiv = stepCard.querySelector('.step-stream-content');
+                    if (streamContentDiv) {
+                        if (status === 'completed') {
+                            delete streamContentDiv.dataset.firstContent;
+                            setTimeout(() => {
+                                streamContentDiv.classList.remove('show');
+                            }, 3000);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 显示Manim结果
+        function showManimResult(result) {
+            document.getElementById('manimEmptyState').style.display = 'none';
+            document.getElementById('manimResultContent').classList.add('active');
+
+            const video = document.getElementById('manimResultVideo');
+            if (!video) {
+                console.error('❌ Manim视频元素不存在');
+                return;
+            }
+
+            const videoUrl = result.video_url + '?t=' + Date.now();
+            video.src = videoUrl;
+            video.load();
+
+            document.getElementById('manimVideoSize').innerHTML = `<span class="material-icons">straighten</span> <span>${(result.video_size / (1024 * 1024)).toFixed(2)} MB</span>`;
+            document.getElementById('manimVideoPath').innerHTML = `<span class="material-icons">folder</span> <span>${result.video_path || '-'}</span>`;
+            document.getElementById('manimVideoDuration').innerHTML = `<span class="material-icons">schedule</span> <span>${result.duration || '--'}s</span>`;
+
+            manimCurrentResult = result;
+
+            // 设置最终代码（使用完整代码替换）
+            const codeContentEl = document.getElementById('manimCodeContent');
+            if (codeContentEl && result.generated_code) {
+                codeContentEl.textContent = result.generated_code;
+                // 清除流式更新标记，以便下次运行时重新开始
+                delete codeContentEl.dataset.firstContent;
+                console.log('[DEBUG] Manim 最终代码已设置，长度:', result.generated_code.length);
+            }
+        }
+
+        // 显示Manim错误
+        function showManimError(error) {
+            const emptyState = document.getElementById('manimEmptyState');
+            const resultContent = document.getElementById('manimResultContent');
+
+            if (!emptyState || !resultContent) {
+                console.error('❌ 必需的Manim DOM元素不存在');
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            resultContent.classList.add('active');
+
+            resultContent.innerHTML = `
+                <div class="error-container">
+                    <div class="error-header">
+                        <div class="error-icon"><span class="material-icons">warning</span></div>
+                        <div class="error-title">执行出错</div>
+                    </div>
+                    <div class="error-message">${escapeHtml(error)}</div>
+                </div>
+            `;
+        }
+
+
+</script>
     <script src="https://cdn.jsdelivr.net/npm/cherry-markdown/dist/cherry-markdown.js"></script>
 </body>
 </html>

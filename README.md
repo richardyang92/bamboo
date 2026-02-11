@@ -1,6 +1,6 @@
-# Bamboo - AI 智能绘图与文档生成工作流
+# Bamboo - AI 智能绘图、文档生成与数学动画工作流
 
-一个使用LangGraph框架构建的AI Agent，支持智能绘图和高质量Markdown文档生成。
+一个使用LangGraph框架构建的AI Agent，支持智能绘图、高质量Markdown文档生成和数学动画制作。
 
 ## 功能特性
 
@@ -13,6 +13,15 @@
 - 🛡️ **空白图像防护**：智能检测并防止生成空白图像，包含详细的错误检查清单
 - 🎨 **流程图支持**：支持生成专业的流程图和架构图
 - 🧠 **智能识别**：根据描述类型自动选择最佳绘图策略（力学图、流程图等）
+
+### 🎬 Manim 数学动画
+- 🎥 **AI驱动**：使用DeepSeek模型生成高质量Manim动画代码
+- 📐 **数学可视化**：完美支持函数绘图、几何变换、数学公式动画
+- 🎨 **丰富动画**：支持3D场景、相机动画、粒子效果等高级特性
+- 🎯 **多质量渲染**：支持低/中/高/4K四种渲染质量
+- 🛡️ **代码防护**：智能检测并修复括号配对、语法错误
+- 🌐 **中文支持**：完美支持中文标注和公式渲染
+- 🎓 **教育场景**：特别适合制作数学、物理教学动画
 
 ### 📝 文档生成（命令行）
 - ✨ **AI写作**：使用DeepSeek模型生成高质量Markdown文档
@@ -38,6 +47,7 @@
 - 🚀 **快速启动**：提供便捷的启动脚本
 - ✏️ **AI编辑器**：智能文档编辑，支持AI修改选中文本内容
 - 🎨 **图片生成**：在文档编辑器中直接生成图表并插入
+- 🎬 **动画生成**：生成数学教学动画，支持多种质量选项
 
 ## 快速开始
 
@@ -149,6 +159,34 @@ python write_md_with_images.py "量子力学基础教程"
 
 此功能会自动识别文档中需要图表的部分，并生成相关图表整合到文档中。
 
+#### Manim 动画生成功能
+
+```bash
+python manim_gen.py "动画描述" [质量]
+```
+
+示例：
+
+```bash
+# 生成中等质量动画（默认）
+python manim_gen.py "展示一个圆从左侧移动到右侧的动画"
+
+# 生成低质量动画（快速预览）
+python manim_gen.py "绘制正弦函数图像" low
+
+# 生成高质量动画
+python manim_gen.py "展示三维立方体旋转" high
+
+# 生成4K超高清动画
+python manim_gen.py "复杂的数学公式变换动画" 4k
+```
+
+**质量选项说明**：
+- `low`: 480p, 15fps - 快速预览，文件小
+- `medium`: 720p, 30fps - 平衡质量（默认）
+- `high`: 1080p, 60fps - 最佳质量
+- `4k`: 2160p, 60fps - 超高清质量
+
 ## 工作流程
 
 ### 📊 绘图工作流
@@ -251,28 +289,58 @@ python write_md_with_images.py "量子力学基础教程"
    - 验证文件和图片是否成功保存
    - 统计文档字数、行数、图片数量等信息
 
+### 🎬 Manim 动画生成工作流
+
+Manim 动画生成采用 4 步工作流：
+
+1. **润色动画需求** (refine_prompt)
+   - 增强用户的动画需求描述
+   - 添加动画制作要求和规范
+   - 包含布局和防重叠要求
+
+2. **生成动画代码** (generate_code)
+   - 调用 DeepSeek 模型生成 Manim 代码
+   - 智能识别场景类型（2D/3D/相机动画）
+   - 根据类型应用专门的代码生成策略
+   - 自动检测和修复括号配对问题
+   - 确保代码符合 Manim 语法规范
+
+3. **渲染动画视频** (execute_code)
+   - 在安全环境中执行生成的代码
+   - 使用 Manim 渲染指定质量的视频
+   - 自动清理缓存避免潜在问题
+   - 支持多种渲染质量选项
+   - 自动查找并移动生成的视频文件
+
+4. **验证视频保存** (save_video)
+   - 验证视频是否成功生成
+   - 获取视频大小等信息
+   - 返回执行结果和视频路径
+
 ## 代码结构
 
 ```
 bamboo/
-├── draw_pic.py          # 绘图工作流核心逻辑
-├── write_md.py          # 文档生成工作流核心逻辑
-├── write_md_with_images.py  # 带图片的文档生成工作流
-├── app.py               # Web服务器和API接口
-├── start.sh             # 快速启动脚本
-├── AGENTS.md            # 开发指南和代码规范
+├── draw_pic.py               # 绘图工作流核心逻辑
+├── write_md.py               # 文档生成工作流核心逻辑
+├── write_md_with_images.py   # 带图片的文档生成工作流
+├── manim_gen.py              # Manim动画工作流核心逻辑
+├── app.py                    # Web服务器和API接口
+├── start.sh                  # 快速启动脚本
+├── AGENTS.md                 # 开发指南和代码规范
 ├── templates/
-│   ├── index.html       # Web前端主界面
-│   ├── history.html     # 历史记录页面
-│   └── test.html        # WebSocket测试页面
-├── images/              # 生成的图表保存目录
-├── docs/                # 生成的文档保存目录
-├── requirements.txt     # Python依赖包
-├── .env                 # 环境变量配置
-├── .env.example         # 环境变量示例
-├── .gitignore           # Git忽略文件配置
-├── LICENSE              # Apache 2.0许可证
-└── README.md            # 项目文档
+│   ├── index.html            # Web前端主界面
+│   ├── history.html          # 历史记录页面
+│   └── test.html             # WebSocket测试页面
+├── images/                   # 生成的图表保存目录
+├── docs/                     # 生成的文档保存目录
+├── videos/                   # 生成的动画视频保存目录
+├── requirements.txt           # Python依赖包
+├── .env                      # 环境变量配置
+├── .env.example              # 环境变量示例
+├── .gitignore                # Git忽略文件配置
+├── LICENSE                   # Apache 2.0许可证
+└── README.md                 # 项目文档
 ```
 
 ### 主要文件说明
@@ -280,11 +348,12 @@ bamboo/
 - **draw_pic.py**: 绘图工作流，定义图表生成的各个节点
 - **write_md.py**: 文档生成工作流（命令行模式），定义文档创作的各个节点
 - **write_md_with_images.py**: 带图片的文档生成工作流，支持自动生成图表并整合到文档中
+- **manim_gen.py**: Manim 动画工作流，定义数学动画生成的各个节点
 - **app.py**: Flask Web服务器，提供RESTful API和WebSocket支持
 - **AGENTS.md**: 开发指南，包含代码风格规范、工作流模式和API集成说明
 - **start.sh**: 快速启动脚本，自动检查环境并启动服务
-- **templates/index.html**: 响应式Web界面，支持绘图和文档编辑功能
-- **templates/history.html**: 历史记录页面，展示所有生成的图表和文档
+- **templates/index.html**: 响应式Web界面，支持绘图、文档编辑和动画生成功能
+- **templates/history.html**: 历史记录页面，展示所有生成的图表、文档和视频
 - **templates/test.html**: WebSocket连接测试页面，用于调试实时通信
 
 ## API 接口
@@ -360,8 +429,38 @@ AI生成图片（用于文档编辑器中插入图表）
 
 此接口调用绘图工作流生成指定描述的图表。
 
-#### GET /api/documents/<filename>
-获取指定的文档文件
+### Manim 动画相关
+
+#### POST /api/manim/workflow
+启动 Manim 动画工作流
+
+**请求体**：
+```json
+{
+  "prompt": "展示一个圆从左侧移动到右侧的动画",
+  "quality": "medium"
+}
+```
+
+**质量参数选项**：
+- `low`: 480p, 15fps
+- `medium`: 720p, 30fps（默认）
+- `high`: 1080p, 60fps
+- `4k`: 2160p, 60fps
+
+#### GET /api/manim/videos
+列出所有生成的动画视频
+
+#### GET /api/manim/videos/<filename>
+获取指定的动画视频文件
+
+#### DELETE /api/manim/videos/<filename>
+删除指定的动画视频文件
+
+#### POST /api/manim/clear
+清除所有动画历史记录
+
+### 绘图相关（补充）
 
 #### GET /api/documents/<filename>/content
 获取文档的文本内容（JSON格式）
@@ -405,9 +504,20 @@ AI生成图片（用于文档编辑器中插入图表）
 清除所有历史记录
 
 ### WebSocket事件
-- `status_update`: 接收工作流状态更新（支持绘图和带图片的文档生成工作流）
+- `status_update`: 接收工作流状态更新（支持绘图、文档生成和Manim动画工作流）
 - `connect`: 客户端连接
 - `disconnect`: 客户端断开
+
+**支持的工作流类型**：
+- `drawing` - 绘图工作流
+- `document_with_images` - 文档生成工作流
+- `manim` - Manim 动画工作流
+
+客户端连接示例：
+```javascript
+const socket = new WebSocket('ws://localhost:5001/ws');
+socket.send(JSON.stringify({workflow_type: 'manim'}));
+```
 
 ## 输出示例
 
@@ -485,6 +595,36 @@ import matplotlib.pyplot as plt
 [STATS] 行数: 320, 字符数: 15678, 标题数: 35, 图片数: 3
 ```
 
+### 🎬 Manim 动画生成输出
+
+```
+1. 正在润色动画需求...
+✅ 原始需求: '展示一个圆从左侧移动到右侧的动画'
+✅ 增强后的提示词已生成
+
+2. 正在生成 Manim 动画代码...
+✅ Manim 代码生成完成
+
+3. 正在渲染动画视频（这可能需要较长时间）...
+🎬 开始渲染动画（可能需要 30 秒到 5 分钟）...
+✅ 视频渲染成功！
+
+4. 正在验证视频保存...
+视频大小: 2.45 MB
+✅ 动画生成成功！
+📁 保存路径: /path/to/videos/manim_20260211_203421_a1b2c3d4.mp4
+📏 文件大小: 2570240 字节
+🎥 渲染质量: medium
+📍 视频绝对路径: /Users/yangyang/Projects/bamboo/videos/manim_20260211_203421_a1b2c3d4.mp4
+```
+
+生成的动画特点：
+- 专业的数学可视化效果
+- 流畅的动画过渡
+- 清晰的中文标注
+- 支持多种渲染质量
+- 可嵌入到教学材料中
+
 ## 注意事项
 
 1. **API密钥安全**：不要将你的API密钥提交到版本控制系统
@@ -492,6 +632,8 @@ import matplotlib.pyplot as plt
 3. **代码安全**：生成的代码会在安全环境中执行，但仍建议谨慎处理未知输入
 4. **中文显示**：程序已配置中文支持，但可能需要根据你的系统调整字体设置
 5. **端口配置**：默认使用5001端口，如需修改请编辑 [app.py](app.py) 最后一行
+6. **Manim 依赖**：Manim 需要安装 FFmpeg 和 LaTeX，首次使用可能需要较长时间安装依赖
+7. **动画渲染**：Manim 动画渲染可能需要 30 秒到 5 分钟，取决于场景复杂度和质量设置
 
 ## 技术栈
 
@@ -502,6 +644,8 @@ import matplotlib.pyplot as plt
 - **AI模型**: DeepSeek (兼容OpenAI API)
 - **绘图**: Matplotlib >= 3.9.0
 - **数值计算**: NumPy >= 2.0.0
+- **动画渲染**: Manim >= 0.18.0
+- **视频处理**: FFmpeg
 
 ### 前端
 - **基础**: 原生 HTML/CSS/JavaScript
@@ -548,6 +692,16 @@ chmod +x start.sh
 
 ## 扩展建议
 
+### 动画功能
+- [ ] 支持更多动画效果（粒子系统、物理模拟等）
+- [ ] 添加动画编辑和重新生成功能
+- [ ] 实现代码模板管理
+- [ ] 支持批量动画生成
+- [ ] 添加音频配音功能
+- [ ] 实现动画拼接和合并
+- [ ] 支持导出为 GIF 格式
+- [ ] 添加动画预设和参数调节
+
 ### 绘图功能
 - [ ] 支持更多绘图库（seaborn、plotly等）
 - [ ] 添加图表编辑和重新生成功能
@@ -584,6 +738,7 @@ chmod +x start.sh
 - [DeepSeek](https://www.deepseek.com/) - 提供高性价比的AI模型服务
 - [Flask](https://flask.palletsprojects.com/) - 轻量级Web框架
 - [Matplotlib](https://matplotlib.org/) - 强大的Python绘图库
+- [Manim](https://www.manim.community/) - 专业的数学动画引擎
 
 ---
 
