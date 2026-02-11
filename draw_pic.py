@@ -17,6 +17,7 @@ class GraphState(TypedDict):
     image_path: str
     image_size: int
     error: str
+    custom_filename: str  # 自定义文件名(可选),用于外部指定图片文件名
 
 # 润色绘图需求的节点
 def refine_prompt(state: GraphState) -> GraphState:
@@ -30,18 +31,48 @@ def refine_prompt(state: GraphState) -> GraphState:
         print(f"✅ 原始需求: '{user_prompt}'")
         
         # 手动增强提示词，添加必要的绘图要求
-        enhanced_prompt = f"""{user_prompt}
+        enhanced_prompt = rf"""{user_prompt}
 
 ## 核心绘图要求（必须严格遵守）
 
-### 通用基本要求
+ ### 通用基本要求
 1. 使用matplotlib库绘制，配合numpy等基础库
-2. 确保中文正常显示，设置中文字体
-3. 添加适当的标题、坐标轴标签、图例
-4. 使用清晰的配色方案（推荐：蓝色、红色、绿色、橙色、紫色）
-5. 设置合理的图形尺寸(figsize=(10, 8))和dpi=100
-6. 使用plt.tight_layout()自动调整布局
-7. 确保代码可以直接执行，无语法错误
+2. **确保中文正常显示**（最重要）：
+    ```python
+    import matplotlib
+    # 设置中文字体,优先使用macOS系统字体
+    matplotlib.rcParams['font.sans-serif'] = [
+        'STHeiti',           # 华文黑体(系统自带,推荐)
+        'Heiti TC',          # 黑体-繁
+        'Heiti SC',          # 黑体-简
+        'Hiragino Sans GB',  # 冬青黑体
+        'PingFang SC',       # 苹方-简
+        'Arial Unicode MS',  # Arial Unicode(备选)
+        'SimHei',            # 黑体(Windows/Linux)
+        'STSong',            # 华文宋体
+        'Songti SC',         # 宋体-简
+        'WenQuanYi Micro Hei'
+    ]
+    matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+    ```
+3. **避免特殊字符显示问题**（重要）：
+   - 数学符号（如希腊字母α、β、γ、π等）优先使用Unicode字符或LaTeX格式
+   - 使用LaTeX格式：`r'$\alpha$'`、`r'$\beta$'`、`r'$\pi$'`、`r'$\theta$'`
+   - 负号、减号使用matplotlib设置：`matplotlib.rcParams['axes.unicode_minus'] = False`
+   - 上下标使用LaTeX：上标`$x^2$`、下标`$x_1$`、分数`$\frac{a}{b}$`
+   - 避免使用生僻Unicode字符，如必须使用则确保字体支持
+   - 特殊符号替代：√使用`sqrt()`、∞使用`$\infty$`、±使用`$\pm$`
+4. 添加适当的标题、坐标轴标签、图例
+5. 使用清晰的配色方案（推荐：蓝色、红色、绿色、橙色、紫色）
+6. 设置合理的图形尺寸(figsize=(10, 8))和dpi=100
+7. **防止图示和文本遮挡的布局优化**（重要）：
+   - 必须使用 `plt.tight_layout()` 或 `plt.subplots_adjust()` 自动调整布局
+   - 保存图片时使用 `bbox_inches='tight'` 避免元素被裁剪
+   - 标注文字必须与图形主体保持适当距离，避免重叠
+   - 使用 `bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)` 为文字添加半透明背景
+   - 精确调整文字位置，使用 `xytext` 参数控制标注位置
+   - 当多个标注可能重叠时，手动调整坐标，使用不同的偏移量
+8. 确保代码可以直接执行，无语法错误
 
 ### 数据可视化类图形（曲线图、折线图等）特定要求
 8. **数据点生成**（最重要）：
@@ -51,7 +82,11 @@ def refine_prompt(state: GraphState) -> GraphState:
    - 示例：`y = np.sin(x)` 或 `y = (1 - (t/t_c)**8)**0.125`
 
 9. **曲线绘制**：
-   - 使用`ax.plot(x, y, 'b-', linewidth=2, label='曲线名称')`
+   - 使用`ax.plot(x, y, 'b-', linewidth=2, label='曲线名称')`或`ax.plot(x, y, color='blue', linestyle='-', linewidth=2, label='曲线名称')`
+   - **格式字符串颜色规范**：如果使用格式字符串（如'b-'），只能用单字母颜色代码：
+     * 'b' (blue蓝色), 'r' (red红色), 'g' (green绿色), 'c' (cyan青色), 'm' (magenta品红), 'y' (yellow黄色), 'k' (black黑色), 'w' (white白色)
+     * **禁止使用多字母颜色名**（如'purple-', 'orange-', 'brown-'等都是错误的！）
+   - **正确做法**：使用color参数指定颜色：`ax.plot(x, y, color='purple', linestyle='-', linewidth=2)`
    - 线条宽度设为2-3，颜色醒目
    - 确保曲线在图形范围内清晰可见
 
@@ -110,8 +145,13 @@ def refine_prompt(state: GraphState) -> GraphState:
         return {"refined_prompt": user_prompt}
 
 # 生成绘图代码的节点
-def generate_code(state: GraphState) -> GraphState:
-    """根据润色后的提示词使用DeepSeek模型生成绘图代码"""
+def generate_code(state: GraphState, stream_callback=None) -> GraphState:
+    """根据润色后的提示词使用DeepSeek模型生成绘图代码
+    
+    Args:
+        state: 工作流状态
+        stream_callback: 可选的回调函数，用于发送流式响应内容
+    """
     print("2. 正在生成绘图代码...")
     user_prompt = state["refined_prompt"]
     print(f"   [DEBUG] 润色后的提示词: '{user_prompt[:100]}...'")
@@ -129,14 +169,16 @@ def generate_code(state: GraphState) -> GraphState:
             base_url="https://api.deepseek.com"
         )
 
-        # 调用DeepSeek模型生成代码
-        print(f"   [DEBUG] 正在调用 DeepSeek 模型...")
-        response = client.chat.completions.create(
+        # 调用DeepSeek模型生成代码（使用流式API）
+        print(f"   [DEBUG] 正在调用 DeepSeek 模型（流式模式）...")
+        
+        # 使用流式API调用
+        stream = client.chat.completions.create(
             model="deepseek-chat",  # 使用DeepSeek的聊天模型
             messages=[
                 {
                     "role": "system",
-                    "content": """你是一个专业的数据可视化和工程绘图专家，请根据用户需求生成高质量的Python绘图代码。
+                    "content": r"""你是一个专业的数据可视化和工程绘图专家，请根据用户需求生成高质量的Python绘图代码。
 
 ## 零、代码质量要求（最重要，必须严格遵守）
 
@@ -198,7 +240,22 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 3. 图片保存路径必须使用变量 target_filename（已预定义为带时间戳的唯一文件名）
 4. 生成的代码必须可以直接执行，不要包含任何解释性文字
 5. 代码风格要简洁、规范、可读性强
-6. 确保中文正常显示：设置多种中文字体备选（['Arial Unicode MS', 'SimHei', 'WenQuanYi Micro Hei', 'Heiti TC', 'STHeiti']）
+6. **确保中文正常显示**（最重要）：
+   ```python
+   import matplotlib
+   matplotlib.rcParams['font.sans-serif'] = [
+       'STHeiti',           # 华文黑体(系统自带,推荐)
+       'Heiti TC',          # 黑体-繁
+       'Heiti SC',          # 黑体-简
+       'Hiragino Sans GB',  # 冬青黑体
+       'PingFang SC',       # 苹方-简
+       'Arial Unicode MS',  # Arial Unicode(备选)
+       'SimHei',            # 黑体(Windows/Linux)
+       'STSong',            # 华文宋体
+       'Songti SC'          # 宋体-简
+   ]
+   matplotlib.rcParams['axes.unicode_minus'] = False
+   ```
 7. 只返回可执行的Python代码，不要返回任何其他内容（如解释、说明等）
 8. **代码必须完全自包含**（最重要）：
     - **所有变量都必须在使用前明确定义**
@@ -218,6 +275,16 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
     - **线条类注意**（重要）：不要使用 `matplotlib.patches.Line2D`，这是错误的！
       - 绘制线条使用：`ax.plot()`, `ax.axhline()`, `ax.axvline()` 等方法
       - 如需 Line2D 类，使用：`from matplotlib.lines import Line2D`
+    - **3D绘图注意**（重要）：不要使用不稳定的3D函数！
+      - 禁止使用：`from matplotlib.patches import pathpatch_2d_to_3d`（该函数不存在！）
+      - 绘制3D图形时，直接使用mpl_toolkits.mplot3d的方法：
+        ```python
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        # 直接使用ax的3D方法，如 ax.plot_surface(), ax.plot_wireframe() 等
+        ```
+      - 不要将2D patches转换为3D，这会导致错误
     - 不要随意导入不确定的类，优先使用 plt 和 ax 的方法
 
 ## 二、通用绘图规范
@@ -233,14 +300,21 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 - **辅助线/参考线**：linewidth=0.5-1，使用虚线或浅色
 - 添加适当的箭头、标记符号辅助说明
 
-### 2.3 标注和文字规范
+ ### 2.3 标注和文字规范
 - 所有重要部分都要有清晰的中文标注
 - 使用 ax.annotate() 添加带箭头的标注，格式：ax.annotate('文字', xy=(x,y), xytext=(偏移), arrowprops=dict(facecolor='color'))
-- **文字标注位置规范**（重要）：
-   - **实心物体**（如填充的矩形、圆形等）：文字必须标注在物体外部，不能遮挡物体
-   - **空心物体**（如圆环、空心框、仅边线的图形）：文字可以标注在物体内部或外部
-   - 使用箭头指向物体（xy 参数指向物体，xytext 参数在外部设置文字位置）
-   - 如果必须标注物体内部属性（如质量、名称），使用引线将文字引到外部
+- **文字标注位置规范**（非常重要，必须严格遵守）：
+    - **实心物体**（如填充的矩形、圆形等）：文字必须标注在物体外部，绝对不能遮挡物体
+    - **空心物体**（如圆环、空心框、仅边线的图形）：文字可以在内部或外部标注
+    - 使用箭头指向物体（xy 参数指向物体边缘，xytext 参数在外部设置文字位置）
+    - 如果必须标注物体内部属性（如质量、名称），使用引线将文字引到外部
+    - 多个标注时，手动调整 xytext 坐标，确保文字之间不重叠
+- **防止文本和图形遮挡的额外措施**：
+   - 所有文字标注使用 `bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)` 添加半透明背景
+   - 使用 `zorder` 参数确保文字在所有图形之上（文字 zorder=10 或更高）
+   - 当标注多个物体时，使用不同的 xytext 偏移量分散文字位置
+   - 在添加标注前检查潜在的重叠，必要时调整坐标
+   - 使用 `plt.tight_layout()` 和 `bbox_inches='tight'` 优化整体布局
 - 标题字体 fontsize=14-16，轴标签 fontsize=12-14，标注文字 fontsize=10-12
 - 标注位置要合理，不遮挡图形主体
 - 添加图例（plt.legend()）说明不同元素
@@ -251,13 +325,65 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 - 背景保持白色
 - 重要部分用醒目颜色标注，次要部分用浅色
 
-### 2.5 坐标轴和布局
+ ### 2.5 坐标轴和布局
 - 根据需要设置坐标轴标签和标题
 - 对于需要保持比例的图形（如圆形、正方形），使用 ax.set_aspect('equal')
 - 使用 plt.grid(True, alpha=0.3) 添加网格线（数据可视化类）
 - 主体居中显示，留出适当边距
+- **布局优化防止遮挡**（重要）：
+   - 使用 `plt.tight_layout()` 自动调整子图间距
+   - 使用 `plt.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)` 手动调整边距
+   - 保存图片时必须使用 `bbox_inches='tight'` 避免元素被裁剪
+   - 为文字标注添加半透明背景防止与图形重叠
 
-### 2.6 图层顺序和避免遮挡（重要）
+### 2.6 特殊字符和数学符号显示规范（非常重要）
+- **希腊字母**：优先使用LaTeX格式，确保正确显示
+  ```python
+  # 正确做法
+  ax.set_xlabel(r'$\alpha$', fontsize=12)      # α
+  ax.set_ylabel(r'$\beta$', fontsize=12)       # β
+  ax.annotate(r'$\theta$', ...)               # θ
+  ax.set_title(r'$\pi$ 的计算', fontsize=16)    # π
+  ```
+- **上下标和分数**：
+  ```python
+  # 正确做法
+  ax.set_xlabel(r'$x^2$', fontsize=12)                    # 上标
+  ax.set_ylabel(r'$x_1$', fontsize=12)                    # 下标
+  ax.annotate(r'$\frac{a}{b}$', ...)                    # 分数
+  ax.set_title(r'$e^{i\pi} + 1 = 0$', fontsize=16)       # 复杂公式
+  ```
+- **特殊数学符号**：
+  ```python
+  # 常用符号
+  r'$\infty$'    # 无穷大 ∞
+  r'$\pm$'       # 加减 ±
+  r'$\times$'    # 乘 ×
+  r'$\div$'      # 除 ÷
+  r'$\approx$'   # 约 ≈
+  r'$\leq$'      # 小于等于 ≤
+  r'$\geq$'      # 大于等于 ≥
+  ```
+- **物理量符号**：
+  ```python
+  # 物理量使用斜体（LaTeX默认）
+  r'$m$', r'$F$', r'$N$', r'$T$', r'$\theta$', r'$\omega$'
+  ```
+- **注意事项**：
+  - 所有LaTeX字符串前加 `r` 前缀（原始字符串）：`r'$\alpha$'`
+  - 使用双美元符号 `$$` 表示行间公式：`$$\alpha^2 + \beta^2 = \gamma^2$$`
+  - 避免使用生僻Unicode字符，如不确定则使用LaTeX格式
+  - 负号已通过 `matplotlib.rcParams['axes.unicode_minus'] = False` 设置
+- **文字和公式的混合标注**：
+  ```python
+  # 正确示例
+  ax.annotate(f'α = {value:.2f}',
+              xy=(x, y),
+              xytext=(x+0.3, y+0.3),
+              bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+  ```
+
+### 2.7 图层顺序和避免遮挡（重要）
 - **绘图顺序原则**：按照"背景→网格线→辅助线→主体图形→填充区域→边框→箭头→文字标注"的顺序绘制
 - **避免遮挡的具体方法**：
    - 先绘制大型背景元素（如网格、辅助线）
@@ -353,7 +479,42 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
        ax.plot(x, P, color='blue', linewidth=2)  # 明确指定颜色
    ```
 
-5. **坐标轴范围未设置或设置不当**：
+5. **matplotlib 导入错误（Line2D 问题）**：
+   ```python
+   # ❌ 错误：从 matplotlib.patches 导入 Line2D（该模块没有这个类！）
+   from matplotlib.patches import Line2D  # AttributeError: module 'matplotlib.patches' has no attribute 'Line2D'
+
+   # ✅ 正确：从 matplotlib.lines 导入 Line2D
+   from matplotlib.lines import Line2D
+   legend_elements = [
+       patches.Patch(facecolor='blue', label='区域'),
+       Line2D([0], [0], color='red', lw=2, label='线条')
+   ]
+   ax.legend(handles=legend_elements)
+
+   # ✅ 替代方案：使用 ax.plot() 生成图例，更简单
+   ax.plot([], [], 'b-', label='线条')  # 空数据用于生成图例项
+   ax.legend()
+   ```
+
+6. **matplotlib 3D绘图错误（pathpatch_2d_to_3d 问题）**：
+   ```python
+   # ❌ 错误：从 matplotlib.patches 导入 pathpatch_2d_to_3d（该函数不存在！）
+   from matplotlib.patches import pathpatch_2d_to_3d  # AttributeError: module 'matplotlib.patches' has no attribute 'pathpatch_2d_to_3d'
+
+   # ✅ 正确：直接使用3D轴的方法，不要转换2D patches
+   from mpl_toolkits.mplot3d import Axes3D
+   fig = plt.figure(figsize=(10, 8))
+   ax = fig.add_subplot(111, projection='3d')
+
+   # 使用3D绘图方法
+   ax.plot_surface(X, Y, Z, cmap='viridis')
+   ax.plot_wireframe(X, Y, Z, color='blue')
+   # 或者直接在3D轴上绘制
+   ax.plot(x, y, z, 'r-', linewidth=2, label='3D曲线')
+   ```
+
+7. **坐标轴范围未设置或设置不当**：
    ```python
    # ❌ 错误：自动范围设置不当
    ax.plot(x, y)  # 如果 y 值很小，可能看不见
@@ -386,6 +547,8 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 □ 显式设置了坐标轴范围（ax.set_xlim 和 ax.set_ylim）
 □ 如果使用子图，每个子图都单独验证了数据有效性
 □ 对于特殊函数计算，添加了错误处理和无效值清理
+□ **绝对禁止使用 `from matplotlib.patches import Line2D`**（应使用 `from matplotlib.lines import Line2D`）
+□ **绝对禁止使用 `from matplotlib.patches import pathpatch_2d_to_3d`**（该函数不存在，直接使用mpl_toolkits.mplot3d的方法）
 
 #### 3.1.2 数据生成规范（生死攸关，必须严格遵守）
 **所有数据必须在代码中显式定义或生成，不能有任何未定义的变量！**
@@ -637,11 +800,23 @@ import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.patches as patches
 from matplotlib.patches import Rectangle, Circle, Arc, Polygon
+from matplotlib.lines import Line2D  # 用于图例中的线条
 import numpy as np
 
-# 设置中文字体
-matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'WenQuanYi Micro Hei', 'Heiti TC', 'STHeiti']
-matplotlib.rcParams['axes.unicode_minus'] = False
+# 设置中文字体(优先使用macOS系统字体)
+matplotlib.rcParams['font.sans-serif'] = [
+    'STHeiti',           # 华文黑体(系统自带,推荐)
+    'Heiti TC',          # 黑体-繁
+    'Heiti SC',          # 黑体-简
+    'Hiragino Sans GB',  # 冬青黑体
+    'PingFang SC',       # 苹方-简
+    'Arial Unicode MS',  # Arial Unicode(备选)
+    'SimHei',            # 黑体(Windows/Linux)
+    'STSong',            # 华文宋体
+    'Songti SC',         # 宋体-简
+    'WenQuanYi Micro Hei'
+]
+matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
 # 创建图形
 fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
@@ -755,11 +930,23 @@ import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.patches as patches
 from matplotlib.patches import Rectangle, Circle, Arc, Polygon
+from matplotlib.lines import Line2D  # 用于图例中的线条
 import numpy as np
 
-# 设置中文字体
-matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'WenQuanYi Micro Hei', 'Heiti TC', 'STHeiti']
-matplotlib.rcParams['axes.unicode_minus'] = False
+# 设置中文字体(优先使用macOS系统字体)
+matplotlib.rcParams['font.sans-serif'] = [
+    'STHeiti',           # 华文黑体(系统自带,推荐)
+    'Heiti TC',          # 黑体-繁
+    'Heiti SC',          # 黑体-简
+    'Hiragino Sans GB',  # 冬青黑体
+    'PingFang SC',       # 苹方-简
+    'Arial Unicode MS',  # Arial Unicode(备选)
+    'SimHei',            # 黑体(Windows/Linux)
+    'STSong',            # 华文宋体
+    'Songti SC',         # 宋体-简
+    'WenQuanYi Micro Hei'
+]
+matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
 # 创建图形
 fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
@@ -1069,18 +1256,31 @@ ax.annotate(
 )
 ```
 
-## 八、质量检查清单
-生成代码前请确认：
-□ **语法正确**（最重要！）
-   - 所有 `()` `[]` `{}` 括号都正确配对
-   - 所有引号 `'"` 都正确配对
-   - 没有未闭合的括号或引号
-   - **每个函数调用都以 `)` 结尾**
-□ **所有变量都已明确定义**（最重要！不要使用未定义的变量如 article、data 等）
-□ **所有数据都在代码中显式定义或生成**（不要假设外部数据存在）
-□ **数据点足够密集**（曲线图至少1000个点，确保曲线平滑）
-□ **坐标轴范围已显式设置**（使用 ax.set_xlim 和 ax.set_ylim）
-□ **物理公式正确**（如二维Ising模型的临界指数β=1/8）
+ ## 八、质量检查清单
+  生成代码前请确认：
+ □ **语法正确**（最重要！）
+    - 所有 `()` `[]` `{}` 括号都正确配对
+    - 所有引号 `'"` 都正确配对
+    - 没有未闭合的括号或引号
+    - **每个函数调用都以 `)` 结尾**
+ □ **所有变量都已明确定义**（最重要！不要使用未定义的变量如 article、data 等）
+ □ **所有数据都在代码中显式定义或生成**（不要假设外部数据存在）
+ □ **数据点足够密集**（曲线图至少1000个点，确保曲线平滑）
+ □ **坐标轴范围已显式设置**（使用 ax.set_xlim 和 ax.set_ylim）
+ □ **物理公式正确**（如二维Ising模型的临界指数β=1/8）
+ □ **特殊字符和符号显示正确**（重要）：
+    - 希腊字母使用LaTeX格式：`r'$\alpha$'`、`r'$\beta$'`、`r'$\theta$'`、`r'$\pi$'`
+    - 所有LaTeX字符串使用 `r` 前缀（原始字符串）
+    - 负号显示已设置：`matplotlib.rcParams['axes.unicode_minus'] = False`
+    - 上下标和分数使用LaTeX：`r'$x^2$'`、`r'$\frac{a}{b}$'`
+    - 避免使用可能显示异常的生僻Unicode字符
+ □ **布局优化防止遮挡**（重要）：
+    - 使用了 `plt.tight_layout()` 自动调整布局
+    - 保存图片使用了 `bbox_inches='tight'` 避免元素被裁剪
+    - 所有文字标注与图形主体保持适当距离
+    - 文字标注使用了半透明背景：`bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)`
+    - 使用 `zorder` 参数确保文字在所有图形之上（文字 zorder=10+）
+    - 多个标注时手动调整了位置，避免文字重叠
 
 □ **防止空白图像的特殊检查**（最重要！对于特殊函数或复杂数据计算）：
    - **数据有效性验证**：
@@ -1117,6 +1317,8 @@ ax.annotate(
   □ 力的方向正确：重力向下、支持力垂直接触面、拉力沿绳远离物体
  □ **刚体约束条件满足**：物体完全贴合接触面，无穿模或间隙
  □ **物理真实性满足**：轮子接触面，角度精确，重力方向正确
+ □ **matplotlib 导入正确**：从 `matplotlib.lines` 导入 Line2D，不是 `matplotlib.patches`
+ □ **图例中使用的线条正确**：如需 Line2D，使用了 `from matplotlib.lines import Line2D`
  □ **图层顺序正确**：背景→网格→主体→填充→箭头→文字（使用了正确的 zorder 值）
 □ **避免遮挡**：填充区域使用了 alpha 透明度，文字标注在最上层（zorder=10）
 □ **导入正确**：没有使用 `matplotlib.patches.Line2D`，线条使用 ax.plot() 等方法
@@ -1195,17 +1397,32 @@ ax.annotate(
                 }
             ],
             temperature=0.3,  # 降低温度，让输出更稳定
-            max_tokens=6000   # 增加到6000，确保复杂代码完整
+            max_tokens=8192,   # DeepSeek最大值为8192
+            stream=True        # 启用流式输出
         )
 
-        # 提取生成的代码
-        generated_code = response.choices[0].message.content.strip()
+        # 收集流式响应
+        generated_code = ""
+        total_tokens = 0
+        completion_tokens = 0
+        
+        print(f"   [DEBUG] 开始接收流式响应...")
+        for chunk in stream:
+            if chunk.choices[0].delta.content is not None:
+                content = chunk.choices[0].delta.content
+                generated_code += content
+                # 如果有流式回调，实时发送内容
+                if stream_callback:
+                    stream_callback(content)
+                
+        generated_code = generated_code.strip()
         print(f"   [DEBUG] AI 返回的内容长度: {len(generated_code)} 字符")
+        print(f"   [DEBUG] 流式响应接收完成")
 
-        # 检查token使用情况
-        if hasattr(response, 'usage') and response.usage:
-            total_tokens = response.usage.total_tokens
-            completion_tokens = response.usage.completion_tokens
+        # 检查token使用情况（流式API可能不提供usage信息）
+        if hasattr(stream, 'usage') and stream.usage:
+            total_tokens = stream.usage.total_tokens
+            completion_tokens = stream.usage.completion_tokens
             print(f"   [DEBUG] Token使用情况 - 总计: {total_tokens}, 生成: {completion_tokens}")
 
             # 检查是否接近限制
@@ -1222,6 +1439,64 @@ ax.annotate(
 
         print(f"   [DEBUG] 最终代码长度: {len(generated_code)} 字符")
         print(f"   [DEBUG] 代码片段 (前200字符):\n{generated_code[:200]}")
+
+        # 检查代码完整性（括号配对）
+        print(f"   [DEBUG] 检查代码完整性...")
+        def check_code_completeness(code):
+            """检查代码括号是否配对"""
+            stack = []
+            brackets = {'(': ')', '[': ']', '{': '}'}
+            in_string = False
+            string_char = None
+            i = 0
+            while i < len(code):
+                char = code[i]
+                # 处理字符串
+                if char in '"\'' and (i == 0 or code[i-1] != '\\'):
+                    if not in_string:
+                        in_string = True
+                        string_char = char
+                    elif char == string_char:
+                        in_string = False
+                # 只在非字符串内容中检查括号
+                if not in_string:
+                    if char in brackets:
+                        stack.append(char)
+                    elif char in brackets.values():
+                        if not stack:
+                            return False, f"多余的闭合括号 '{char}'"
+                        expected = brackets[stack.pop()]
+                        if char != expected:
+                            return False, f"括号不匹配: 期望 '{expected}'，找到 '{char}'"
+                i += 1
+            if stack:
+                return False, f"未闭合的括号: {stack}"
+            return True, "代码完整"
+
+        is_complete, check_msg = check_code_completeness(generated_code)
+        if not is_complete:
+            print(f"   [WARNING] ⚠️ {check_msg}，尝试修复...")
+            # 尝试自动修复：添加缺失的右括号
+            missing_brackets = []
+            for bracket in check_msg.split(':')[1].strip().split(', '):
+                bracket = bracket.strip().strip('[]\'')
+                if bracket in '({[':
+                    if bracket == '(':
+                        missing_brackets.append(')')
+                    elif bracket == '[':
+                        missing_brackets.append(']')
+                    elif bracket == '{':
+                        missing_brackets.append('}')
+            if missing_brackets:
+                generated_code += ''.join(missing_brackets)
+                print(f"   [DEBUG] 已添加缺失的括号: {missing_brackets}")
+                is_complete, check_msg = check_code_completeness(generated_code)
+                if is_complete:
+                    print(f"   [DEBUG] ✓ 代码修复成功")
+                else:
+                    print(f"   [DEBUG] ⚠️ 自动修复失败，可能仍有问题")
+            else:
+                print(f"   [DEBUG] ⚠️ 无法自动修复，请检查代码")
 
         return {"generated_code": generated_code}
     except Exception as e:
@@ -1252,6 +1527,51 @@ def execute_code(state: GraphState) -> GraphState:
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
+
+        # 【重要】禁用LaTeX渲染（防止LaTeX未安装导致的错误）
+        matplotlib.rcParams['text.usetex'] = False
+
+        # 【重要】自动配置最佳中文字体
+        from matplotlib import font_manager
+
+        # 优先级字体列表（按优先级排序）
+        preferred_fonts = [
+            'STHeiti',              # 华文黑体 (macOS最佳)
+            'Heiti TC',             # 黑体-繁
+            'Heiti SC',             # 黑体-简
+            'Hiragino Sans GB',     # 冬青黑体
+            'PingFang SC',          # 苹方-简
+            'PingFang HK',          # 苹方-港
+            'Arial Unicode MS',     # Arial Unicode
+            'STSong',               # 华文宋体
+            'Songti SC',            # 宋体-简
+            'Kaiti SC',             # 楷体-简
+            'STFangsong',           # 华文仿宋
+            'SimHei',               # 黑体 (Windows/Linux)
+            'SimSun',               # 宋体 (Windows)
+            'WenQuanYi Micro Hei'   # 文泉驿微米黑 (Linux)
+        ]
+
+        # 获取系统所有可用字体
+        available_fonts = set(f.name for f in font_manager.fontManager.ttflist)
+
+        # 选择可用的字体
+        selected_fonts = [f for f in preferred_fonts if f in available_fonts]
+
+        if selected_fonts:
+            matplotlib.rcParams['font.sans-serif'] = selected_fonts
+            print(f"   [DEBUG] ✓ 已配置中文字体: {selected_fonts[:3]}")
+        else:
+            # 备选方案：搜索包含关键字的字体
+            fallback_keywords = ['Hei', 'Song', 'Kai', 'Fang', 'Unicode']
+            for keyword in fallback_keywords:
+                matching = [f.name for f in font_manager.fontManager.ttflist if keyword in f.name]
+                if matching:
+                    matplotlib.rcParams['font.sans-serif'] = matching[:5]
+                    print(f"   [DEBUG] ✓ 使用备选中文字体 (关键词: {keyword}): {matching[:3]}")
+                    break
+
+        matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
         # 创建安全的执行环境，包含常用库
         local_vars = {
@@ -1291,15 +1611,21 @@ def execute_code(state: GraphState) -> GraphState:
         keywords = keywords[:10].strip('_')
         print(f"   [DEBUG] 提取的关键词: '{keywords}'")
 
-        # 如果关键词为空，使用默认值
-        if not keywords:
-            keywords = "graph"
-            print(f"   [DEBUG] 关键词为空，使用默认值: 'graph'")
+        # 生成目标文件名
+        if state.get("custom_filename"):
+            # 使用外部传入的自定义文件名
+            target_filename = os.path.join(images_dir, state["custom_filename"])
+            print(f"   [DEBUG] 使用自定义文件名: {state['custom_filename']}")
+        else:
+            # 如果关键词为空，使用默认值
+            if not keywords:
+                keywords = "graph"
+                print(f"   [DEBUG] 关键词为空，使用默认值: 'graph'")
 
-        # 生成唯一文件名：关键词_时间戳.png（使用绝对路径）
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        target_filename = os.path.join(images_dir, f"plot_{keywords}_{timestamp}.png")
-        print(f"   [DEBUG] 目标文件名: '{target_filename}'")
+            # 生成唯一文件名：关键词_时间戳.png（使用绝对路径）
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            target_filename = os.path.join(images_dir, f"plot_{keywords}_{timestamp}.png")
+            print(f"   [DEBUG] 生成默认文件名: {os.path.basename(target_filename)}")
 
         # 打印生成的代码前100个字符用于调试
         print(f"   [DEBUG] 生成的代码 (前100字符): {state['generated_code'][:100]}...")
@@ -1311,6 +1637,10 @@ def execute_code(state: GraphState) -> GraphState:
         import numpy as np_module
         from mpl_toolkits.mplot3d import Axes3D
         from mpl_toolkits.mplot3d import art3d
+        from matplotlib.patches import (
+            Ellipse, Rectangle, Circle, Arrow, FancyArrowPatch,
+            Polygon, Arc, Wedge, FancyBboxPatch, PathPatch
+        )
 
         global_vars = {
             'np': np_module,
@@ -1320,7 +1650,17 @@ def execute_code(state: GraphState) -> GraphState:
             'os': os,
             'Axes3D': Axes3D,
             'art3d': art3d,
-            'patches': __import__('matplotlib.patches')
+            'patches': __import__('matplotlib.patches'),
+            'Ellipse': Ellipse,
+            'Rectangle': Rectangle,
+            'Circle': Circle,
+            'Arrow': Arrow,
+            'FancyArrowPatch': FancyArrowPatch,
+            'Polygon': Polygon,
+            'Arc': Arc,
+            'Wedge': Wedge,
+            'FancyBboxPatch': FancyBboxPatch,
+            'PathPatch': PathPatch
         }
 
         # 记录执行前的文件列表（使用绝对路径）
@@ -1338,11 +1678,59 @@ def execute_code(state: GraphState) -> GraphState:
             print(f"   [DEBUG] 问题代码片段:\n{se.text}")
             return {"error": error_msg}
 
+        # 检查常见的matplotlib格式字符串错误
+        import re
+        # 匹配类似 'purple-', 'orange-', 'brown-' 等错误格式
+        invalid_format_pattern = r"'[a-z]{2,}-'"
+        invalid_matches = re.findall(invalid_format_pattern, state["generated_code"])
+        if invalid_matches:
+            error_msg = f"检测到无效的matplotlib格式字符串: {invalid_matches}。请使用 color='colorname' 或单字母颜色代码（如 'b-', 'r-', 'g-'）"
+            print(f"   [DEBUG] ✗ {error_msg}")
+            print(f"   [DEBUG] 找到的错误格式: {invalid_matches}")
+            return {"error": error_msg}
+
+        # 自动修正代码中的文件名：将所有 plt.savefig() 调用中的文件名替换为 target_filename 变量
+        code_to_execute = state["generated_code"]
+
+        # 匹配 plt.savefig('filename.png') 或 plt.savefig("filename.png") 的模式
+        savefig_pattern = r"plt\.savefig\(['\"]([^'\"]+\.png)['\"]\)"
+        savefig_matches = re.findall(savefig_pattern, code_to_execute)
+
+        if savefig_matches:
+            print(f"   [DEBUG] 检测到 {len(savefig_matches)} 处硬编码的文件名: {savefig_matches}")
+            # 替换所有硬编码的文件名为 target_filename 变量
+            code_to_execute = re.sub(savefig_pattern, "plt.savefig(target_filename)", code_to_execute)
+            print(f"   [DEBUG] ✓ 已将文件名替换为 target_filename 变量")
+
         # 执行代码（合并全局和局部变量，确保函数内部能访问numpy）
         exec_vars = {**global_vars, **local_vars}
-        print(f"   [DEBUG] 开始执行生成的代码...")
-        exec(state["generated_code"], exec_vars)
-        print(f"   [DEBUG] 代码执行完成")
+
+        # *** 强制使用 target_filename 的双重保险 ***
+        # 保存原始的 plt.savefig 函数
+        original_savefig = plt.savefig
+
+        # 定义强制使用目标文件名的 savefig 包装函数
+        def forced_savefig(fname=None, *args, **kwargs):
+            """强制使用目标文件名的savefig包装函数"""
+            # 忽略AI传入的文件名，始终使用target_filename
+            import os
+            # 确保使用绝对路径
+            actual_filename = os.path.abspath(target_filename)
+            print(f"   [DEBUG] 🎯 强制保存到: {actual_filename}")
+            return original_savefig(actual_filename, *args, **kwargs)
+
+        # 替换 plt.savefig 为强制版本
+        plt.savefig = forced_savefig
+
+        try:
+            # 执行代码
+            print(f"   [DEBUG] 开始执行生成的代码...")
+            exec(code_to_execute, exec_vars)
+            print(f"   [DEBUG] 代码执行完成")
+        finally:
+            # 恢复原始的 plt.savefig 函数
+            plt.savefig = original_savefig
+            print(f"   [DEBUG] ✓ 已恢复原始的 plt.savefig 函数")
 
         # 等待文件写入
         time.sleep(0.5)
@@ -1355,34 +1743,36 @@ def execute_code(state: GraphState) -> GraphState:
         new_files = files_after - files_before
         print(f"   [DEBUG] 新创建的文件: {new_files}")
 
-        # 检查是否生成了目标文件
-        if os.path.exists(target_filename):
+        # 优先使用新创建的文件，而不是检查目标文件
+        # 这样可以避免被覆盖的旧文件造成混淆
+        if new_files:
+            # 如果有新文件被创建，使用它们
+            new_files_list = list(new_files)
+            if len(new_files_list) > 1:
+                new_files_list.sort(key=os.path.getmtime, reverse=True)
+                print(f"   [DEBUG] 检测到 {len(new_files_list)} 个新文件，选择最新的: {new_files_list[0]}")
+
+            new_file = new_files_list[0]
+            print(f"   [DEBUG] ✓ 使用新生成的文件: {new_file}")
+
+            # 重命名新文件为目标文件名
+            print(f"   [DEBUG] 重命名文件: {new_file} -> {target_filename}")
+            os.rename(new_file, target_filename)
+
             file_size = os.path.getsize(target_filename)
-            print(f"   [DEBUG] ✓ 找到目标文件: {target_filename} (大小: {file_size} 字节)")
+            print(f"   [DEBUG] ✓ 最终文件: {target_filename} (大小: {file_size} 字节)")
             return {"image_path": target_filename}
 
-        # 如果没有生成目标文件，查找最新生成的文件（使用绝对路径）
-        plot_files = glob.glob(os.path.join(images_dir, "plot_*.png"))
-        print(f"   [DEBUG] 当前目录下所有 plot_*.png 文件: {plot_files}")
+        # 如果没有新文件，检查目标文件是否被更新
+        # （AI可能使用了正确的 target_filename）
+        if os.path.exists(target_filename):
+            file_size = os.path.getsize(target_filename)
+            print(f"   [DEBUG] ✓ 找到目标文件（可能是更新后的）: {target_filename} (大小: {file_size} 字节)")
+            return {"image_path": target_filename}
 
-        if not plot_files:
-            print(f"   [DEBUG] ✗ 未找到任何 plot_*.png 文件")
-            return {"error": "图片生成失败，未找到生成的图片文件"}
-
-        # 按修改时间排序，获取最新生成的文件
-        plot_files.sort(key=os.path.getmtime, reverse=True)
-        latest_plot = plot_files[0]
-        print(f"   [DEBUG] 最新的 plot 文件: {latest_plot}")
-
-        # 如果生成的文件名不是目标文件名，重命名它
-        if latest_plot != target_filename:
-            print(f"   [DEBUG] 重命名文件: {latest_plot} -> {target_filename}")
-            os.rename(latest_plot, target_filename)
-            latest_plot = target_filename
-
-        file_size = os.path.getsize(latest_plot)
-        print(f"   [DEBUG] ✓ 最终使用的文件: {latest_plot} (大小: {file_size} 字节)")
-        return {"image_path": latest_plot}
+        # 如果都没有，说明生成失败
+        print(f"   [DEBUG] ✗ 图片生成失败，没有生成新文件且目标文件不存在")
+        return {"error": "图片生成失败，代码执行后未生成图片"}
     except Exception as e:
         import traceback
         error_msg = f"执行代码失败: {str(e)}"
@@ -1463,7 +1853,8 @@ def main():
             "generated_code": "",
             "image_path": "",
             "image_size": 0,
-            "error": ""
+            "error": "",
+            "custom_filename": ""  # 初始化为空字符串,使用默认文件名
         })
         
         # 输出结果
@@ -1478,10 +1869,437 @@ def main():
             # 显示图片路径的绝对位置
             abs_path = os.path.abspath(result['image_path'])
             print(f"📍 图片绝对路径: {abs_path}")
-            
+
     except Exception as e:
         print(f"❌ 工作流运行失败: {str(e)}")
         sys.exit(1)
+
+
+# ==================== 公共函数（供 draw_pic.py 和 write_md_with_images.py 共同使用）====================
+
+def get_enhanced_drawing_prompt(base_prompt: str) -> str:
+    """
+    生成增强的绘图提示词（包含详细的绘图规范）
+
+    这个函数被 draw_pic.py 和 write_md_with_images.py 共同使用
+    确保两种模式使用相同的高质量绘图规范
+
+    参数:
+        base_prompt: 基础的绘图需求描述
+
+    返回:
+        增强后的绘图提示词
+    """
+    enhanced_prompt = rf"""{base_prompt}
+
+## 核心绘图要求（必须严格遵守）
+
+### 通用基本要求
+1. 使用matplotlib库绘制，配合numpy、scipy等科学计算库
+2. 确保中文正常显示，设置中文字体
+3. 添加适当的标题、坐标轴标签、图例
+4. 使用清晰的配色方案（推荐：蓝色、红色、绿色、橙色、紫色）
+5. 设置合理的图形尺寸(figsize=(10, 8))和dpi=100
+6. 使用plt.tight_layout()自动调整布局
+7. 确保代码可以直接执行，无语法错误
+
+### 数据可视化类图形（曲线图、折线图等）特定要求
+8. **数据点生成**（最重要）：
+   - 使用numpy生成密集的数据点：x = np.linspace(起始值, 结束值, 1000)
+   - 确保x轴范围足够覆盖所需区域（如0到π、0到2等）
+   - 计算y值时使用明确的数学公式，不要使用未定义的变量
+   - 示例：y = np.sin(x) 或 y = (1 - (t/t_c)**8)**0.125
+
+9. **曲线绘制**：
+   - 使用ax.plot(x, y, 'b-', linewidth=2, label='曲线名称')或ax.plot(x, y, color='blue', linestyle='-', linewidth=2, label='曲线名称')
+   - **格式字符串颜色规范**：如果使用格式字符串（如'b-'），只能用单字母颜色代码：
+     * 'b' (blue蓝色), 'r' (red红色), 'g' (green绿色), 'c' (cyan青色), 'm' (magenta品红), 'y' (yellow黄色), 'k' (black黑色), 'w' (white白色)
+     * **禁止使用多字母颜色名**（如'purple-', 'orange-', 'brown-'等都是错误的！）
+   - **正确做法**：使用color参数指定颜色：ax.plot(x, y, color='purple', linestyle='-', linewidth=2)
+   - 线条宽度设为2-3，颜色醒目
+   - 确保曲线在图形范围内清晰可见
+
+10. **坐标轴设置**：
+    - 设置合理的x轴和y轴范围（使用ax.set_xlim和ax.set_ylim）
+    - 添加网格线：plt.grid(True, alpha=0.3)辅助读数
+    - 添加坐标轴标签和标题，使用中文标注
+
+11. **特殊标注**（如需要）：
+    - 标注关键点（极值、零点、交点、临界点等）
+    - 添加文字注释说明特殊点或区域
+    - 对于能隙、相变点等重要位置，使用箭头或虚线标注
+
+12. **代码完整性**（生死攸关）：
+    - 所有变量必须在代码中显式定义或生成
+    - 不要使用任何未定义的变量（如data、result等）
+    - 确保所有函数调用都完整，特别是括号闭合
+    - 数据必须完整，不能有undefined values
+
+13. **物理规律正确性**：
+    - 曲线形状必须符合物理规律（如能谱的连续性、磁化强度在临界点的平滑变化等）
+    - 数学公式必须正确（如二维Ising模型的临界指数β=1/8）
+    - 数据范围和比例关系必须合理
+
+14. **单摆/摆动系统角度标注**（必须严格遵守）：
+    - **角度顶点定位**：角度θ的顶点必须在支点/转轴处，绝不能标注在摆球或其他运动物体上
+    - **参考线绘制**：必须绘制垂直向下的虚线作为角度参考线（从支点垂直向下延伸）
+    - **角度弧线绘制**：使用Arc绘制角度弧线，弧的圆心必须在支点坐标
+    - **角度计算**：对于单摆，从垂直向下方向（270度）开始，到摆线方向（270+θ度）
+
+15. **刚体约束条件和物理真实性**（必须严格遵守）：
+   - **接触面约束**：物体（如小车、滑块）必须完全贴合接触面，不能有穿模或间隙
+   - **斜面约束**：斜面上的物体底部必须与斜面线精确重合，使用三角函数计算坐标
+   - **刚体完整性**：物体内部不能有任何线条穿模，所有几何关系必须精确计算
+   - **轮子约束**：轮子必须接触地面或斜面，轮心到接触面的距离等于半径
+   - **重力方向**：重力必须严格垂直向下，不能有偏差
+   - **力系平衡**：静止物体的受力分析必须满足平衡条件
+
+### 重要提醒
+- 如果绘制曲线图，必须使用numpy生成足够多的数据点（至少1000个）
+- 必须显式设置坐标轴范围，确保曲线完整显示在图形中
+- 曲线的数学关系必须准确，不能凭空捏造数据
+- 对于物理系统的曲线，必须遵循已知的理论公式或规律
+"""
+    return enhanced_prompt
+
+
+def get_drawing_system_prompt() -> str:
+    """
+    获取绘图系统提示词（包含完整的绘图规范）
+
+    这个函数被两种模式共同使用
+
+    返回:
+        完整的绘图系统提示词
+    """
+    return r"""你是一个专业的数据可视化和工程绘图专家，请根据用户需求生成高质量的Python绘图代码。
+
+## 零、代码质量要求（最重要，必须严格遵守）
+
+### 0.1 语法正确性（生死攸关，绝对不能出错）
+**特别警告**：未闭合的括号会导致代码完全无法执行！生成代码后必须进行括号匹配检查。
+
+**必须执行的检查步骤**（生成代码前必须按此顺序检查）：
+1. 从代码开头到结尾，确保每个 ( 都有对应的 )
+2. 检查每个函数调用的最后一行是否以 ) 结尾
+3. 检查每个字符串（用引号括起来的内容）是否都有结束引号
+4. 特别注意 ax.annotate(), ax.plot(), dict() 等有多层嵌套的函数调用
+5. **确认无误后再输出代码**
+
+### 0.2 代码完整性
+- 不要生成被截断的代码（代码必须完整结束）
+- 确保每个函数调用都有完整的参数列表
+- 确保多行语句使用正确的续行符（反斜杠 \ 或括号内的隐式续行）
+- 代码最后必须确保所有括号都闭合
+
+## 一、技术要求
+
+### 1.1 中文字体配置（必须严格遵守，最重要！）
+
+**重要说明**：matplotlib 已在执行环境中预配置最佳中文字体，生成的代码中**不需要再设置字体**！
+
+如果必须在代码中显式设置字体（不推荐），请使用以下配置：
+
+```python
+import matplotlib
+# 执行环境中已配置的字体列表（按优先级排序）
+matplotlib.rcParams["font.sans-serif"] = [
+    "STHeiti",              # 华文黑体 (macOS系统最佳字体)
+    "Heiti TC",             # 黑体-繁
+    "Heiti SC",             # 黑体-简
+    "Hiragino Sans GB",     # 冬青黑体
+    "PingFang HK",          # 苹方-港
+    "Arial Unicode MS",     # Arial Unicode (备选)
+    "STSong",               # 华文宋体
+    "Songti SC",            # 宋体-简
+    "Kaiti SC",             # 楷体-简
+    "STFangsong",           # 华文仿宋
+    "SimHei",               # 黑体 (Windows/Linux)
+    "SimSun",               # 宋体 (Windows)
+    "WenQuanYi Micro Hei"   # 文泉驿微米黑 (Linux)
+]
+matplotlib.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
+```
+
+**注意**：
+- 执行环境会自动检测并配置最佳中文字体
+- 通常情况下，生成的代码中只需要 `import matplotlib` 和 `import matplotlib.pyplot as plt`
+- 不需要重复设置 `rcParams["font.sans-serif"]`
+
+1. 只使用matplotlib库（可配合numpy、scipy等科学计算库）
+2. 代码要完整，包括导入、数据生成（如果需要）、绘图、保存图片
+3. 图片保存路径必须使用变量 target_filename（已预定义为带时间戳的唯一文件名）
+4. 生成的代码必须可以直接执行，不要包含任何解释性文字
+5. 代码风格要简洁、规范、可读性强
+6. **确保中文正常显示**（最重要）：使用完整的中文字体配置列表，优先使用 macOS 系统字体（STHeiti, Heiti TC/SC, Hiragino Sans GB, PingFang SC 等）
+7. 只返回可执行的Python代码，不要返回任何其他内容（如解释、说明等）
+8. **代码必须完全自包含**（最重要）：
+     - **所有变量都必须在使用前明确定义**
+     - **不要使用任何未在代码中定义的变量名**（如 article、data、result 等）
+     - **不要假设任何预定义的数据或变量存在**（除了 target_filename）
+     - **所有需要的数据（数值、列表、数组等）都必须在代码中显式定义或生成**
+9. **matplotlib 导入规范**（重要）：
+     - 基本导入：import matplotlib.pyplot as plt 和 import matplotlib.patches as patches
+     - 图形类导入：Rectangle, Circle, Arc, Polygon 等
+     - 箭头：使用 ax.annotate() 的 arrowprops 参数
+     - 不要随意导入不确定的类，优先使用 plt 和 ax 的方法
+10. **scipy 科学计算库导入规范**：
+     - scipy 已在执行环境中预加载，可以直接使用
+     - 常用模块：special（特殊函数）、optimize（优化）、integrate（积分）
+
+## 二、通用绘图规范
+
+### 2.1 图形尺寸和清晰度
+- 使用 figsize=(10, 8) 或根据实际需要调整
+- 设置 dpi=100 或更高
+- 使用 plt.tight_layout() 自动调整布局
+
+### 2.2 线条和样式规范
+- 主要元素：linewidth=2-3，使用醒目颜色
+- 次要元素：linewidth=1-1.5，使用辅助色
+- 辅助线/参考线：linewidth=0.5-1，使用虚线或浅色
+
+### 2.3 标注和文字规范
+- 所有重要部分都要有清晰的中文标注
+- 实心物体的文字必须标注在物体外部，不能遮挡物体
+- 空心物体的文字可以在内部或外部
+
+### 2.4 颜色方案
+- 推荐颜色：蓝色('#1f77b4')、红色('#d62728')、绿色('#2ca02c')、橙色('#ff7f0e')、紫色('#9467bd')
+- 背景保持白色
+
+### 2.5 坐标轴和布局
+- 添加坐标轴标签和标题
+- 对于需要保持比例的图形，使用 ax.set_aspect('equal')
+- 使用 plt.grid(True, alpha=0.3) 添加网格线（数据可视化类）
+
+### 2.6 图层顺序和避免遮挡（重要）
+- 绘图顺序原则：背景→网格线→辅助线→主体图形→填充区域→边框→箭头→文字标注
+- 使用 zorder 参数控制图层顺序：
+  - 背景元素：zorder=0-1
+  - 网格线：zorder=1
+  - 辅助线：zorder=2
+  - 主体图形：zorder=3-5
+  - 填充区域：zorder=3-4（设置 alpha=0.3-0.7 透明度）
+  - 边框线：zorder=5-6
+  - 箭头：zorder=10（确保在所有图形上方）
+  - 文字标注：zorder=10（确保在所有元素上方）
+
+## 三、分类绘图规范
+
+### 3.1 数据可视化类（折线图、曲线图、柱状图等）
+
+#### 3.1.1 防止空白图像的特别要求（生死攸关）
+
+**常见错误原因及解决方案**：
+
+1. **数据范围错误**：
+   - 错误：数据值太小或太大，导致超出坐标轴范围
+   - 正确：显式设置坐标轴范围或使用归一化数据
+
+2. **数据全为零或未定义**：
+   - 错误：计算结果全为零
+   - 正确：检查数据是否有效，添加调试代码
+
+3. **绘图背景与线条颜色冲突**：
+   - 错误：白色线条在白色背景上
+   - 正确：使用深色线条（蓝色、红色等）
+
+4. **坐标轴范围未设置或设置不当**：
+   - 错误：自动范围设置不当
+   - 正确：显式设置合理的坐标轴范围
+
+5. **特殊函数计算错误**（如拉盖尔多项式、贝塞尔函数等）：
+   - 错误：特殊函数返回 NaN 或 Inf
+   - 正确：验证特殊函数的输出，使用 np.nan_to_num() 清理无效值
+
+**必须执行的检查清单**：
+- 所有绘图语句都显式指定了颜色（color='blue' 或类似）
+- 数据生成后立即打印数据范围
+- 检查数据是否包含 NaN 或 Inf
+- 显式设置了坐标轴范围（ax.set_xlim 和 ax.set_ylim）
+- 对于特殊函数计算，添加了错误处理和无效值清理
+
+#### 3.1.2 数据生成规范（生死攸关）
+
+**所有数据必须在代码中显式定义或生成，不能有任何未定义的变量！**
+
+**正确示例（必须遵循）**：
+- 使用 numpy 生成密集数据点：x = np.linspace(0, np.pi, 1000)
+- 明确定义所有参数
+- 添加适当的坐标轴范围和网格
+
+#### 3.1.3 曲线绘制规范
+- 使用 ax.plot(x, y, 'b-', linewidth=2, label='曲线名称') 格式
+- 线条宽度设为 2-3，颜色醒目
+- 确保曲线在图形范围内清晰可见
+
+#### 3.1.4 坐标轴设置规范
+- 必须显式设置坐标轴范围（使用 ax.set_xlim 和 ax.set_ylim）
+- 添加坐标轴标签，使用中文
+- 添加标题，说明图形内容
+- 添加网格线：plt.grid(True, alpha=0.3)
+
+### 3.2 物理示意图类
+
+**刚体约束条件和物理真实性**（最重要，必须严格遵守）：
+- 接触面约束：物体必须完全贴合接触面，不能有穿模或间隙
+- 斜面约束：斜面上的物体底部必须与斜面线精确重合，使用三角函数计算坐标
+- 刚体完整性：物体内部不能有任何线条穿模
+- 轮子约束：轮子必须接触地面或斜面
+- 角度精确性：所有角度必须与标注一致
+- 重力方向：重力必须严格垂直向下
+- 力系平衡：静止物体的受力分析必须满足平衡条件
+
+**力和方向标注规范**（非常重要）：
+- 重力 mg：必须垂直向下
+- 支持力 N（法向力）：必须垂直于接触面
+- 拉力 T：沿绳索方向，远离物体
+- 摩擦力 f：沿接触面，与相对运动或运动趋势方向相反
+
+**角度标注规范**（最重要）：
+- 角的顶点定位原则：角度的顶点必须在支点或转动轴上
+- 单摆角度标注：角度θ的顶点在单摆的固定支点处
+- 必须绘制垂直向下的虚线作为角度参考线
+
+### 3.3 表格绘制规范（重要）
+**matplotlib 表格使用注意事项**（生死攸关）：
+- **禁止使用 `cell.set_text()` 方法**：该方法不存在，会导致 AttributeError
+- **正确设置单元格文本的方式**：
+  ```python
+  # 错误写法（会报错）
+  cell.set_text("文字内容")
+
+  # 正确写法1：通过 cellProps 在创建时设置
+  table = ax.table(cellText=data, cellProps=dict(fontsize=12))
+
+  # 正确写法2：获取文本对象后设置
+  cell = table[(i, j)]
+  cell.get_text().set_text("文字内容")
+  cell.get_text().set_fontsize(12)
+  cell.get_text().set_color('red')
+  ```
+- **表格单元格属性设置**：
+  - 文本内容：使用 `cell.get_text().set_text()`
+  - 文本颜色：使用 `cell.get_text().set_color()`
+  - 字体大小：使用 `cell.get_text().set_fontsize()`
+  - 背景颜色：使用 `cell.set_facecolor()`
+  - 边框宽度：使用 `cell.set_linewidth()`
+
+### 3.4 流程图/架构图
+- 使用矩形框表示模块/步骤
+- 使用箭头表示流程方向
+- 层级清晰，从上到下或从左到右
+- 添加简短的文字说明每个模块
+
+## 八、质量检查清单
+生成代码前请确认：
+- 语法正确（所有括号、引号都配对）
+- 所有变量都已明确定义
+- 所有数据都在代码中显式定义或生成
+- 数据点足够密集（曲线图至少1000个点）
+- 坐标轴范围已显式设置
+- 物理公式正确
+- 防止空白图像的特殊检查（数据有效性、颜色显式指定、坐标轴范围验证）
+- 图形尺寸合适，不拥挤
+- 所有重要元素都有中文标注
+- 颜色方案专业、清晰
+- 布局合理，主体居中
+- 刚体约束条件满足
+- 物理真实性满足
+- 图层顺序正确
+- 避免遮挡（填充区域使用了 alpha 透明度）
+- 代码可以直接执行，无语法错误
+- 使用了 target_filename 变量保存文件
+
+只返回 Python 代码，不要任何解释。
+"""
+
+
+def generate_single_image(description: str, custom_filename: str = None) -> dict:
+    """
+    生成单张图片(供文本+图模式调用)
+
+    这个函数封装了绘图工作流,提供简单的接口供文档模式调用
+
+    参数:
+        description: 图片描述(用户需求)
+        custom_filename: 自定义文件名,如 "plot_something_20260104_123456.png"
+                       如果为None,则使用默认命名规则
+
+    返回:
+        dict: {
+            'success': bool,        # 是否成功
+            'image_path': str,      # 图片完整路径(成功时)
+            'image_size': int,      # 文件大小(成功时)
+            'relative_path': str,   # 相对路径 "../images/xxx.png"(成功时)
+            'error': str            # 错误信息(失败时)
+        }
+    """
+    try:
+        print(f"\n[WORKFLOW] ===== 单图生成工作流启动 =====")
+        print(f"[WORKFLOW] 图片描述: '{description}'")
+        if custom_filename:
+            print(f"[WORKFLOW] 自定义文件名: '{custom_filename}'")
+
+        # 创建工作流
+        graph = create_graph()
+
+        # 准备初始状态
+        initial_state = {
+            "user_prompt": description,
+            "refined_prompt": "",
+            "generated_code": "",
+            "image_path": "",
+            "image_size": 0,
+            "error": "",
+            "custom_filename": custom_filename or ""  # 传递自定义文件名
+        }
+
+        # 执行工作流
+        print(f"[WORKFLOW] 开始执行工作流...")
+        result = graph.invoke(initial_state)
+
+        print(f"[WORKFLOW] ===== 工作流执行完成 =====")
+
+        # 处理结果
+        if result.get("error"):
+            print(f"[WORKFLOW] ❌ 生成失败: {result['error']}")
+            return {
+                'success': False,
+                'error': result['error']
+            }
+
+        # 成功生成图片
+        image_path = result['image_path']
+        image_size = result['image_size']
+
+        # 计算相对路径(相对于 docs 目录)
+        filename = os.path.basename(image_path)
+        relative_path = f"../images/{filename}"
+
+        print(f"[WORKFLOW] ✅ 生成成功:")
+        print(f"[WORKFLOW]   - 完整路径: {image_path}")
+        print(f"[WORKFLOW]   - 相对路径: {relative_path}")
+        print(f"[WORKFLOW]   - 文件大小: {image_size} 字节")
+
+        return {
+            'success': True,
+            'image_path': image_path,
+            'image_size': image_size,
+            'relative_path': relative_path
+        }
+
+    except Exception as e:
+        import traceback
+        error_msg = f"工作流异常: {str(e)}"
+        print(f"[WORKFLOW] ❌ {error_msg}")
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': error_msg
+        }
+
 
 if __name__ == "__main__":
     main()

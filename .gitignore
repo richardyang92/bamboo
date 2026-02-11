@@ -11,6 +11,9 @@ images/
 # 生成的文档文件夹
 docs/
 
+# 生成的视频文件夹
+videos/
+
 # 生成的图片
 plot.png
 *.png

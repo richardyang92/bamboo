@@ -1,9 +1,9 @@
 flask==3.0.0
-flask-socketio==5.3.6
-python-socketio==5.11.0
-eventlet==0.40.4
+flask-sock==0.7.0
 python-dotenv==1.0.0
 langgraph==0.0.28
 matplotlib>=3.9.0
 numpy>=2.0.0
+scipy>=1.13.0
 openai>=1.0.0
+manim>=0.18.0

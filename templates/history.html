@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>历史图表 - AI 智能绘图工作流</title>
+    <title>历史记录 - Bamboo AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cherry-markdown/dist/cherry-markdown.css">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
     <style>
         * {
             margin: 0;
@@ -122,6 +124,19 @@
             align-items: center;
             justify-content: center;
             box-shadow: var(--elevation-2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .navbar-logo:hover {
+            transform: scale(1.1);
+            filter: brightness(1.1);
+            box-shadow: var(--elevation-4);
+        }
+
+        .navbar-logo:active {
+            transform: scale(0.95);
+            filter: brightness(0.95);
         }
 
         .navbar-logo .material-icons {
@@ -408,6 +423,11 @@
             border-color: var(--primary-light);
         }
 
+        /* 视频卡片样式 */
+        .gallery-item.video {
+            border-color: #E91E63;
+        }
+
         .document-preview {
             width: 100%;
             height: 240px;
@@ -418,6 +438,28 @@
             justify-content: center;
             color: white;
             font-size: 48px;
+        }
+
+        .video-preview {
+            width: 100%;
+            height: 240px;
+            background: linear-gradient(135deg, #E91E63 0%, #9C27B0 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+        }
+
+        .video-preview-icon {
+            font-size: 64px;
+            margin-bottom: 8px;
+        }
+
+        .video-preview-text {
+            font-size: 14px;
+            opacity: 0.9;
         }
 
         .gallery-info {
@@ -690,7 +732,7 @@
 <body>
     <!-- 顶部导航栏 - Material Design -->
     <nav class="navbar">
-        <div class="navbar-brand" onclick="goToHome()">
+        <div class="navbar-brand" onclick="goToHome()" style="cursor: pointer;">
             <div class="navbar-logo">
                 <span class="material-icons">palette</span>
             </div>
@@ -716,8 +758,8 @@
         <!-- 页面标题 -->
         <div class="page-header">
             <div>
-                <h1 class="page-title">历史图表</h1>
-                <p class="page-subtitle">查看和管理所有生成的图表</p>
+                <h1 class="page-title">历史记录</h1>
+                <p class="page-subtitle">查看和管理所有生成的图表、文档和视频</p>
             </div>
             <button class="md-button md-button-contained" onclick="loadImages()">
                 <span class="material-icons">refresh</span>
@@ -731,7 +773,7 @@
                 <div class="stat-icon"><span class="material-icons">bar_chart</span></div>
                 <div class="stat-content">
                     <div class="stat-value" id="totalCount">0</div>
-                    <div class="stat-label">总图表数</div>
+                    <div class="stat-label">总项目数</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -746,14 +788,14 @@
         <!-- 加载状态 -->
         <div class="loading-container" id="loadingState">
             <div class="loading-spinner"></div>
-            <div class="loading-text">加载历史图表中...</div>
+            <div class="loading-text">加载历史记录中...</div>
         </div>
 
         <!-- 空状态 -->
         <div class="empty-state" id="emptyState" style="display: none;">
             <div class="empty-icon"><span class="material-icons">folder_open</span></div>
-            <div class="empty-title">暂无历史图表</div>
-            <div class="empty-text">还没有生成任何图表，快去创建第一个吧！</div>
+            <div class="empty-title">暂无历史记录</div>
+            <div class="empty-text">还没有生成任何内容，快去创建第一个图表、文档或视频吧！</div>
             <button class="md-button md-button-contained" onclick="goToHome()">
                 <span class="material-icons">rocket_launch</span>
                 <span>开始生成</span>
@@ -798,7 +840,7 @@
         <div class="image-modal-content" style="max-width: 900px;">
             <div class="image-modal-image-wrapper">
                 <button class="image-modal-close" onclick="closeDocumentModal()"><span class="material-icons">close</span></button>
-                <iframe id="documentModalPreview" style="width: 100%; height: 70vh; border: none; border-radius: 12px;"></iframe>
+                <div id="documentModalPreview" style="width: 100%; height: 70vh; overflow: auto;"></div>
             </div>
             <div class="image-modal-info">
                 <div class="image-modal-filename" id="documentModalFilename">document.md</div>
@@ -816,6 +858,30 @@
         </div>
     </div>
 
+    <!-- 视频预览模态框 -->
+    <div class="image-modal" id="videoModal">
+        <div class="image-modal-backdrop" onclick="closeVideoModal()"></div>
+        <div class="image-modal-content" style="max-width: 1000px;">
+            <div class="image-modal-image-wrapper">
+                <button class="image-modal-close" onclick="closeVideoModal()"><span class="material-icons">close</span></button>
+                <video id="videoModalPreview" controls autoplay style="max-width: 100%; max-height: 75vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);"></video>
+            </div>
+            <div class="image-modal-info">
+                <div class="image-modal-filename" id="videoModalFilename">video.mp4</div>
+                <div class="image-modal-actions">
+                    <button class="image-modal-btn" onclick="downloadCurrentVideo()">
+                        <span class="material-icons">download</span>
+                        <span>下载</span>
+                    </button>
+                    <button class="image-modal-btn delete" onclick="deleteCurrentVideo()">
+                        <span class="material-icons">delete</span>
+                        <span>删除</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 主题管理
         const THEME_KEY = 'app-theme';
@@ -823,6 +889,7 @@
         let currentThemeMode = localStorage.getItem(THEME_KEY) || 'auto';
         let currentImageData = null;
         let currentDocumentData = null;
+        let currentVideoData = null;
         let allImages = [];
 
         // 初始化主题
@@ -847,10 +914,11 @@
         function updateThemeButton() {
             const icon = document.getElementById('themeIcon');
 
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            const actualTheme = currentThemeMode === 'auto' ? systemTheme : currentThemeMode;
-
-            icon.textContent = actualTheme === 'dark' ? 'dark_mode' : 'light_mode';
+            if (currentThemeMode === 'auto') {
+                icon.textContent = 'brightness_auto';
+            } else {
+                icon.textContent = currentThemeMode === 'dark' ? 'dark_mode' : 'light_mode';
+            }
         }
 
         // 切换主题
@@ -862,6 +930,84 @@
             localStorage.setItem(THEME_KEY, currentThemeMode);
             applyTheme(currentThemeMode);
             updateThemeButton();
+
+            // Update Cherry Markdown instances
+            const cherryContainers = document.querySelectorAll('.cherry');
+            cherryContainers.forEach(container => {
+                const cherryInstance = container.__cherry__;
+                if (cherryInstance && cherryInstance.getValue) {
+                    const currentValue = cherryInstance.getValue();
+                    const parent = container.parentElement;
+                    const containerId = parent.id;
+
+                    // Destroy old instance
+                    parent.innerHTML = '';
+
+                    // Recreate with new theme
+                    new Cherry({
+                        id: containerId,
+                        value: currentValue,
+                        locale: 'zh_CN',
+                        theme: currentThemeMode === 'dark' ? 'dark' : 'light',
+                        externals: {
+                            mathjax: window.MathJax,
+                        },
+                        editor: {
+                            defaultModel: 'previewOnly',
+                            keepDocumentScrollAfterInit: true,
+                        },
+                        toolbars: {
+                            toolbar: false,
+                            toc: {
+                                updateLocationHash: false,
+                                defaultModel: 'pure',
+                                position: 'fixed',
+                                cssText: 'right: 20px;',
+                            },
+                        },
+                        engine: {
+                            global: {
+                                formatMoney: false,
+                            },
+                            syntax: {
+                                emoji: { enable: false },
+                                fontEmphasis: { allowWhitespace: true },
+                                footNote: { enable: true },
+                                inlineCode: { enable: true },
+                                mathBlock: {
+                                    engine: 'MathJax',
+                                    src: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js',
+                                },
+                                inlineMath: {
+                                    engine: 'MathJax',
+                                },
+                                table: {
+                                    enableChart: false
+                                },
+                                image: {
+                                    lazyLoad: true
+                                }
+                            }
+                        },
+                        previewer: {
+                            enablePreviewerBubble: false,
+                        },
+                        urlProcessor: function(url, srcType) {
+                            if (srcType === 'image') {
+                                const docPath = currentDocumentData?.url || '';
+                                const docDir = docPath ? docPath.substring(0, docPath.lastIndexOf('/')) : '';
+                                if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/') && !url.startsWith('data:')) {
+                                    if (docDir) {
+                                        return docDir + '/' + url;
+                                    }
+                                    return '/' + url;
+                                }
+                            }
+                            return url;
+                        }
+                    });
+                }
+            });
         }
 
         // 监听系统主题变化
@@ -909,7 +1055,8 @@
                 // 更新统计信息
                 const imageCount = items.filter(item => item.type === 'image').length;
                 const documentCount = items.filter(item => item.type === 'document').length;
-                totalCount.textContent = `${imageCount} 图表 / ${documentCount} 文档`;
+                const videoCount = items.filter(item => item.type === 'video').length;
+                totalCount.textContent = `${imageCount} 图表 / ${documentCount} 文档 / ${videoCount} 视频`;
                 const totalBytes = items.reduce((sum, item) => sum + item.size, 0);
                 totalSize.textContent = formatFileSize(totalBytes);
 
@@ -943,6 +1090,8 @@
             // 根据类型添加class
             if (item.type === 'document') {
                 div.classList.add('document');
+            } else if (item.type === 'video') {
+                div.classList.add('video');
             }
 
             div.onclick = (e) => {
@@ -952,6 +1101,8 @@
                 // 根据类型打开不同的预览
                 if (item.type === 'document') {
                     openDocumentModal(item);
+                } else if (item.type === 'video') {
+                    openVideoModal(item);
                 } else {
                     openImageModal(item);
                 }
@@ -964,6 +1115,12 @@
             let previewHTML = '';
             if (item.type === 'document') {
                 previewHTML = `<div class="document-preview">📄</div>`;
+            } else if (item.type === 'video') {
+                previewHTML = `
+                    <div class="video-preview">
+                        <div class="video-preview-icon"><span class="material-icons" style="font-size: inherit;">play_circle</span></div>
+                        <div class="video-preview-text">点击播放</div>
+                    </div>`;
             } else {
                 previewHTML = `<img class="gallery-image" src="${item.url}?t=${Date.now()}" alt="${item.name}" loading="lazy">`;
             }
@@ -981,6 +1138,21 @@
                         <span>下载</span>
                     </button>
                     <button class="gallery-action-btn delete" onclick="deleteDocument('${item.name}', ${index})">
+                        <span class="material-icons">delete</span>
+                        <span>删除</span>
+                    </button>
+                `;
+            } else if (item.type === 'video') {
+                actionButtons = `
+                    <button class="gallery-action-btn" onclick="viewVideo(${index})">
+                        <span class="material-icons">play_arrow</span>
+                        <span>播放</span>
+                    </button>
+                    <button class="gallery-action-btn" onclick="downloadVideo('${item.url}', '${item.name}')">
+                        <span class="material-icons">download</span>
+                        <span>下载</span>
+                    </button>
+                    <button class="gallery-action-btn delete" onclick="deleteVideo('${item.name}', ${index})">
                         <span class="material-icons">delete</span>
                         <span>删除</span>
                     </button>
@@ -1167,6 +1339,7 @@
             if (e.key === 'Escape') {
                 closeImageModal();
                 closeDocumentModal();
+                closeVideoModal();
             }
         });
 
@@ -1176,131 +1349,83 @@
         async function openDocumentModal(doc) {
             currentDocumentData = doc;
             const modal = document.getElementById('documentModal');
-            const preview = document.getElementById('documentModalPreview');
+            const previewContainer = document.getElementById('documentModalPreview');
             const filename = document.getElementById('documentModalFilename');
 
             try {
                 const response = await fetch(doc.url);
-                const content = await response.text();
+                let content = await response.text();
 
-                // 使用 marked.js 解析 Markdown，并添加数学公式支持
-                const htmlContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <!-- Marked.js for Markdown -->
-                        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
-                        <!-- KaTeX for math rendering -->
-                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-                        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
-                        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
-                        <style>
-                            body {
-                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-                                line-height: 1.6;
-                                color: #333;
-                                padding: 40px;
-                                background: #fff;
-                            }
-                            h1, h2, h3, h4 {
-                                border-bottom: 1px solid #eee;
-                                padding-bottom: 0.3em;
-                                margin-top: 1.5em;
-                                margin-bottom: 0.5em;
-                            }
-                            h1 { font-size: 2em; }
-                            h2 { font-size: 1.5em; }
-                            h3 { font-size: 1.25em; }
-                            code {
-                                background: #f6f8fa;
-                                padding: 0.2em 0.4em;
-                                border-radius: 3px;
-                                font-family: 'Monaco', 'Courier New', monospace;
-                                font-size: 0.9em;
-                            }
-                            pre {
-                                background: #f6f8fa;
-                                padding: 16px;
-                                border-radius: 6px;
-                                overflow: auto;
-                                border: 1px solid #e1e4e8;
-                            }
-                            pre code {
-                                background: transparent;
-                                padding: 0;
-                                border: none;
-                            }
-                            blockquote {
-                                border-left: 4px solid #dfe2e5;
-                                padding-left: 16px;
-                                color: #6a737d;
-                                margin: 1em 0;
-                            }
-                            ul, ol {
-                                padding-left: 2em;
-                                margin: 1em 0;
-                            }
-                            li {
-                                margin: 0.5em 0;
-                            }
-                            a {
-                                color: #0366d6;
-                                text-decoration: none;
-                            }
-                            a:hover {
-                                text-decoration: underline;
-                            }
-                            p {
-                                margin: 1em 0;
-                            }
-                            /* KaTeX 样式调整 */
-                            .katex-display {
-                                overflow-x: auto;
-                                overflow-y: hidden;
-                                padding: 0.5em 0;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div id="content"></div>
-                        <script>
-                            const markdownContent = ${JSON.stringify(content)};
+                // Replace /images/ with /api/images/ in markdown content
+                content = content.replace(/\/images\//g, '/api/images/');
 
-                            // 修复双反斜杠问题：将 LaTeX 中错误的双反斜杠替换为单反斜杠
-                            function fixLatexBackslashes(text) {
-                                // 保护真正的双反斜杠换行符
-                                text = text.replace(/\\\\\\n/g, '___NEWLINE___');
-                                // 将所有 \\+字母 替换为 \+字母
-                                text = text.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
-                                // 恢复换行符
-                                text = text.replace(/___NEWLINE___/g, '\\\\\\n');
-                                return text;
+                // Clear previous instance
+                previewContainer.innerHTML = '';
+
+                // Initialize Cherry Markdown (preview-only)
+                new Cherry({
+                    id: 'documentModalPreview',
+                    value: content,
+                    locale: 'zh_CN',
+                    theme: currentThemeMode === 'dark' ? 'dark' : 'light',
+                    externals: {
+                        mathjax: window.MathJax,
+                    },
+                    editor: {
+                        defaultModel: 'previewOnly',
+                        keepDocumentScrollAfterInit: true,
+                    },
+                    toolbars: {
+                        toolbar: false,
+                        toc: {
+                            updateLocationHash: false,
+                            defaultModel: 'pure',
+                            position: 'fixed',
+                            cssText: 'right: 20px;',
+                        },
+                    },
+                    engine: {
+                        global: {
+                            formatMoney: false,
+                        },
+                        syntax: {
+                            emoji: { enable: false },
+                            fontEmphasis: { allowWhitespace: true },
+                            footNote: { enable: true },
+                            inlineCode: { enable: true },
+                            mathBlock: {
+                                engine: 'MathJax',
+                                src: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js',
+                            },
+                            inlineMath: {
+                                engine: 'MathJax',
+                            },
+                            table: {
+                                enableChart: false
+                            },
+                            image: {
+                                lazyLoad: true
                             }
+                        }
+                    },
+                    previewer: {
+                        enablePreviewerBubble: false,
+                    },
+                    urlProcessor: function(url, srcType) {
+                        if (srcType === 'image') {
+                            if (url.startsWith('/images/')) {
+                                return url.replace('/images/', '/api/images/');
+                            }
+                            if (!url.startsWith('http://') && !url.startsWith('https://') && 
+                                !url.startsWith('/') && !url.startsWith('data:') &&
+                                !url.startsWith('/api/images/')) {
+                                return '/api/images/' + url;
+                            }
+                        }
+                        return url;
+                    }
+                });
 
-                            const fixedContent = fixLatexBackslashes(markdownContent);
-
-                            // 第一步：解析 Markdown
-                            const content = document.getElementById('content');
-                            content.innerHTML = marked.parse(fixedContent);
-
-                            // 第二步：使用 KaTeX 自动渲染数学公式
-                            renderMathInElement(content, {
-                                delimiters: [
-                                    {left: '$$', right: '$$', display: true},
-                                    {left: '$', right: '$', display: false},
-                                    {left: '\\[', right: '\\]', display: true},
-                                    {left: '\\(', right: '\\)', display: false}
-                                ],
-                                throwOnError: false
-                            });
-                        <\/script>
-                    </body>
-                    </html>
-                `;
-
-                preview.srcdoc = htmlContent;
                 filename.textContent = doc.name;
                 modal.classList.add('show');
             } catch (error) {
@@ -1367,6 +1492,83 @@
                 await deleteDocument(currentDocumentData.name, -1);
             }
         }
+
+        // ========== 视频相关函数 ==========
+
+        // 打开视频预览
+        function openVideoModal(video) {
+            currentVideoData = video;
+            const modal = document.getElementById('videoModal');
+            const preview = document.getElementById('videoModalPreview');
+            const filename = document.getElementById('videoModalFilename');
+
+            preview.src = video.url + '?t=' + Date.now();
+            filename.textContent = video.name;
+            modal.classList.add('show');
+        }
+
+        // 关闭视频预览
+        function closeVideoModal() {
+            const modal = document.getElementById('videoModal');
+            const preview = document.getElementById('videoModalPreview');
+            preview.pause();
+            preview.src = '';
+            modal.classList.remove('show');
+            currentVideoData = null;
+        }
+
+        // 查看视频
+        function viewVideo(index) {
+            if (allImages[index]) {
+                openVideoModal(allImages[index]);
+            }
+        }
+
+        // 下载视频
+        function downloadVideo(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+        }
+
+        // 下载当前预览的视频
+        function downloadCurrentVideo() {
+            if (currentVideoData) {
+                downloadVideo(currentVideoData.url, currentVideoData.name);
+            }
+        }
+
+        // 删除视频
+        async function deleteVideo(filename, index) {
+            if (!confirm(`确定要删除 "${filename}" 吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/manim/videos/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadImages();
+                    closeVideoModal();
+                } else {
+                    alert('删除失败');
+                }
+            } catch (error) {
+                console.error('删除视频失败:', error);
+                alert('删除失败');
+            }
+        }
+
+        // 删除当前预览的视频
+        async function deleteCurrentVideo() {
+            if (currentVideoData) {
+                await deleteVideo(currentVideoData.name, -1);
+            }
+        }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/cherry-markdown/dist/cherry-markdown.js"></script>
 </body>
 </html>
