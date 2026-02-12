@@ -5,6 +5,7 @@ from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from openai import OpenAI
 from dotenv import load_dotenv
+from config import Config
 
 # 加载.env文件中的环境变量
 load_dotenv()
@@ -55,13 +56,101 @@ def refine_prompt(state: GraphState) -> GraphState:
     ]
     matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
     ```
-3. **避免特殊字符显示问题**（重要）：
-   - 数学符号（如希腊字母α、β、γ、π等）优先使用Unicode字符或LaTeX格式
-   - 使用LaTeX格式：`r'$\alpha$'`、`r'$\beta$'`、`r'$\pi$'`、`r'$\theta$'`
+3. **原始字符串（r前缀）是生死攸关的要求**：
+   ```python
+   # ❌ 错误：普通字符串中的反斜杠会被当作转义字符
+   '以概率 $|\alpha|^2$ 坍缩到 $|0\rangle$'  # \a和\b是转义序列，会导致错误
+
+   # ✅ 正确：使用原始字符串（r前缀）
+   r'以概率 $|\alpha|^2$ 坍缩到 $|0\rangle$'  # 反斜杠被正确保留
+
+   # ❌ 错误示例
+   ax.text(x, y, '$|\alpha|^2$')      # \a会被转义
+   ax.annotate(r'标签 $x_i$', ...)   # 混用，有r前缀但部分字符串没有
+
+   # ✅ 正确示例 - 所有包含LaTeX的字符串都必须有r前缀
+   ax.text(x, y, r'$|\alpha|^2$')
+   ax.annotate(r'标签 $x_i$', ...)
+   plt.title(r'函数 $f(x) = x^2$')
+   ax.set_xlabel(r'角度 $\theta$ (rad)')
+   ```
+   **核心规则**：
+   - 只要字符串中包含 `$` 符号（LaTeX公式），就必须在字符串引号前加 `r`
+   - 不要使用普通字符串 `'...'`，必须使用原始字符串 `r'...'`
+   - 包括但不限于：`ax.text()`, `ax.annotate()`, `plt.title()`, `ax.set_xlabel()`, `ax.set_ylabel()`, `ax.legend()`
+
+4. **数学符号必须使用LaTeX格式**：
+   - 希腊字母：`r'$\alpha$'`（α）、`r'$\beta$'`（β）、`r'$\gamma$'`（γ）、`r'$\pi$'`（π）、`r'$\theta$'`（θ）
+   - **量子态符号**（必须用LaTeX）：
+     * `|0⟩` → `r'$|0\\rangle$'` 或 `r'$\\langle 0|$'`
+     * `|1⟩` → `r'$|1\\rangle$'`
+     * `|ψ⟩` → `r'$|\\psi\\rangle$'` 或 `r'$\\langle\\psi|$'`
+     * 示例：`ax.annotate(r'测量坍缩 → $|0\\rangle$', ...)`
+   - **上下标必须使用LaTeX格式**（生死攸关，绝对不能违反！）：
+     * **致命错误**：绝不能使用Unicode下标字符（如 ₁₂₃₄₅₆₇₈₉₀ₐₑᵢₒᵤᵩ 等）
+     * **错误示例**（会导致显示异常）：
+       ```python
+       # ❌ 绝对禁止 - Unicode下标字符
+       lagrange_points = [(L1_x, 0, 'L₁', 'red'), (L2_x, 0, 'L₂', 'orange')]
+       ax.text(x, y, 'xₙ')              # 直接使用Unicode下标
+       ax.set_xlabel('位置 xᵢ')         # 直接使用Unicode下标
+       ```
+     * **正确示例**（必须遵循）：
+       ```python
+       # ✅ 正确 - 使用LaTeX下标格式
+       lagrange_points = [(L1_x, 0, r'$L_1$', 'red'), (L2_x, 0, r'$L_2$', 'orange')]
+       ax.text(x, y, r'$x_n$')                    # LaTeX格式下标
+       ax.set_xlabel(r'位置 $x_i$')               # LaTeX格式下标
+       ax.plot(x, y, label=r'曲线 $f_{max}(x)$')  # LaTeX格式下标
+       ```
+     * 上标格式：`$x^2$`、`$x^n$`、`$a^{b+c}$`  # type: ignore
+     * 下标格式：`$x_1$`、`$x_n$`、`$L_{max}$`
+     * 分数格式：`$\frac{{a}}{{b}}$`
+   - 特殊数学符号：`r'$\infty$'`（∞）、`r'$\pm$'`（±）、`r'$\times$'`（×）
+   - **禁止使用特殊Unicode符号**（生死攸关，绝对不能违反！）：
+     * **致命错误**：绝不能直接使用matplotlib无法显示的Unicode符号
+     * **常见问题符号**：
+       - `•` (项目符号，U+2022) → 无法显示，会导致显示为方块或乱码
+       - `→` (箭头，U+2192) → 无法显示，应使用LaTeX的 `$\rightarrow$` 或 `$\to$`
+       - `°` (度数符号，U+00B0) → 无法显示，应使用LaTeX的 `$^\circ$`
+       - `±` (正负号，U+00B1) → 无法显示，应使用LaTeX的 `$\pm$`
+       - `×` (乘号，U+00D7) → 无法显示，应使用LaTeX的 `$\times$`
+       - `÷` (除号，U+00F7) → 无法显示，应使用LaTeX的 `$\div$`
+       - `≤` (小于等于，U+2264) → 无法显示，应使用LaTeX的 `$\le$`
+       - `≥` (大于等于，U+2265) → 无法显示，应使用LaTeX的 `$\ge$`
+     * **错误示例**（会导致显示异常）：
+       ```python
+       # ❌ 绝对禁止 - 直接使用Unicode特殊符号
+       ax.text(x, y, '要点一 • 要点二 • 要点三')  # • 无法显示
+       ax.annotate('A → B', ...)                # → 无法显示
+       ax.set_title('温度变化 ± 5°C')            # ± 和 ° 无法显示
+       plt.xlabel('长度 ≥ 0')                    # ≥ 无法显示
+       ```
+     * **正确示例**（必须遵循）：
+       ```python
+       # ✅ 正确 - 使用LaTeX格式
+       ax.text(x, y, r'要点一 $\cdot$ 要点二 $\cdot$ 要点三')  # 使用 \cdot
+       ax.annotate(r'A $\rightarrow$ B', ...)                        # 使用 \rightarrow
+       ax.set_title(r'温度变化 $\pm$ 5$^\circ$C')               # 使用 \pm 和 ^\circ
+       plt.xlabel(r'长度 $\ge$ 0')                               # 使用 \ge
+       ```
+     * **LaTeX替代方案对照表**：
+       | Unicode | LaTeX | 说明 |
+       |---------|-------|------|
+       | `•` | `$\cdot$` 或 `$\bullet$` | 项目符号/乘点 |
+       | `→` | `$\rightarrow$` 或 `$\to$` | 箭头 |
+       | `←` | `$\leftarrow$` 或 `$\gets$` | 左箭头 |
+       | `↔` | `$\leftrightarrow$` | 双向箭头 |
+       | `°` | `$^\circ$` | 度数 |
+       | `±` | `$\pm$` | 正负号 |
+       | `×` | `$\times$` | 乘号 |
+       | `÷` | `$\div$` | 除号 |
+       | `≤` | `$\le$` | 小于等于 |
+       | `≥` | `$\ge$` | 大于等于 |
+       | `≠` | `$\neq$` | 不等于 |
+       | `∞` | `$\infty$` | 无穷 |
+       | `√` | `$\sqrt{x}$` | 根号 |  # type: ignore
    - 负号、减号使用matplotlib设置：`matplotlib.rcParams['axes.unicode_minus'] = False`
-   - 上下标使用LaTeX：上标`$x^2$`、下标`$x_1$`、分数`$\frac{a}{b}$`
-   - 避免使用生僻Unicode字符，如必须使用则确保字体支持
-   - 特殊符号替代：√使用`sqrt()`、∞使用`$\infty$`、±使用`$\pm$`
 4. 添加适当的标题、坐标轴标签、图例
 5. 使用清晰的配色方案（推荐：蓝色、红色、绿色、橙色、紫色）
 6. 设置合理的图形尺寸(figsize=(10, 8))和dpi=100
@@ -81,12 +170,29 @@ def refine_prompt(state: GraphState) -> GraphState:
    - 计算y值时使用明确的数学公式，不要使用未定义的变量
    - 示例：`y = np.sin(x)` 或 `y = (1 - (t/t_c)**8)**0.125`
 
-9. **曲线绘制**：
-   - 使用`ax.plot(x, y, 'b-', linewidth=2, label='曲线名称')`或`ax.plot(x, y, color='blue', linestyle='-', linewidth=2, label='曲线名称')`
-   - **格式字符串颜色规范**：如果使用格式字符串（如'b-'），只能用单字母颜色代码：
-     * 'b' (blue蓝色), 'r' (red红色), 'g' (green绿色), 'c' (cyan青色), 'm' (magenta品红), 'y' (yellow黄色), 'k' (black黑色), 'w' (white白色)
-     * **禁止使用多字母颜色名**（如'purple-', 'orange-', 'brown-'等都是错误的！）
-   - **正确做法**：使用color参数指定颜色：`ax.plot(x, y, color='purple', linestyle='-', linewidth=2)`
+9. **曲线绘制**（必须严格遵守）：
+   - **致命错误警告**：绝不能在 `color` 参数中使用格式字符串（如 'k--', 'b-', 'r--' 等）
+   - **错误示例**（会导致执行失败）：
+     ```python
+     # ❌ 绝对禁止
+     ax.plot(x, y, color='k--', linewidth=2)  # 错误！'k--'不是有效的颜色值
+     ax.plot(x, y, color='b-', linewidth=2)   # 错误！'b-'不是有效的颜色值
+     ```
+   - **正确做法**（二选一）：
+     ```python
+     # ✅ 方案1：使用分离的 color 和 linestyle 参数（推荐）
+     ax.plot(x, y, color='black', linestyle='--', linewidth=2, label='曲线名称')
+     ax.plot(x, y, color='blue', linestyle='-', linewidth=2, label='曲线名称')
+
+     # ✅ 方案2：使用格式字符串作为位置参数（第三参数）
+     ax.plot(x, y, 'k--', linewidth=2, label='曲线名称')
+     ax.plot(x, y, 'b-', linewidth=2, label='曲线名称')
+     ```
+   - **参数使用规则**：
+     * 格式字符串（如 'k--', 'b-', 'r:'）只能作为位置参数（第三参数），不能放在 `color=` 中
+     * 使用关键字参数时，必须分别指定 `color='颜色名'` 和 `linestyle='线型'`
+     * 常用颜色：`'black'`, `'blue'`, `'red'`, `'green'`, `'orange'`, `'purple'`
+     * 常用线型：`'-'` 实线, `'--'` 虚线, `':'` 点线, `'-.'` 点划线
    - 线条宽度设为2-3，颜色醒目
    - 确保曲线在图形范围内清晰可见
 
@@ -234,6 +340,48 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
 - 确保多行语句使用正确的续行符（反斜杠 `\` 或括号内的隐式续行）
 - 代码最后必须确保所有括号都闭合
 
+### 0.3 变量定义完整性（生死攸关，绝对不能出错！）
+**常见错误示例（必须避免）**：
+```python
+# ❌ 错误1：使用单字母未定义变量（最常见！）
+plt.plot(x, y, 'b-')  # x, y 未定义
+
+# ❌ 错误2：变量名拼写错误或引用不存在的变量
+x_val = 5
+y_val = 3  # 假设定义了 y_val
+print(z_val)  # z_val 未定义，会报错：name 'z_val' is not defined
+
+# ❌ 错误3：假设外部数据存在
+data = article['values']  # article 未定义
+result = processed_data  # processed_data 未定义
+```
+
+**正确示例（必须遵循）**：
+```python
+# ✅ 正确1：在使用变量前明确定义
+import numpy as np
+x = np.linspace(0, 10, 100)  # 定义 x
+y = np.sin(x)                  # 定义 y
+plt.plot(x, y, 'b-')          # 现在可以使用了
+
+# ✅ 正确2：定义所有需要的数据
+x_val = 5
+y_val = 3
+z_val = x_val + y_val  # z_val 是基于已定义的 x_val 和 y_val 计算的
+print(z_val)   # 现在可以使用了
+
+# ✅ 正确3：显式生成数据，不依赖外部源
+data = [1, 2, 3, 4, 5]  # 直接定义数据
+plt.plot(data)
+```
+
+**必须执行的检查步骤**（生成代码前必须逐项检查）：
+1. 逐行检查代码，确保每个使用的变量都已定义
+2. 特别注意单字母变量（x, y, a, b, k, t 等）是否在使用前定义
+3. 检查数组操作中的变量（如 data[:, 0]）是否 data 已定义
+4. 确认没有引用任何"假设存在"的外部数据
+5. **确认无误后再输出代码**
+
 ## 一、技术要求
 1. 只使用matplotlib库（可配合numpy等基础库）
 2. 代码要完整，包括导入、数据生成（如果需要）、绘图、保存图片
@@ -286,6 +434,60 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
         ```
       - 不要将2D patches转换为3D，这会导致错误
     - 不要随意导入不确定的类，优先使用 plt 和 ax 的方法
+10. **样式设置规范**（重要）：
+    - **禁止使用已弃用的样式**：不要使用 `plt.style.use('seaborn-darkgrid')` 或类似的旧版 seaborn 样式
+    - 这些样式在新版 matplotlib 中已被移除，会导致 `'seaborn-darkgrid' is not a valid package style` 错误
+    - **正确的做法**：不要调用 `plt.style.use()`，直接使用默认样式即可
+    - 如需美化图形，通过设置 rcParams 或直接在绘图时指定颜色、线型等参数来实现
+    - 示例错误：`plt.style.use('seaborn-darkgrid')` ❌
+    - 示例正确：使用 `ax.plot(x, y, color='blue', linewidth=2)` 或 `plt.grid(True, alpha=0.3)` ✅
+
+11. **颜色和线型参数规范**（生死攸关，绝对不能违反！）：
+    - **致命错误**：绝不能在 `color` 参数中使用格式字符串（如 'k--', 'b-', 'r--' 等）
+    - **错误示例**（会导致执行失败）：
+      ```python
+      # ❌ 错误1：color参数包含格式字符串
+      ax.plot(x, y, color='k--', linewidth=2)  # 会报错：'k--' is not a valid value for color
+      ax.plot(x, y, color='b-', linewidth=2)   # 会报错：'b-' is not a valid value for color
+      ax.plot(x, y, color='r--', linewidth=2)  # 会报错：'r--' is not a valid value for color
+
+      # ❌ 错误2：使用多字母颜色名加符号
+      ax.plot(x, y, color='purple-', linewidth=2)  # 错误！
+
+      # ❌ 错误3：在color参数中混合颜色和线型
+      ax.plot(x, y, color='blue--', linewidth=2)  # 错误！
+      ```
+    - **正确做法**（必须严格遵守）：
+      ```python
+      # ✅ 正确1：将颜色和线型分开指定（推荐）
+      ax.plot(x, y, color='black', linestyle='--', linewidth=2)
+
+      # ✅ 正确2：使用格式字符串作为位置参数（第三参数）
+      ax.plot(x, y, 'k--', linewidth=2)
+
+      # ✅ 正确3：使用命名的颜色
+      ax.plot(x, y, color='blue', linestyle='-', linewidth=2)
+      ax.plot(x, y, color='red', linestyle='--', linewidth=2)
+      ax.plot(x, y, color='green', linestyle=':', linewidth=2)
+
+      # ✅ 正确4：使用十六进制颜色代码
+      ax.plot(x, y, color='#1f77b4', linestyle='-', linewidth=2)
+      ```
+    - **格式字符串使用规则**：
+      * 格式字符串（如 'k--', 'b-', 'r:'）只能作为位置参数使用
+      * 绝不能放在 `color=`、`linestyle=` 等关键字参数中
+      * 如果使用关键字参数，必须分别指定 `color` 和 `linestyle`
+    - **常用颜色名称**（用于 color 参数）：
+      * `'black'` 或 `'k'`, `'blue'` 或 `'b'`, `'red'` 或 `'r'`
+      * `'green'` 或 `'g'`, `'orange'`, `'purple'`, `'brown'`, `'pink'`
+      * 或使用十六进制：`'#1f77b4'`, `'#d62728'`, `'#2ca02c'` 等
+    - **常用线型**（用于 linestyle 参数）：
+      * `'-'` 实线, `'--'` 虚线, `':'` 点线, `'-.'` 点划线
+      * `'none'` 或 `''` 无线条
+    - **生成代码前检查**：
+      1. 搜索所有 `color=` 参数，确认不包含 `'--'`, `'-'`, `':'` 等线型符号
+      2. 如果 `color` 参数中有 `-` 或 `:` 等符号，立即修正
+      3. 推荐始终使用分离的 `color` 和 `linestyle` 参数
 
 ## 二、通用绘图规范
 
@@ -364,6 +566,29 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
   r'$\leq$'      # 小于等于 ≤
   r'$\geq$'      # 大于等于 ≥
   ```
+- **量子态符号**（必须使用LaTeX，不能用Unicode字符如⟨⟩）：
+  ```python
+  # 量子态右矢 |ψ⟩
+  r'$|0\rangle$'      # |0⟩
+  r'$|1\rangle$'      # |1⟩
+  r'$|\psi\rangle$'   # |ψ⟩
+  r'$|\phi\rangle$'   # |φ⟩
+
+  # 量子态左矢 ⟨ψ|
+  r'$\langle 0|$'     # ⟨0|
+  r'$\langle 1|$'     # ⟨1|
+  r'$\langle\psi|$'   # ⟨ψ|
+
+  # 叠加态
+  r'$\alpha|0\rangle + \beta|1\rangle$'  # α|0⟩ + β|1⟩
+
+  # 实际使用示例
+  ax.annotate(r'测量 → $|0\rangle$', xy=(x, y), fontsize=12)
+  ax.text(0.5, 0.5, r'$\langle\psi|\hat{H}|\psi\rangle$', fontsize=14)
+
+  # ❌ 错误：直接使用Unicode字符会显示为方框或空白
+  # ax.annotate('测量 → |0⟩', ...)  # ⟨ 和 ⟩ 无法正确显示
+  ```
 - **物理量符号**：
   ```python
   # 物理量使用斜体（LaTeX默认）
@@ -374,6 +599,21 @@ arrowprops=dict(facecolor='red', arrowstyle='->')
   - 使用双美元符号 `$$` 表示行间公式：`$$\alpha^2 + \beta^2 = \gamma^2$$`
   - 避免使用生僻Unicode字符，如不确定则使用LaTeX格式
   - 负号已通过 `matplotlib.rcParams['axes.unicode_minus'] = False` 设置
+- **mathtext不支持的LaTeX命令（必须避免）**：
+  ```python
+  # ❌ 错误：matplotlib mathtext不支持这些命令
+  r'$\xrightarrow{...}$'   # 不支持，使用 Unicode '→' 或 r'$\rightarrow$' 代替
+  r'$\xleftarrow{...}$'   # 不支持
+  r'$\overset{...}{...}$' # 不支持
+  r'$\underset{...}{...}$' # 不支持
+
+  # ✅ 正确替代方案
+  '→'                     # 使用 Unicode 箭头（推荐）
+  r'$\rightarrow$'        # 或使用普通箭头符号
+  r'$|0\rangle \xrightarrow{测量} |1\rangle$'  # ❌ 错误
+  r'$|0\rangle \rightarrow |1\rangle$'        # ✅ 正确
+  '流程：状态A → 状态B → 状态C'                  # ✅ 正确（使用Unicode箭头）
+  ```
 - **文字和公式的混合标注**：
   ```python
   # 正确示例
@@ -1440,25 +1680,58 @@ ax.annotate(
         print(f"   [DEBUG] 最终代码长度: {len(generated_code)} 字符")
         print(f"   [DEBUG] 代码片段 (前200字符):\n{generated_code[:200]}")
 
-        # 检查代码完整性（括号配对）
+        # 检查代码完整性（括号配对、字符串引号）
         print(f"   [DEBUG] 检查代码完整性...")
         def check_code_completeness(code):
-            """检查代码括号是否配对"""
+            """检查代码括号和引号是否配对"""
             stack = []
             brackets = {'(': ')', '[': ']', '{': '}'}
             in_string = False
             string_char = None
+            string_start_line = 1
             i = 0
+            current_line = 1
+
             while i < len(code):
                 char = code[i]
-                # 处理字符串
-                if char in '"\'' and (i == 0 or code[i-1] != '\\'):
+
+                # 跟踪行号用于错误报告
+                if char == '\n':
+                    current_line += 1
+
+                # 检查三引号字符串（多行字符串）
+                if i + 2 < len(code) and code[i:i+3] in ('"""', "'''"):
                     if not in_string:
                         in_string = True
-                        string_char = char
-                    elif char == string_char:
+                        string_char = code[i:i+3]
+                        string_start_line = current_line
+                        i += 3
+                        continue
+                    elif code[i:i+3] == string_char:
                         in_string = False
-                # 只在非字符串内容中检查括号
+                        string_char = None
+                        i += 3
+                        continue
+
+                # 检查普通字符串引号
+                if char in '"\'' and (i == 0 or code[i-1] != '\\') and not in_string:
+                    # 检查是否是三引号的开始（已经处理过，这里跳过）
+                    if i + 2 < len(code) and code[i:i+3] in ('"""', "'''"):
+                        i += 1
+                        continue
+                    in_string = True
+                    string_char = char
+                    string_start_line = current_line
+                elif char in '"\'' and (i == 0 or code[i-1] != '\\') and in_string:
+                    # 检查是否是三引号的结束（已经处理过，这里跳过）
+                    if i + 2 < len(code) and code[i:i+3] in ('"""', "'''"):
+                        i += 1
+                        continue
+                    if char == string_char:
+                        in_string = False
+                        string_char = None
+
+                # 在字符串外检查括号
                 if not in_string:
                     if char in brackets:
                         stack.append(char)
@@ -1469,8 +1742,15 @@ ax.annotate(
                         if char != expected:
                             return False, f"括号不匹配: 期望 '{expected}'，找到 '{char}'"
                 i += 1
+
+            # 检查是否有未闭合的字符串
+            if in_string:
+                return False, f"未闭合的字符串引号 {repr(string_char)} (从第{string_start_line}行开始)"
+
+            # 检查是否有未闭合的括号
             if stack:
                 return False, f"未闭合的括号: {stack}"
+
             return True, "代码完整"
 
         is_complete, check_msg = check_code_completeness(generated_code)
@@ -1589,16 +1869,14 @@ def execute_code(state: GraphState) -> GraphState:
         import time
         from datetime import datetime
 
-        # 获取脚本所在目录的绝对路径，确保路径正确
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        images_dir = os.path.join(script_dir, "images")
+        # 使用配置文件中的统一 images 目录
+        images_dir = Config.IMAGES_DIR
 
         # 确保 images 目录存在
         if not os.path.exists(images_dir):
             os.makedirs(images_dir)
             print(f"   [DEBUG] 创建 images 目录: {images_dir}")
 
-        print(f"   [DEBUG] 脚本目录: {script_dir}")
         print(f"   [DEBUG] Images 目录: {images_dir}")
 
         # 提取关键词
@@ -1680,7 +1958,7 @@ def execute_code(state: GraphState) -> GraphState:
 
         # 检查常见的matplotlib格式字符串错误
         import re
-        # 匹配类似 'purple-', 'orange-', 'brown-' 等错误格式
+        # 匹配类似 'purple-', 'orange-', 'brown-' 等错误格式（多字母颜色+符号）
         invalid_format_pattern = r"'[a-z]{2,}-'"
         invalid_matches = re.findall(invalid_format_pattern, state["generated_code"])
         if invalid_matches:
@@ -1689,8 +1967,63 @@ def execute_code(state: GraphState) -> GraphState:
             print(f"   [DEBUG] 找到的错误格式: {invalid_matches}")
             return {"error": error_msg}
 
+        # 自动修复：尝试自动修正常见的 color 参数错误
+        # 将 color='g--' 等模式自动转换为正确的格式
+        code_to_fix = state["generated_code"]
+        original_code = code_to_fix
+
+        # 先扫描代码中所有可能的 color 参数错误，用于调试
+        all_color_patterns = r"color\s*=\s*['\"][^\']*['\"]"
+        all_color_matches = re.findall(all_color_patterns, code_to_fix)
+        if all_color_matches:
+            print(f"   [DEBUG] 🔍 扫描到 {len(all_color_matches)} 处 color 参数: {all_color_matches}")
+
+        # 修复模式1: color='X-' -> color='colorname', linestyle='-'
+        def fix_color_format(match):
+            color_code = match.group(1)
+            linestyle_chars = match.group(2)
+            # 映射单字母颜色到完整颜色名
+            color_map = {'k': 'black', 'b': 'blue', 'r': 'red', 'g': 'green',
+                        'c': 'cyan', 'm': 'magenta', 'y': 'yellow', 'w': 'white'}
+            full_color = color_map.get(color_code, color_code)
+            # 映射线型符号到 linestyle 参数值
+            linestyle_map = {'-': '-', '--': '--', ':': ':', '-.': '-.'}
+            # 获取线型（取第一个字符作为主要线型）
+            linestyle = linestyle_map.get(linestyle_chars, linestyle_chars[0] if linestyle_chars else '-')
+            print(f"   [DEBUG] 🔧 修复: color='{color_code}{linestyle_chars}' -> color='{full_color}', linestyle='{linestyle}'")
+            return f"color='{full_color}', linestyle='{linestyle}'"
+
+        # 修复模式2: color='colorname-' -> color='colorname', linestyle='-'
+        # 处理多字母颜色名加线型符号的情况，如 'purple-', 'orange-', 'brown-' 等
+        def fix_color_format_multiletter(match):
+            color_name = match.group(1)
+            linestyle_char = match.group(2)
+            # 映射线型符号到 linestyle 参数值
+            linestyle_map = {'-': '-', ':': ':', '.': '.'}
+            linestyle = linestyle_map.get(linestyle_char, linestyle_char if linestyle_char else '-')
+            print(f"   [DEBUG] 🔧 修复多字母: color='{color_name}{linestyle_char}' -> color='{color_name}', linestyle='{linestyle}'")
+            return f"color='{color_name}', linestyle='{linestyle}'"
+
+        # 查找并替换 color='XYY' 模式（例如 color='g--', color='b-', color='k:'）
+        # 使用更宽松的模式：匹配 color=' 或 color=" 后跟任意单字母颜色+线型符号
+        fix_pattern = r"color\s*=\s*['\"]([a-z])([\-:\.]+)['\"]"
+        fixed_code = re.sub(fix_pattern, fix_color_format, code_to_fix)
+
+        # 查找并替换 color='colorname-' 模式（多字母颜色名）
+        # 匹配如 color='purple-', color='orange-', color='brown-' 等
+        fix_pattern2 = r"color\s*=\s*['\"]([a-z]{2,})([\-:\.])['\"]"
+        fixed_code = re.sub(fix_pattern2, fix_color_format_multiletter, fixed_code)
+
+        # 根据是否修复了错误，决定使用哪个版本的代码
+        if fixed_code != original_code:
+            print(f"   [DEBUG] 🔧 自动修正了 color 参数中的格式字符串错误")
+            print(f"   [DEBUG] 修正前片段: {original_code[:200]}...")
+            print(f"   [DEBUG] 修正后片段: {fixed_code[:200]}...")
+            code_to_execute = fixed_code  # 使用修正后的代码
+        else:
+            code_to_execute = state["generated_code"]  # 使用原始代码
+
         # 自动修正代码中的文件名：将所有 plt.savefig() 调用中的文件名替换为 target_filename 变量
-        code_to_execute = state["generated_code"]
 
         # 匹配 plt.savefig('filename.png') 或 plt.savefig("filename.png") 的模式
         savefig_pattern = r"plt\.savefig\(['\"]([^'\"]+\.png)['\"]\)"
@@ -1704,6 +2037,69 @@ def execute_code(state: GraphState) -> GraphState:
 
         # 执行代码（合并全局和局部变量，确保函数内部能访问numpy）
         exec_vars = {**global_vars, **local_vars}
+
+        # *** 最后的保险：全局搜索并替换所有可能的 color 参数错误 ***
+        # 这个模式会匹配任何 color='...' 或 color="..." 中包含格式字符串的情况
+        # 例如：color='k--', color="b-", color='g:' 等
+        final_fix_pattern = r"color\s*=\s*(['\"])([a-z])([\-:\.]+)\1"
+        def final_fix_color(match):
+            quote = match.group(1)
+            color_code = match.group(2)
+            linestyle = match.group(3)
+            color_map = {'k': 'black', 'b': 'blue', 'r': 'red', 'g': 'green',
+                        'c': 'cyan', 'm': 'magenta', 'y': 'yellow', 'w': 'white'}
+            full_color = color_map.get(color_code, color_code)
+            print(f"   [DEBUG] 🚨 最终修复: color={quote}{color_code}{linestyle}{quote} -> color='{full_color}', linestyle='{linestyle}'")
+            return f"color='{full_color}', linestyle='{linestyle}'"
+        code_to_execute = re.sub(final_fix_pattern, final_fix_color, code_to_execute)
+
+        # *** 自动修复特殊Unicode符号为LaTeX格式 ***
+        # 将matplotlib无法显示的Unicode符号替换为LaTeX格式
+        print(f"   [DEBUG] 🔍 检查并修复特殊Unicode符号...")
+
+        original_before_unicode_fix = code_to_execute
+
+        # 处理包含 • 符号的代码行
+        # 逐行处理，智能识别字符串字面量并添加r前缀
+        lines = code_to_execute.split('\n')
+        fixed_lines = []
+
+        for line in lines:
+            if '•' in line:
+                print(f"   [DEBUG] 🔧 发现包含 • 的代码行，进行修复")
+                # 先替换 • 为 $\\cdot$
+                fixed_line = line.replace('•', r'$\cdot$')
+
+                # 如果替换后包含LaTeX公式，需要确保字符串有r前缀
+                if r'$\cdot$' in fixed_line:
+                    # 匹配字符串字面量并添加r前缀（如果还没有的话）
+                    def add_r_prefix_if_needed(match):
+                        s = match.group(0)
+                        # 如果字符串包含LaTeX且没有r前缀，添加它
+                        if ('$' in s and not s.startswith("r'") and not s.startswith('r"')):
+                            # 避免重复添加r前缀
+                            if len(s) > 1:
+                                if s[0] == "'" and s[1] != 'r':
+                                    return 'r' + s
+                                elif s[0] == '"' and s[1] != 'r':
+                                    return 'r' + s
+                        return s
+
+                    # 简化的字符串匹配（不处理转义字符的情况，足以应对大多数场景）
+                    fixed_line = re.sub(r"(['\"]).*?\1", add_r_prefix_if_needed, fixed_line)
+
+                fixed_lines.append(fixed_line)
+            else:
+                fixed_lines.append(line)
+
+        code_to_execute = '\n'.join(fixed_lines)
+
+        if code_to_execute != original_before_unicode_fix:
+            print(f"   [DEBUG] ✅ Unicode符号修复完成")
+        else:
+            print(f"   [DEBUG] ✓ 未发现需要修复的Unicode符号")
+
+        print(f"   [DEBUG] ✓ 最终代码检查完成，准备执行...")
 
         # *** 强制使用 target_filename 的双重保险 ***
         # 保存原始的 plt.savefig 函数
@@ -1900,17 +2296,38 @@ def get_enhanced_drawing_prompt(base_prompt: str) -> str:
 3. 添加适当的标题、坐标轴标签、图例
 4. 使用清晰的配色方案（推荐：蓝色、红色、绿色、橙色、紫色）
 5. 设置合理的图形尺寸(figsize=(10, 8))和dpi=100
-6. 使用plt.tight_layout()自动调整布局
-7. 确保代码可以直接执行，无语法错误
+6. **布局规划与元素间距**（生死攸关，必须严格遵守）：
+   - **绘图前先规划布局**（最重要）：
+     * 在绘制任何元素前，先计算所有元素的位置分布
+     * 根据元素数量和大小，动态调整figsize确保不拥挤
+     * 元素较多时增大图形尺寸：(12, 10)或(14, 10)甚至更大
+   - **坐标轴范围强制要求**（最重要）：
+     * 必须根据实际内容范围动态设置，不能使用默认值
+     * 在所有元素绘制完成后，使用`ax.set_xlim()`和`ax.set_ylim()`设置范围
+     * 在最大最小值基础上留出15%-20%的边距，不要让元素贴边
+     * 示例：`ax.set_xlim(x_min - 0.5, x_max + 0.5)`
+   - **元素间距要求**：
+     * 任何两个元素之间至少保持0.5-1.0单位的间距（根据图形尺寸调整）
+     * 文字标注与图形主体之间至少偏移0.3-0.5单位
+     * 多个标注时使用分层或扇形分布，避免聚集在同一个区域
+   - **标注位置优化**：
+     * 使用`xytext`参数精确控制标注文字位置，不要直接在元素上标注
+     * 标注箭头的起点(xy)和文字位置(xytext)必须分开
+     * 示例：`ax.annotate('标签', xy=(x, y), xytext=(x+0.5, y+0.5), arrowprops=dict(arrowstyle='->'))`
+   - **布局验证**：
+     * 绘制完成后检查是否有元素重叠或过于拥挤
+     * 必要时手动调整部分元素位置
+7. 使用plt.tight_layout()自动调整布局
+8. 确保代码可以直接执行，无语法错误
 
 ### 数据可视化类图形（曲线图、折线图等）特定要求
-8. **数据点生成**（最重要）：
+10. **数据点生成**（最重要）：
    - 使用numpy生成密集的数据点：x = np.linspace(起始值, 结束值, 1000)
    - 确保x轴范围足够覆盖所需区域（如0到π、0到2等）
    - 计算y值时使用明确的数学公式，不要使用未定义的变量
    - 示例：y = np.sin(x) 或 y = (1 - (t/t_c)**8)**0.125
 
-9. **曲线绘制**：
+11. **曲线绘制**：
    - 使用ax.plot(x, y, 'b-', linewidth=2, label='曲线名称')或ax.plot(x, y, color='blue', linestyle='-', linewidth=2, label='曲线名称')
    - **格式字符串颜色规范**：如果使用格式字符串（如'b-'），只能用单字母颜色代码：
      * 'b' (blue蓝色), 'r' (red红色), 'g' (green绿色), 'c' (cyan青色), 'm' (magenta品红), 'y' (yellow黄色), 'k' (black黑色), 'w' (white白色)
@@ -1919,34 +2336,34 @@ def get_enhanced_drawing_prompt(base_prompt: str) -> str:
    - 线条宽度设为2-3，颜色醒目
    - 确保曲线在图形范围内清晰可见
 
-10. **坐标轴设置**：
+12. **坐标轴设置**：
     - 设置合理的x轴和y轴范围（使用ax.set_xlim和ax.set_ylim）
     - 添加网格线：plt.grid(True, alpha=0.3)辅助读数
     - 添加坐标轴标签和标题，使用中文标注
 
-11. **特殊标注**（如需要）：
+13. **特殊标注**（如需要）：
     - 标注关键点（极值、零点、交点、临界点等）
     - 添加文字注释说明特殊点或区域
     - 对于能隙、相变点等重要位置，使用箭头或虚线标注
 
-12. **代码完整性**（生死攸关）：
+14. **代码完整性**（生死攸关）：
     - 所有变量必须在代码中显式定义或生成
     - 不要使用任何未定义的变量（如data、result等）
     - 确保所有函数调用都完整，特别是括号闭合
     - 数据必须完整，不能有undefined values
 
-13. **物理规律正确性**：
+15. **物理规律正确性**：
     - 曲线形状必须符合物理规律（如能谱的连续性、磁化强度在临界点的平滑变化等）
     - 数学公式必须正确（如二维Ising模型的临界指数β=1/8）
     - 数据范围和比例关系必须合理
 
-14. **单摆/摆动系统角度标注**（必须严格遵守）：
+16. **单摆/摆动系统角度标注**（必须严格遵守）：
     - **角度顶点定位**：角度θ的顶点必须在支点/转轴处，绝不能标注在摆球或其他运动物体上
     - **参考线绘制**：必须绘制垂直向下的虚线作为角度参考线（从支点垂直向下延伸）
     - **角度弧线绘制**：使用Arc绘制角度弧线，弧的圆心必须在支点坐标
     - **角度计算**：对于单摆，从垂直向下方向（270度）开始，到摆线方向（270+θ度）
 
-15. **刚体约束条件和物理真实性**（必须严格遵守）：
+17. **刚体约束条件和物理真实性**（必须严格遵守）：
    - **接触面约束**：物体（如小车、滑块）必须完全贴合接触面，不能有穿模或间隙
    - **斜面约束**：斜面上的物体底部必须与斜面线精确重合，使用三角函数计算坐标
    - **刚体完整性**：物体内部不能有任何线条穿模，所有几何关系必须精确计算
@@ -2054,26 +2471,74 @@ matplotlib.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
 - 设置 dpi=100 或更高
 - 使用 plt.tight_layout() 自动调整布局
 
-### 2.2 线条和样式规范
+### 2.2 布局规划与元素间距（最重要，生死攸关）
+
+**绘图前必须先规划布局，这是最重要的步骤！**
+
+- **步骤1：评估元素数量和分布**
+  - 在绘制任何元素前，先确定需要绘制哪些对象
+  - 估算每个对象的大小和位置范围
+  - 规划对象之间的间距关系
+
+- **步骤2：动态设置坐标轴范围**（生死攸关）
+  - **必须使用显式范围设置**，不能依赖自动范围
+  - 在所有元素绘制完成后，根据实际范围设置：
+    ```python
+    # 计算所有元素的边界
+    x_min, x_max = min(所有x坐标), max(所有x坐标)
+    y_min, y_max = min(所有y坐标), max(所有y坐标)
+
+    # 留出15%-20%的边距（最重要！）
+    x_margin = (x_max - x_min) * 0.15 if x_max != x_min else 1.0
+    y_margin = (y_max - y_min) * 0.15 if y_max != y_min else 1.0
+
+    # 设置范围（必须留边距）
+    ax.set_xlim(x_min - x_margin, x_max + x_margin)
+    ax.set_ylim(y_min - y_margin, y_max + y_margin)
+    ```
+  - **绝对禁止**：让元素贴着坐标轴边缘显示
+
+- **步骤3：确保元素间距**
+  - 任何两个独立元素之间至少保持0.5-1.0单位间距
+  - 文字标注必须与图形主体分离，使用`xytext`偏移
+  - 多个标注应分散在不同区域，不要聚集在一起
+
+- **步骤4：动态调整图形尺寸**
+  - 如果元素数量多（>5个），增大figsize：(12, 10)或更大
+  - 如果是横向排列的元素，增加宽度：figsize=(14, 8)
+  - 如果是纵向排列的元素，增加高度：figsize=(10, 12)
+
+- **布局验证清单**：
+  - 所有元素是否完整显示在图形内？
+  - 是否有元素重叠或过于拥挤？
+  - 文字标注是否清晰可读，不被图形遮挡？
+  - 整体布局是否美观，元素分布是否均匀？
+  - 边距是否充足，元素是否贴边？
+
+### 2.3 线条和样式规范
 - 主要元素：linewidth=2-3，使用醒目颜色
 - 次要元素：linewidth=1-1.5，使用辅助色
 - 辅助线/参考线：linewidth=0.5-1，使用虚线或浅色
 
-### 2.3 标注和文字规范
+### 2.4 标注和文字规范
 - 所有重要部分都要有清晰的中文标注
 - 实心物体的文字必须标注在物体外部，不能遮挡物体
 - 空心物体的文字可以在内部或外部
+- 使用 ax.annotate() 添加带箭头的标注，格式：ax.annotate('文字', xy=(x,y), xytext=(偏移), arrowprops=dict(facecolor='color'))
+- **标注位置必须精心规划**：不要让标注挤在一起，使用不同的 xytext 偏移量分散标注
+- 文字标注使用半透明背景：bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)
 
-### 2.4 颜色方案
+### 2.5 颜色方案
 - 推荐颜色：蓝色('#1f77b4')、红色('#d62728')、绿色('#2ca02c')、橙色('#ff7f0e')、紫色('#9467bd')
 - 背景保持白色
 
-### 2.5 坐标轴和布局
+### 2.6 坐标轴和布局
 - 添加坐标轴标签和标题
 - 对于需要保持比例的图形，使用 ax.set_aspect('equal')
 - 使用 plt.grid(True, alpha=0.3) 添加网格线（数据可视化类）
+- **主体居中显示，留出适当边距**（与2.2节的布局规划配合）
 
-### 2.6 图层顺序和避免遮挡（重要）
+### 2.7 图层顺序和避免遮挡（重要）
 - 绘图顺序原则：背景→网格线→辅助线→主体图形→填充区域→边框→箭头→文字标注
 - 使用 zorder 参数控制图层顺序：
   - 背景元素：zorder=0-1

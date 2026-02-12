@@ -1,0 +1,238 @@
+/* Bamboo 全局样式 */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 响应式工作流面板布局 */
+.workflow-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  height: 100%;
+  min-height: 0; /* 关键：允许flex子元素收缩 */
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .workflow-panel {
+    grid-template-columns: 3fr 7fr; /* 左侧30%，右侧70% */
+  }
+}
+
+.workflow-panel-left,
+.workflow-panel-right {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* 关键：允许flex子元素收缩 */
+  overflow: hidden;
+}
+
+/* 左侧面板内部滚动 */
+.workflow-panel-left .ant-space {
+  flex: 1;
+  min-height: 0; /* 关键：允许flex子元素收缩 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  padding-bottom: 16px;
+}
+
+/* 确保 Space 组件容器对齐 */
+.workflow-panel-left .ant-space,
+.workflow-panel-right .ant-space {
+  align-items: stretch !important;
+}
+
+/* 重置 Space item 的 margin 和 padding，确保顶部对齐 */
+.workflow-panel-left .ant-space > .ant-space-item:first-child,
+.workflow-panel-right .ant-space > .ant-space-item:first-child {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.workflow-panel-left .ant-card {
+  max-width: 100%;
+}
+
+/* 右侧面板 - 不滚动，让 Card 内部滚动 */
+.workflow-panel-right .ant-space {
+  flex: 1;
+  min-height: 0; /* 关键：允许flex子元素收缩 */
+  overflow: hidden;
+  padding-right: 8px;
+  padding-bottom: 16px;
+}
+
+/* 确保 Space 内部的 Card 撑满容器 */
+.workflow-panel-right .ant-space > .ant-space-item {
+  max-width: 100%;
+  flex: 1;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.workflow-panel-right .ant-card {
+  max-width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 0 !important;
+}
+
+/* 确保左右面板的 Card 标题区域对齐 */
+.workflow-panel-left .ant-card-head,
+.workflow-panel-right .ant-card-head {
+  min-height: auto !important;
+  padding: 16px 24px !important;
+}
+
+/* 确保 Card 标题内的 Space 不会影响高度 */
+.workflow-panel-left .ant-card-head .ant-space {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Card body 限制高度，内部滚动 */
+.workflow-panel-right .ant-card .ant-card-body {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(100vh - 260px);
+  overflow: auto;
+  padding: 16px;
+}
+
+/* 图片自适应高度 */
+.workflow-panel-right .ant-image {
+  max-height: calc(100vh - 320px);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.workflow-panel-right .ant-image img {
+  max-height: calc(100vh - 320px);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* 视频自适应高度 */
+.workflow-panel-right video {
+  max-height: calc(100vh - 320px);
+  width: auto;
+  max-width: 100%;
+}
+
+/* Tabs 内容区域限制 */
+.workflow-panel-right .ant-tabs {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.workflow-panel-right .ant-tabs .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(100vh - 320px);
+  overflow: auto;
+}
+
+.workflow-panel-right .ant-tabs-tabpane {
+  height: 100%;
+}
+
+/* 代码块自适应 */
+.workflow-panel-right pre {
+  max-height: calc(100vh - 360px);
+  overflow: auto;
+}
+
+/* 工作流面板内部滚动条样式 */
+.workflow-panel-left .ant-space::-webkit-scrollbar,
+.workflow-panel-right .ant-space::-webkit-scrollbar {
+  width: 8px;
+}
+
+.workflow-panel-left .ant-space::-webkit-scrollbar-track,
+.workflow-panel-right .ant-space::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workflow-panel-left .ant-space::-webkit-scrollbar-thumb,
+.workflow-panel-right .ant-space::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 4px;
+}
+
+.workflow-panel-left .ant-space::-webkit-scrollbar-thumb:hover,
+.workflow-panel-right .ant-space::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* 暗色模式下的滚动条样式 */
+.dark .workflow-panel-left .ant-space::-webkit-scrollbar-thumb,
+.dark .workflow-panel-right .ant-space::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+}
+
+.dark .workflow-panel-left .ant-space::-webkit-scrollbar-thumb:hover,
+.dark .workflow-panel-right .ant-space::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
+}
+
+/* 流式内容查看器样式 - 撑满高度，保持宽度一致 */
+.workflow-panel-left .ant-space > .ant-space-item:has(.stream-content-viewer) {
+  flex: 1;
+  min-height: 0;
+}
+
+.stream-content-viewer {
+  height: 100%;
+}
+
+/* 代码块样式 - 撑满父容器 */
+.code-block {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Steps 进度条样式优化 */
+.step-progress-display .ant-steps {
+  flex-wrap: wrap;
+}
+
+.step-progress-display .ant-steps-item {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 移动端垂直布局 */
+@media (max-width: 767px) {
+  .steps-vertical .ant-steps {
+    flex-direction: column;
+  }
+
+  .steps-vertical .ant-steps-item {
+    flex: none;
+    min-width: 100%;
+  }
+}

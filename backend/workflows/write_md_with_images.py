@@ -5,6 +5,7 @@ from typing import TypedDict, List, Dict
 from langgraph.graph import StateGraph, END
 from openai import OpenAI
 from dotenv import load_dotenv
+from config import Config
 
 # 加载.env文件中的环境变量
 load_dotenv()
@@ -532,7 +533,7 @@ def generate_images(state: GraphState) -> GraphState:
 
     try:
         # 导入公共的图片生成函数
-        from draw_pic import generate_single_image
+        from workflows.draw_pic import generate_single_image
 
         image_requests = state["image_requests"]
         generated_images = []
@@ -669,8 +670,7 @@ def save_document(state: GraphState) -> GraphState:
         import re
         from datetime import datetime
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        docs_dir = os.path.join(script_dir, "docs")
+        docs_dir = Config.DOCS_DIR
 
         if not os.path.exists(docs_dir):
             os.makedirs(docs_dir)

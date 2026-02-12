@@ -1,15 +1,33 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 from flask_sock import Sock
+from flask_cors import CORS
 import os
 import threading
 import json
-from draw_pic import create_graph, GraphState
+import sys
+from workflows.draw_pic import create_graph, GraphState
 from datetime import datetime
+from config import Config
+
+# Fix UTF-8 encoding on Windows
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # 初始化 Flask 应用
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SECRET_KEY'] = Config.SECRET_KEY
 sock = Sock(app)
+
+# CORS 配置
+CORS(app, resources={
+    r"/api/*": {
+        "origins": Config.CORS_ORIGINS,
+        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # WebSocket 连接池 (按工作流类型分组)
 websocket_clients = {
@@ -115,20 +133,36 @@ MANIM_STEP_NAMES = {
      'save_video': '验证视频保存'
  }
 
+# ==================== 前端静态文件服务（生产环境）====================
+# 生产环境：服务前端静态文件
+# 开发环境：前端由 Vite 开发服务器提供服务（http://localhost:5173）
+FRONTEND_DIST = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'dist')
+
+@app.route('/api/health')
+def health_check():
+    """健康检查端点"""
+    return jsonify({
+        'status': 'healthy',
+        'workflows': ['drawing', 'document_with_images', 'manim']
+    })
+
 @app.route('/')
-def index():
-    """主页"""
-    return render_template('index.html')
-
-@app.route('/test')
-def test():
-    """测试页面"""
-    return render_template('test.html')
-
-@app.route('/history')
-def history():
-    """历史页面"""
-    return render_template('history.html')
+@app.route('/<path:path>')
+def serve_frontend(path='index.html'):
+    """服务前端静态文件（仅生产环境）"""
+    # 如果前端构建目录存在，则服务静态文件
+    if os.path.exists(FRONTEND_DIST):
+        if path != 'index.html':
+            file_path = os.path.join(FRONTEND_DIST, path)
+            if os.path.isfile(file_path):
+                return send_from_directory(FRONTEND_DIST, path)
+        return send_from_directory(FRONTEND_DIST, 'index.html')
+    else:
+        # 开发环境：前端由 Vite 开发服务器提供服务
+        return jsonify({
+            'message': 'Frontend development server should be running at http://localhost:5173',
+            'status': 'development_mode'
+        })
 
 @app.route('/api/workflow', methods=['POST'])
 def run_workflow():
@@ -173,10 +207,10 @@ def get_status():
 def list_images():
     """列出所有生成的图片"""
     plot_files = []
-    if os.path.exists('images'):
-        for file in os.listdir('images'):
+    if os.path.exists(os.path.join(Config.BASE_DIR, 'static', 'images')):
+        for file in os.listdir(Config.IMAGES_DIR):
             if file.startswith('plot_') and file.endswith('.png'):
-                filepath = os.path.join('images', file)
+                filepath = os.path.join(Config.IMAGES_DIR, file)
                 plot_files.append({
                     'name': file,
                     'path': f'/api/images/{file}',
@@ -191,13 +225,13 @@ def list_images():
 @app.route('/api/images/<filename>')
 def get_image(filename):
     """获取图片文件"""
-    return send_from_directory('images', filename)
+    return send_from_directory(Config.IMAGES_DIR, filename)
 
 @app.route('/api/images/<filename>', methods=['DELETE'])
 def delete_image(filename):
     """删除图片文件"""
     try:
-        filepath = os.path.join('images', filename)
+        filepath = os.path.join(Config.IMAGES_DIR, filename)
         if os.path.exists(filepath):
             os.remove(filepath)
             return jsonify({'message': '图片已删除'})
@@ -331,7 +365,7 @@ def ai_generate_image():
             return jsonify({'error': '请提供图片描述'}), 400
 
         # 导入绘图工作流
-        from draw_pic import create_graph, GraphState
+        from workflows.draw_pic import create_graph, GraphState
 
         print(f"\n[DEBUG] ===== AI生成图片工作流启动 =====")
         print(f"[DEBUG] 图片描述: '{description}'")
@@ -379,10 +413,10 @@ def ai_generate_image():
 def list_documents():
     """列出所有生成的文档"""
     doc_files = []
-    if os.path.exists('docs'):
-        for file in os.listdir('docs'):
+    if os.path.exists(Config.DOCS_DIR):
+        for file in os.listdir(Config.DOCS_DIR):
             if file.startswith('doc_') and file.endswith('.md'):
-                filepath = os.path.join('docs', file)
+                filepath = os.path.join(Config.DOCS_DIR, file)
                 doc_files.append({
                     'type': 'document',
                     'name': file,
@@ -395,16 +429,26 @@ def list_documents():
     doc_files.sort(key=lambda x: x['created'], reverse=True)
     return jsonify(doc_files)
 
+@app.route('/api/document/clear', methods=['POST'])
+def clear_document_history():
+    """清除文档历史记录"""
+    workflow_statuses['document_with_images']['steps'] = []
+    workflow_statuses['document_with_images']['result'] = None
+    workflow_statuses['document_with_images']['error'] = None
+    update_and_emit_status('document_with_images')
+    print("[DEBUG] 文档历史已清除，状态已发送")
+    return jsonify({'message': '文档历史记录已清除'})
+
 @app.route('/api/documents/<filename>')
 def get_document(filename):
     """获取文档内容"""
-    return send_from_directory('docs', filename)
+    return send_from_directory(Config.DOCS_DIR, filename)
 
 @app.route('/api/documents/<filename>/content')
 def get_document_content(filename):
     """获取文档的文本内容"""
     try:
-        filepath = os.path.join('docs', filename)
+        filepath = os.path.join(Config.DOCS_DIR, filename)
         if os.path.exists(filepath):
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -418,7 +462,7 @@ def get_document_content(filename):
 def delete_document(filename):
     """删除文档文件"""
     try:
-        filepath = os.path.join('docs', filename)
+        filepath = os.path.join(Config.DOCS_DIR, filename)
         if os.path.exists(filepath):
             os.remove(filepath)
             return jsonify({'message': '文档已删除'})
@@ -463,10 +507,10 @@ def run_manim_workflow():
 def list_manim_videos():
     """列出所有生成的视频"""
     video_files = []
-    if os.path.exists('videos'):
-        for file in os.listdir('videos'):
+    if os.path.exists(Config.VIDEOS_DIR):
+        for file in os.listdir(Config.VIDEOS_DIR):
             if file.startswith('manim_') and file.endswith('.mp4'):
-                filepath = os.path.join('videos', file)
+                filepath = os.path.join(Config.VIDEOS_DIR, file)
                 video_files.append({
                     'name': file,
                     'path': f'/api/manim/videos/{file}',
@@ -480,13 +524,13 @@ def list_manim_videos():
 @app.route('/api/manim/videos/<filename>')
 def get_manim_video(filename):
     """获取视频文件"""
-    return send_from_directory('videos', filename)
+    return send_from_directory(Config.VIDEOS_DIR, filename)
 
 @app.route('/api/manim/videos/<filename>', methods=['DELETE'])
 def delete_manim_video(filename):
     """删除视频文件"""
     try:
-        filepath = os.path.join('videos', filename)
+        filepath = os.path.join(Config.VIDEOS_DIR, filename)
         if os.path.exists(filepath):
             os.remove(filepath)
             return jsonify({'message': '视频已删除'})
@@ -513,10 +557,10 @@ def list_history():
     items = []
 
     # 添加图片
-    if os.path.exists('images'):
-        for file in os.listdir('images'):
+    if os.path.exists(os.path.join(Config.BASE_DIR, 'static', 'images')):
+        for file in os.listdir(Config.IMAGES_DIR):
             if file.startswith('plot_') and file.endswith('.png'):
-                filepath = os.path.join('images', file)
+                filepath = os.path.join(Config.IMAGES_DIR, file)
                 items.append({
                     'type': 'image',
                     'name': file,
@@ -526,10 +570,10 @@ def list_history():
                 })
 
     # 添加文档
-    if os.path.exists('docs'):
-        for file in os.listdir('docs'):
+    if os.path.exists(Config.DOCS_DIR):
+        for file in os.listdir(Config.DOCS_DIR):
             if file.startswith('doc_') and file.endswith('.md'):
-                filepath = os.path.join('docs', file)
+                filepath = os.path.join(Config.DOCS_DIR, file)
                 items.append({
                     'type': 'document',
                     'name': file,
@@ -539,10 +583,10 @@ def list_history():
                 })
 
     # 添加视频
-    if os.path.exists('videos'):
-        for file in os.listdir('videos'):
+    if os.path.exists(Config.VIDEOS_DIR):
+        for file in os.listdir(Config.VIDEOS_DIR):
             if file.startswith('manim_') and file.endswith('.mp4'):
-                filepath = os.path.join('videos', file)
+                filepath = os.path.join(Config.VIDEOS_DIR, file)
                 items.append({
                     'type': 'video',
                     'name': file,
@@ -560,48 +604,52 @@ def list_history():
 def websocket_connection(ws):
     """处理 WebSocket 连接"""
     print(f"[DEBUG] WebSocket 客户端连接")
-    
-    # 默认连接到 drawing
-    ws.workflow_type = 'drawing'
-    
+
+    # 验证请求来源
+    origin = ws.environ.get('HTTP_ORIGIN', '')
+    if origin and origin not in Config.CORS_ORIGINS:
+        print(f"[WARNING] WebSocket 连接被拒绝：无效的源 {origin}")
+        ws.close()
+        return
+
     try:
+        # 首先接收客户端的 workflow_type 消息
+        print(f"[DEBUG] 等待客户端 workflow_type 消息...")
+        first_message = ws.receive()
+        if first_message is None:
+            print(f"[DEBUG] 客户端在发送 workflow_type 前断开连接")
+            return
+
+        data = json.loads(first_message)
+        workflow_type = data.get('workflow_type', 'drawing')
+        ws.workflow_type = workflow_type
+        print(f"[DEBUG] 客户端工作流类型: {workflow_type}")
+
+        # 验证 workflow_type
+        if workflow_type not in ['drawing', 'document_with_images', 'manim']:
+            print(f"[WARNING] 无效的工作流类型: {workflow_type}")
+            ws.close()
+            return
+
         # 将客户端添加到连接池
         if ws.workflow_type not in websocket_clients:
             websocket_clients[ws.workflow_type] = []
         websocket_clients[ws.workflow_type].append(ws)
         print(f"[DEBUG] 客户端已添加到 {ws.workflow_type} 连接池，当前连接数: {len(websocket_clients[ws.workflow_type])}")
-        
-        # 发送初始状态（先获取数据，释放锁后再发送）
+
+        # 只发送当前工作流类型的初始状态（避免发送多个消息导致协议错误）
         with status_lock:
-            drawing_status = workflow_statuses['drawing'].copy()
-            doc_status = workflow_statuses.get('document_with_images', {}).copy() if 'document_with_images' in workflow_statuses else None
-            manim_status = workflow_statuses.get('manim', {}).copy() if 'manim' in workflow_statuses else None
+            status = workflow_statuses.get(ws.workflow_type, {}).copy()
 
         print(f"[DEBUG] 准备发送初始状态...")
         ws.send(json.dumps({
             'type': 'status_update',
-            'workflow_type': 'drawing',
-            **drawing_status
+            'workflow_type': ws.workflow_type,
+            **status
         }))
-        print(f"[DEBUG] 绘图状态已发送")
+        print(f"[DEBUG] {ws.workflow_type} 状态已发送")
 
-        if doc_status:
-            ws.send(json.dumps({
-                'type': 'status_update',
-                'workflow_type': 'document_with_images',
-                **doc_status
-            }))
-            print(f"[DEBUG] 文档状态已发送")
-
-        if manim_status:
-            ws.send(json.dumps({
-                'type': 'status_update',
-                'workflow_type': 'manim',
-                **manim_status
-            }))
-            print(f"[DEBUG] Manim 状态已发送")
-        
-        # 接收消息（使用 while 循环而不是 for 迭代）
+        # 持续监听后续消息
         print(f"[DEBUG] 开始监听客户端消息...")
         while True:
             try:
@@ -609,27 +657,32 @@ def websocket_connection(ws):
                 if message is None:
                     print(f"[DEBUG] 客户端断开连接（消息为 None）")
                     break
-                
+
                 data = json.loads(message)
                 if 'workflow_type' in data:
                     # 更新客户端的工作流类型
                     old_type = ws.workflow_type
                     new_type = data['workflow_type']
-                    
+
+                    # 验证新的 workflow_type
+                    if new_type not in ['drawing', 'document_with_images', 'manim']:
+                        print(f"[WARNING] 无效的工作流类型: {new_type}")
+                        continue
+
                     # 只有当类型真正改变时才处理
                     if old_type != new_type:
                         ws.workflow_type = new_type
-                        
+
                         # 从旧的连接池中移除
                         if old_type in websocket_clients and ws in websocket_clients[old_type]:
                             websocket_clients[old_type].remove(ws)
-                        
+
                         # 添加到新的连接池
                         if ws.workflow_type not in websocket_clients:
                             websocket_clients[ws.workflow_type] = []
                         if ws not in websocket_clients[ws.workflow_type]:
                             websocket_clients[ws.workflow_type].append(ws)
-                        
+
                         print(f"[DEBUG] 客户端工作流类型变更: {old_type} -> {ws.workflow_type}")
                     else:
                         print(f"[DEBUG] 客户端工作流类型未改变: {old_type}")
@@ -647,7 +700,7 @@ def websocket_connection(ws):
                 else:
                     print(f"[WARNING] 处理消息失败: {e}")
                     break
-    
+
     except Exception as e:
         print(f"[DEBUG] WebSocket 错误: {e}")
     finally:
@@ -672,7 +725,7 @@ def run_drawing_workflow_thread(user_prompt):
             from langgraph.graph import StateGraph, END
 
             # 原始节点函数
-            from draw_pic import refine_prompt, generate_code, execute_code, save_image
+            from workflows.draw_pic import refine_prompt, generate_code, execute_code, save_image
 
             # 包装节点以添加进度报告
             def monitored_refine_prompt(state):
@@ -722,6 +775,7 @@ def run_drawing_workflow_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['drawing']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['drawing']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -753,6 +807,7 @@ def run_drawing_workflow_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['drawing']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['drawing']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -784,6 +839,7 @@ def run_drawing_workflow_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['drawing']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['drawing']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -895,7 +951,7 @@ def run_document_with_images_thread(user_prompt):
 
     try:
         # 导入带图片的文档工作流
-        from write_md_with_images import create_graph as create_doc_with_images_graph, GraphState as DocWithImagesGraphState
+        from workflows.write_md_with_images import create_graph as create_doc_with_images_graph, GraphState as DocWithImagesGraphState
 
         # 添加步骤名称映射
         DOC_WITH_IMAGES_STEP_NAMES = {
@@ -915,7 +971,7 @@ def run_document_with_images_thread(user_prompt):
             from langgraph.graph import StateGraph, END
 
             # 导入原始节点函数
-            from write_md_with_images import (
+            from workflows.write_md_with_images import (
                 refine_prompt, generate_outline, generate_content,
                 identify_image_requests, generate_images, embed_images,
                 save_document, verify_document
@@ -941,6 +997,7 @@ def run_document_with_images_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['document_with_images']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -972,6 +1029,7 @@ def run_document_with_images_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['document_with_images']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1003,6 +1061,7 @@ def run_document_with_images_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['document_with_images']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1030,6 +1089,7 @@ def run_document_with_images_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['document_with_images']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1057,6 +1117,7 @@ def run_document_with_images_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['document_with_images']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1084,6 +1145,7 @@ def run_document_with_images_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['document_with_images']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1111,6 +1173,7 @@ def run_document_with_images_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['document_with_images']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1138,6 +1201,7 @@ def run_document_with_images_thread(user_prompt):
                 # 节点完成时立即更新状态
                 if result.get('error'):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['document_with_images']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1258,7 +1322,7 @@ def run_manim_workflow_thread(user_prompt, quality):
 
     try:
         # 导入 Manim 动画工作流
-        from manim_gen import create_graph as create_manim_graph, ManimState
+        from workflows.manim_gen import create_graph as create_manim_graph, ManimState
 
         # 创建监控的工作流
         def create_monitored_manim_graph():
@@ -1266,7 +1330,7 @@ def run_manim_workflow_thread(user_prompt, quality):
             from langgraph.graph import StateGraph, END
 
             # 导入原始节点函数
-            from manim_gen import (
+            from workflows.manim_gen import (
                 refine_prompt, generate_code, execute_code, save_video
             )
 
@@ -1287,6 +1351,7 @@ def run_manim_workflow_thread(user_prompt, quality):
 
                 if result.get('error'):
                     workflow_statuses['manim']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['manim']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
                     workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1314,6 +1379,7 @@ def run_manim_workflow_thread(user_prompt, quality):
 
                 if result.get('error'):
                     workflow_statuses['manim']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['manim']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
                     workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1342,6 +1408,7 @@ def run_manim_workflow_thread(user_prompt, quality):
 
                 if result.get('error'):
                     workflow_statuses['manim']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['manim']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
                     workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1370,6 +1437,7 @@ def run_manim_workflow_thread(user_prompt, quality):
 
                 if result.get('error'):
                     workflow_statuses['manim']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['manim']['steps'][-1]['error'] = result.get('error', '未知错误')
                 else:
                     workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
                     workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1469,8 +1537,8 @@ def run_manim_workflow_thread(user_prompt, quality):
 
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
-    print("🚀 启动 Web 服务器...")
-    print("📝 绘图模式: http://localhost:5001")
-    print("📄 文档模式: http://localhost:5001")
+    print("Starting Web server...")
+    print("Drawing mode: http://localhost:5001")
+    print("Document mode: http://localhost:5001")
     # 开发环境使用自动重载，生产环境可设置为 False
     run_simple('0.0.0.0', 5001, app, use_reloader=False, use_debugger=False, use_evalex=False, threaded=True)

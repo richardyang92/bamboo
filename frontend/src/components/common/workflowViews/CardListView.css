@@ -1,0 +1,156 @@
+/**
+ * CardListView 样式
+ * 优化后的卡片列表视图样式
+ */
+
+.card-list-view {
+  width: 100%;
+}
+
+.card-list-view.empty {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+  border: 1px dashed #d9d9d9;
+}
+
+.card-list-view .current-step {
+  position: relative;
+}
+
+.card-list-view .current-step::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 70%;
+  background: linear-gradient(180deg, #1890ff 0%, #40a9ff 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.3);
+  animation: current-indicator-pulse 2s ease-in-out infinite;
+}
+
+@keyframes current-indicator-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(24, 144, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(24, 144, 255, 0.5);
+  }
+}
+
+.card-list-view.compact .ant-space {
+  width: 100%;
+}
+
+.card-list-view.compact .ant-space-item {
+  width: 100%;
+}
+
+.card-list-view .ant-space {
+  animation: list-enter 0.5s ease-out;
+}
+
+@keyframes list-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 卡片容器优化 */
+.card-list-view .ant-space-item {
+  animation: card-item-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+@keyframes card-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 每个卡片的入场延迟 */
+.card-list-view .ant-space-item:nth-child(1) { animation-delay: 0.05s; }
+.card-list-view .ant-space-item:nth-child(2) { animation-delay: 0.1s; }
+.card-list-view .ant-space-item:nth-child(3) { animation-delay: 0.15s; }
+.card-list-view .ant-space-item:nth-child(4) { animation-delay: 0.2s; }
+.card-list-view .ant-space-item:nth-child(5) { animation-delay: 0.25s; }
+.card-list-view .ant-space-item:nth-child(6) { animation-delay: 0.3s; }
+.card-list-view .ant-space-item:nth-child(7) { animation-delay: 0.35s; }
+.card-list-view .ant-space-item:nth-child(8) { animation-delay: 0.4s; }
+
+/* 紧凑模式样式优化 */
+.card-list-view.compact .ant-space {
+  gap: 8px !important;
+}
+
+.card-list-view.compact .current-step::before {
+  height: 50%;
+  left: -8px;
+}
+
+/* 深色模式支持 */
+:root[data-theme='dark'] .card-list-view.empty {
+  background: linear-gradient(135deg, #1f1f1f 0%, #141414 100%);
+  border-color: #303030;
+}
+
+:root[data-theme='dark'] .card-list-view .current-step::before {
+  background: linear-gradient(180deg, #1677cc 0%, #2c5d94 100%);
+  box-shadow: 0 0 8px rgba(22, 119, 204, 0.4);
+}
+
+/* 移动端响应式 */
+@media (max-width: 768px) {
+  .card-list-view {
+    padding: 0;
+  }
+
+  .card-list-view.empty {
+    min-height: 160px;
+    font-size: 13px;
+  }
+
+  .card-list-view .ant-space {
+    gap: 10px !important;
+  }
+
+  .card-list-view .current-step::before {
+    left: -6px;
+    width: 3px;
+  }
+
+  .card-list-view.compact .current-step::before {
+    left: -4px;
+    width: 2px;
+  }
+
+  .card-list-view.compact .ant-space {
+    gap: 6px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-list-view .ant-space {
+    gap: 8px !important;
+  }
+
+  .card-list-view .current-step::before {
+    left: -4px;
+    width: 2px;
+  }
+}

@@ -23,13 +23,12 @@
 - 🌐 **中文支持**：完美支持中文标注和公式渲染
 - 🎓 **教育场景**：特别适合制作数学、物理教学动画
 
-### 📝 文档生成（命令行）
+### 📝 文档生成
 - ✨ **AI写作**：使用DeepSeek模型生成高质量Markdown文档
 - 🧮 **数学公式**：完美支持LaTeX数学公式渲染（基于KaTeX）
 - 📚 **结构化内容**：自动生成大纲、章节、示例代码
 - 🎨 **格式规范**：遵循标准的Markdown语法规范
 - 📖 **多领域支持**：技术文档、教程、学术文章等
-- 💻 **命令行模式**：通过CLI命令生成文档
 
 ### 🖼️ 带图片的文档生成
 - 🎯 **智能识别**：自动识别文档中需要图片的部分
@@ -51,141 +50,121 @@
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 后端安装
 
 ```bash
-# 使用虚拟环境（推荐）
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate  # Windows
+# 进入后端目录
+cd backend
 
-# 安装所有依赖
+# 创建虚拟环境（推荐）
+python -m venv venv
+
+# 激活虚拟环境
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate   # Windows
+
+# 安装依赖
 pip install -r requirements.txt
 ```
 
-### 2. 配置API密钥
-
-复制并编辑环境变量文件：
+### 2. 前端安装
 
 ```bash
+# 进入前端目录
+cd frontend
+
+# 安装依赖
+npm install
+```
+
+### 3. 配置API密钥
+
+在后端目录创建并编辑环境变量文件：
+
+```bash
+cd backend
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，添加你的DeepSeek API密钥：
+编辑 `backend/.env` 文件，添加你的 DeepSeek API 密钥：
 
 ```
 DEEPSEEK_API_KEY=你的DeepSeek密钥
 ```
 
-> 💡 **提示**：获取DeepSeek API密钥请访问 https://platform.deepseek.com
+> 💡 **提示**：获取 DeepSeek API 密钥请访问 https://platform.deepseek.com
 
 ## 使用方式
 
-### 方式一：快速启动脚本（推荐）
+### 方式一：快速启动脚本（仅后端）
 
-使用提供的启动脚本：
+使用提供的启动脚本快速启动后端服务：
 
 ```bash
+# Linux/Mac
 chmod +x start.sh  # 首次运行需要添加执行权限
 ./start.sh
+
+# Windows
+start.bat
 ```
 
-脚本会自动检查虚拟环境和配置文件，然后启动Web服务器。
+脚本会自动检查虚拟环境和配置文件，然后启动后端服务器。访问 `http://localhost:5001` 即可使用前端界面。
 
-### 方式二：Web界面
+### 方式二：开发模式（完整前后端）
 
-手动启动Web服务器：
+**适用于开发调试，支持热更新。**
+
+终端 1 - 启动后端：
+```bash
+cd backend
+source venv/bin/activate  # Windows: venv\Scripts\activate
+python app.py
+# 运行在 http://localhost:5001
+```
+
+终端 2 - 启动前端：
+```bash
+cd frontend
+npm run dev
+# 运行在 http://localhost:5173
+```
+
+然后在浏览器中访问：`http://localhost:5173`
+
+### 方式三：生产构建模式
+
+构建前端静态文件，由后端统一服务：
 
 ```bash
-# 确保已激活虚拟环境
-source venv/bin/activate
+# 1. 构建前端
+cd frontend
+npm run build
 
-# 启动服务器
+# 2. 启动后端（会自动服务前端静态文件）
+cd ../backend
+source venv/bin/activate
 python app.py
 ```
 
-然后在浏览器中访问：`http://localhost:5001`
+访问 `http://localhost:5001` 即可使用完整功能。
 
-Web界面功能：
+### Web 界面功能
+
+主页面 (`/`) 功能：
 - 📊 **智能绘图**：实时输入绘图需求，生成图表
-- 🖼️ **带图片文档生成**：输入主题，自动生成包含图表的Markdown文档
+- 📝 **文档生成**：输入主题，自动生成包含图表的 Markdown 文档
+- 🎬 **动画生成**：生成数学教学动画，支持多种质量选项
+- ✏️ **AI 编辑器**：智能文档编辑，支持 AI 修改选中文本
+- 🎨 **图片生成**：在文档编辑器中直接生成图表并插入
 - 📊 **可视化展示**：实时显示工作流执行步骤
-- ⚡ **实时更新**：WebSocket推送状态更新
-- 🖼️ **预览功能**：预览生成的图表和文档
-- 📜 **历史记录**：访问 `/history` 页面查看所有生成内容
-- 📥 **一键下载**：下载生成的图片和文档
-- 🗑️ **管理功能**：删除不需要的历史记录
-- ✏️ **AI编辑器**：选中文本后使用AI进行智能修改
-- 🎨 **图片生成**：在编辑器中直接生成图表并插入
-- 🔧 **WebSocket测试**：访问 `/test` 页面测试WebSocket连接
+- ⚡ **实时更新**：WebSocket 推送状态更新
 
-### 方式三：命令行模式
-
-#### 绘图功能
-
-```bash
-python draw_pic.py "你的绘图需求"
-```
-
-示例：
-
-```bash
-python draw_pic.py "绘制一个简单的折线图，显示2023年每个月的销售额"
-```
-
-#### 文档生成功能
-
-```bash
-python write_md.py "文档主题"
-```
-
-示例：
-
-```bash
-python write_md.py "量子力学基础教程"
-```
-
-#### 带图片的文档生成功能
-
-```bash
-python write_md_with_images.py "文档主题"
-```
-
-示例：
-
-```bash
-python write_md_with_images.py "量子力学基础教程"
-```
-
-此功能会自动识别文档中需要图表的部分，并生成相关图表整合到文档中。
-
-#### Manim 动画生成功能
-
-```bash
-python manim_gen.py "动画描述" [质量]
-```
-
-示例：
-
-```bash
-# 生成中等质量动画（默认）
-python manim_gen.py "展示一个圆从左侧移动到右侧的动画"
-
-# 生成低质量动画（快速预览）
-python manim_gen.py "绘制正弦函数图像" low
-
-# 生成高质量动画
-python manim_gen.py "展示三维立方体旋转" high
-
-# 生成4K超高清动画
-python manim_gen.py "复杂的数学公式变换动画" 4k
-```
-
-**质量选项说明**：
-- `low`: 480p, 15fps - 快速预览，文件小
-- `medium`: 720p, 30fps - 平衡质量（默认）
-- `high`: 1080p, 60fps - 最佳质量
-- `4k`: 2160p, 60fps - 超高清质量
+历史记录页面 (`/history`) 功能：
+- 🖼️ **预览功能**：预览生成的图表、文档和视频
+- 📜 **历史记录**：查看和管理所有生成内容
+- 📥 **一键下载**：下载生成的文件
+- 🗑️ **文件管理**：删除单个文档、图片或视频
 
 ## 工作流程
 
@@ -208,43 +187,57 @@ python manim_gen.py "复杂的数学公式变换动画" 4k
 3. **执行绘图代码** (execute_code)
    - 在安全环境中执行生成的代码
    - 内置空白图像防护机制
-   - 验证数据有效性（检查NaN、Inf、全零等）
+   - 验证数据有效性（检查 NaN、Inf、全零等）
    - 显式设置坐标轴范围和颜色
    - 自动生成唯一文件名
-   - 保存图表到本地
+   - 保存图表到 `backend/static/images/` 目录
 
 4. **验证图片保存** (save_image)
    - 验证图片是否成功生成
    - 获取图片大小等信息
    - 返回执行结果
 
-### 📝 文档生成工作流（命令行）
+### 📝 文档生成工作流
 
-文档生成采用类似的5步工作流（仅支持命令行模式）：
+文档生成采用增强的 8 步工作流：
 
 1. **润写作需求** (refine_prompt)
    - 增强用户的写作需求
    - 添加文档写作要求和格式规范
-   - 包含数学公式KaTeX兼容性要求
+   - 包含数学公式 KaTeX 兼容性要求
+   - 包含图片生成指令
 
 2. **生成文档大纲** (generate_outline)
-   - 调用DeepSeek模型生成结构化大纲
+   - 调用 DeepSeek 模型生成结构化大纲
    - 确保逻辑清晰、层次分明
-   - 覆盖主题的所有重要方面
+   - 标注需要图表的位置
 
 3. **生成文档内容** (generate_content)
    - 根据大纲展开完整内容
-   - 使用标准Markdown语法
-   - 自动修复LaTeX公式转义问题
+   - 使用标准 Markdown 语法
+   - 在适当位置插入图片占位符
 
-4. **保存文档** (save_document)
-   - 保存到 `docs/` 目录
+4. **识别图片需求** (identify_image_requests)
+   - 分析文档内容，识别需要生成的图表
+   - 确定每个图片的类型和描述
+
+5. **生成图表** (generate_images)
+   - 为每个图片需求生成对应的绘图代码
+   - 智能识别图表类型（流程图、数据图表、力学图等）
+   - 针对不同类型使用优化的绘图策略
+   - 执行代码并保存图片
+
+6. **整合图片到文档** (embed_images)
+   - 将生成的图片路径替换文档中的占位符
+   - 生成包含图片的完整文档内容
+
+7. **保存文档** (save_document)
+   - 保存到 `backend/static/docs/` 目录
    - 自动生成唯一文件名（带时间戳）
-   - 返回文件路径和大小
 
-5. **验证文档** (verify_document)
-   - 验证文件是否成功保存
-   - 统计文档字数、行数等信息
+8. **验证文档** (verify_document)
+   - 验证文件和图片是否成功保存
+   - 统计文档字数、行数、图片数量等信息
 
 ### 🖼️ 带图片的文档生成工作流
 
@@ -310,7 +303,7 @@ Manim 动画生成采用 4 步工作流：
    - 使用 Manim 渲染指定质量的视频
    - 自动清理缓存避免潜在问题
    - 支持多种渲染质量选项
-   - 自动查找并移动生成的视频文件
+   - 自动查找并移动生成的视频文件到 `backend/static/videos/` 目录
 
 4. **验证视频保存** (save_video)
    - 验证视频是否成功生成
@@ -319,50 +312,73 @@ Manim 动画生成采用 4 步工作流：
 
 ## 代码结构
 
+### 前后端分离架构
+
 ```
 bamboo/
-├── draw_pic.py               # 绘图工作流核心逻辑
-├── write_md.py               # 文档生成工作流核心逻辑
-├── write_md_with_images.py   # 带图片的文档生成工作流
-├── manim_gen.py              # Manim动画工作流核心逻辑
-├── app.py                    # Web服务器和API接口
-├── start.sh                  # 快速启动脚本
-├── AGENTS.md                 # 开发指南和代码规范
-├── templates/
-│   ├── index.html            # Web前端主界面
-│   ├── history.html          # 历史记录页面
-│   └── test.html             # WebSocket测试页面
-├── images/                   # 生成的图表保存目录
-├── docs/                     # 生成的文档保存目录
-├── videos/                   # 生成的动画视频保存目录
-├── requirements.txt           # Python依赖包
-├── .env                      # 环境变量配置
-├── .env.example              # 环境变量示例
-├── .gitignore                # Git忽略文件配置
-├── LICENSE                   # Apache 2.0许可证
-└── README.md                 # 项目文档
+├── backend/                  # Flask 后端
+│   ├── app.py              # Flask 服务器、WebSocket、REST API
+│   ├── config.py           # 集中配置管理
+│   ├── requirements.txt    # Python 依赖包
+│   ├── workflows/          # LangGraph 工作流定义
+│   │   ├── draw_pic.py           # 4步绘图工作流
+│   │   ├── write_md_with_images.py # 8步文档工作流
+│   │   └── manim_gen.py          # 4步动画工作流
+│   ├── static/             # 生成的文件
+│   │   ├── images/        # 生成的图表
+│   │   ├── docs/          # 生成的 Markdown 文档
+│   │   └── videos/        # 生成的 Manim 动画
+│   └── .env               # 环境变量配置
+├── frontend/                 # React + TypeScript 前端
+│   ├── src/
+│   │   ├── components/    # React 组件（按工作流类型组织）
+│   │   │   ├── drawing/   # 绘图工作流 UI
+│   │   │   ├── document/  # 文档工作流 UI
+│   │   │   ├── manim/     # Manim 工作流 UI
+│   │   │   └── common/    # 共享组件
+│   │   ├── pages/         # 页面组件
+│   │   │   ├── HomePage.tsx
+│   │   │   └── HistoryPage.tsx
+│   │   ├── services/      # API 客户端、WebSocket 客户端
+│   │   ├── types/         # TypeScript 类型定义
+│   │   └── main.tsx       # React 入口
+│   ├── vite.config.ts     # Vite 配置（开发服务器 + 代理）
+│   └── package.json
+├── start.sh                 # 快速启动脚本（Linux/Mac）
+├── start.bat                # 快速启动脚本（Windows）
+├── CLAUDE.md                # Claude Code 开发指南
+├── .env.example             # 环境变量示例
+├── .gitignore               # Git 忽略文件配置
+├── LICENSE                  # Apache 2.0 许可证
+└── README.md                # 项目文档
 ```
 
 ### 主要文件说明
 
-- **draw_pic.py**: 绘图工作流，定义图表生成的各个节点
-- **write_md.py**: 文档生成工作流（命令行模式），定义文档创作的各个节点
-- **write_md_with_images.py**: 带图片的文档生成工作流，支持自动生成图表并整合到文档中
-- **manim_gen.py**: Manim 动画工作流，定义数学动画生成的各个节点
-- **app.py**: Flask Web服务器，提供RESTful API和WebSocket支持
-- **AGENTS.md**: 开发指南，包含代码风格规范、工作流模式和API集成说明
-- **start.sh**: 快速启动脚本，自动检查环境并启动服务
-- **templates/index.html**: 响应式Web界面，支持绘图、文档编辑和动画生成功能
-- **templates/history.html**: 历史记录页面，展示所有生成的图表、文档和视频
-- **templates/test.html**: WebSocket连接测试页面，用于调试实时通信
+**后端核心文件：**
+- [backend/app.py](backend/app.py) - Flask Web 服务器，提供 RESTful API 和 WebSocket 支持
+- [backend/config.py](backend/config.py) - 集中配置管理（环境变量、路径、CORS）
+- [backend/workflows/draw_pic.py](backend/workflows/draw_pic.py) - 绘图工作流，定义图表生成的各个节点
+- [backend/workflows/write_md_with_images.py](backend/workflows/write_md_with_images.py) - 带图片的文档生成工作流
+- [backend/workflows/manim_gen.py](backend/workflows/manim_gen.py) - Manim 动画工作流，定义数学动画生成的各个节点
+
+**前端核心文件：**
+- [frontend/src/services/api.ts](frontend/src/services/api.ts) - Axios HTTP 客户端，封装所有 API 调用
+- [frontend/src/services/websocket.ts](frontend/src/services/websocket.ts) - WebSocket 单例，处理实时通信
+- [frontend/src/types/index.ts](frontend/src/types/index.ts) - TypeScript 类型定义
+- [frontend/src/components/](frontend/src/components/) - React 组件库，按工作流类型组织
+- [frontend/vite.config.ts](frontend/vite.config.ts) - Vite 配置，包含开发服务器代理
+
+**启动脚本：**
+- [start.sh](start.sh) / [start.bat](start.bat) - 自动检查虚拟环境并启动后端服务
 
 ## API 接口
 
-Web服务器提供以下API接口：
+后端提供以下 RESTful API 接口（详见 [backend/app.py](backend/app.py)）：
 
 ### 绘图相关
 
-#### POST /api/workflow
+#### POST /api/drawing/workflow
 启动新的绘图工作流
 
 **请求体**：
@@ -372,10 +388,19 @@ Web服务器提供以下API接口：
 }
 ```
 
-### 文档相关
+#### GET /api/images
+列出所有生成的图片
 
-#### GET /api/documents
-列出所有生成的文档文件
+#### GET /api/images/<filename>
+获取指定的图片文件
+
+#### DELETE /api/images/<filename>
+删除指定的图片文件
+
+#### POST /api/drawing/clear
+清除所有绘图历史记录
+
+### 文档相关
 
 #### POST /api/document/workflow-with-images
 启动带图片的文档生成工作流
@@ -387,10 +412,8 @@ Web服务器提供以下API接口：
 }
 ```
 
-该接口会自动识别文档中需要图表的部分，并生成相关图表整合到文档中。
-
 #### POST /api/document/ai-modify
-AI修改选中的文本内容
+AI 修改选中的文本内容
 
 **请求体**：
 ```json
@@ -407,10 +430,8 @@ AI修改选中的文本内容
 }
 ```
 
-此接口用于文档编辑器中的AI辅助编辑功能。
-
 #### POST /api/document/generate-image
-AI生成图片（用于文档编辑器中插入图表）
+生成图片（用于文档编辑器）
 
 **请求体**：
 ```json
@@ -427,7 +448,14 @@ AI生成图片（用于文档编辑器中插入图表）
 }
 ```
 
-此接口调用绘图工作流生成指定描述的图表。
+#### GET /api/documents
+列出所有生成的文档文件
+
+#### GET /api/documents/<filename>/content
+获取文档的文本内容
+
+#### DELETE /api/documents/<filename>
+删除指定的文档文件
 
 ### Manim 动画相关
 
@@ -460,63 +488,40 @@ AI生成图片（用于文档编辑器中插入图表）
 #### POST /api/manim/clear
 清除所有动画历史记录
 
-### 绘图相关（补充）
-
-#### GET /api/documents/<filename>/content
-获取文档的文本内容（JSON格式）
-
-#### DELETE /api/documents/<filename>
-删除指定的文档文件
-
-### 绘图相关（补充）
-
-#### POST /api/drawing/workflow
-启动绘图工作流（新的API端点）
-
-**请求体**：
-```json
-{
-  "prompt": "绘制一个折线图"
-}
-```
-
-#### GET /api/status
-获取当前绘图工作流状态
-
-#### POST /api/drawing/clear
-清除绘图历史记录
-
 ### 通用接口
 
 #### GET /api/history
-获取所有历史记录（图表和文档）
+获取所有历史记录（图表、文档和视频）
 
-#### GET /api/images
-列出所有生成的图片
+#### GET /api/health
+健康检查
 
-#### GET /api/images/<filename>
-获取指定的图片文件
+### WebSocket
 
-#### DELETE /api/images/<filename>
-删除指定的图片文件
+**端点**: `ws://localhost:5001/ws`
 
-#### POST /api/clear
-清除所有历史记录
+**连接流程**：
+1. 客户端连接到 WebSocket
+2. 客户端发送第一条消息指定工作流类型：`{"workflow_type": "drawing|document_with_images|manim"}`
+3. 服务器将客户端添加到对应工作流类型的连接池
+4. 服务器向特定类型的客户端广播状态更新
 
-### WebSocket事件
-- `status_update`: 接收工作流状态更新（支持绘图、文档生成和Manim动画工作流）
-- `connect`: 客户端连接
-- `disconnect`: 客户端断开
+**消息类型**：
+- `status_update` - 工作流进度更新
+- `stream_content` - AI 流式响应
 
-**支持的工作流类型**：
-- `drawing` - 绘图工作流
-- `document_with_images` - 文档生成工作流
-- `manim` - Manim 动画工作流
-
-客户端连接示例：
+**客户端连接示例**：
 ```javascript
 const socket = new WebSocket('ws://localhost:5001/ws');
-socket.send(JSON.stringify({workflow_type: 'manim'}));
+socket.onopen = () => {
+  socket.send(JSON.stringify({workflow_type: 'drawing'}));
+};
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'status_update') {
+    console.log('Status:', data.status);
+  }
+};
 ```
 
 ## 输出示例
@@ -627,31 +632,50 @@ import matplotlib.pyplot as plt
 
 ## 注意事项
 
-1. **API密钥安全**：不要将你的API密钥提交到版本控制系统
-2. **模型选择**：目前使用的是DeepSeek模型，提供高性价比的代码生成能力
+1. **API 密钥安全**：不要将你的 API 密钥提交到版本控制系统
+2. **模型选择**：目前使用的是 DeepSeek 模型，提供高性价比的代码生成能力
 3. **代码安全**：生成的代码会在安全环境中执行，但仍建议谨慎处理未知输入
 4. **中文显示**：程序已配置中文支持，但可能需要根据你的系统调整字体设置
-5. **端口配置**：默认使用5001端口，如需修改请编辑 [app.py](app.py) 最后一行
+5. **端口配置**：后端默认使用 5001 端口，前端开发服务器默认使用 5173 端口
 6. **Manim 依赖**：Manim 需要安装 FFmpeg 和 LaTeX，首次使用可能需要较长时间安装依赖
 7. **动画渲染**：Manim 动画渲染可能需要 30 秒到 5 分钟，取决于场景复杂度和质量设置
+8. **开发环境**：开发模式下需要同时运行后端和前端两个服务
+9. **生产部署**：生产环境需要先构建前端，然后由后端统一服务静态文件
+
+## 开发指南
+
+详细的开发指南和代码规范请参阅 [CLAUDE.md](CLAUDE.md)，包括：
+
+- LangGraph 工作流架构模式
+- 前后端 API 接口定义
+- WebSocket 通信协议
+- DeepSeek API 集成最佳实践
+- 错误处理和代码模式
+- 常见问题和解决方案
 
 ## 技术栈
 
 ### 后端
-- **Web框架**: Flask 3.0.0
-- **实时通信**: Flask-SocketIO 5.3.6 + Eventlet
+- **Web 框架**: Flask 3.0.0
+- **实时通信**: flask-sock 0.7.0 (WebSocket)
+- **跨域支持**: flask-cors 4.0.0
 - **工作流引擎**: LangGraph 0.0.28
-- **AI模型**: DeepSeek (兼容OpenAI API)
+- **AI 模型**: DeepSeek (兼容 OpenAI API)
 - **绘图**: Matplotlib >= 3.9.0
 - **数值计算**: NumPy >= 2.0.0
 - **动画渲染**: Manim >= 0.18.0
 - **视频处理**: FFmpeg
 
 ### 前端
-- **基础**: 原生 HTML/CSS/JavaScript
-- **Markdown渲染**: Marked.js
-- **数学公式**: KaTeX
-- **实时通信**: Socket.IO Client
+- **框架**: React 19.2.0
+- **语言**: TypeScript 5.9.3
+- **构建工具**: Vite 7.3.1
+- **UI 组件库**: Ant Design 6.3.0
+- **路由**: react-router-dom 7.13.0
+- **HTTP 客户端**: Axios 1.13.5
+- **Markdown 渲染**: react-markdown 10.1.0
+- **数学公式**: KaTeX 0.16.28
+- **实时通信**: 原生 WebSocket API
 
 ## DeepSeek API 优势
 
@@ -665,30 +689,52 @@ import matplotlib.pyplot as plt
 ## 常见问题
 
 ### 1. 端口被占用
-如果5001端口被占用，可以修改 [app.py](app.py) 最后一行：
+如果 5001 端口被占用，可以修改 [backend/app.py](backend/app.py) 最后一行：
 ```python
-socketio.run(app, debug=True, host='0.0.0.0', port=5002)  # 改为5002
+if __name__ == '__main__':
+    socket.run(app, debug=True, host='0.0.0.0', port=5002)  # 改为5002
 ```
+
+如果前端 5173 端口被占用，可以修改 [frontend/vite.config.ts](frontend/vite.config.ts) 中的 `server.port` 配置。
 
 ### 2. 生成的图片中文显示异常
 系统已配置多种中文字体备选方案。如果仍有问题，请检查系统字体安装情况。
 
-### 3. API调用失败
+### 3. API 调用失败
 请检查：
-- API密钥是否正确配置在 `.env` 文件中
+- API 密钥是否正确配置在 `backend/.env` 文件中
 - 网络连接是否正常
-- API额度是否充足
-- 获取API密钥请访问 https://platform.deepseek.com
+- API 额度是否充足
+- 获取 API 密钥请访问 https://platform.deepseek.com
 
-### 4. 启动脚本无执行权限
+### 4. 前端无法连接后端
+请检查：
+- 后端服务是否正常运行在 http://localhost:5001
+- [frontend/vite.config.ts](frontend/vite.config.ts) 中的代理配置是否正确
+- CORS 配置是否包含前端端口（见 [backend/config.py](backend/config.py)）
+
+### 5. WebSocket 无法接收更新
+请检查：
+- 客户端是否在连接后发送了 `workflow_type` 消息
+- 工作流类型是否正确（`drawing`、`document_with_images` 或 `manim`）
+
+### 6. 启动脚本无执行权限
 ```bash
 chmod +x start.sh
 ```
 
-### 5. 虚拟环境激活失败
+### 7. 虚拟环境激活失败
 确保使用正确的激活命令：
 - Linux/Mac: `source venv/bin/activate`
 - Windows: `venv\Scripts\activate`
+
+### 8. 前端构建失败
+确保已安装 Node.js 18+ 和 npm 9+，然后重新安装依赖：
+```bash
+cd frontend
+rm -rf node_modules package-lock.json
+npm install
+```
 
 ## 扩展建议
 

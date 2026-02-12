@@ -68,6 +68,12 @@ def refine_prompt(state: ManimState) -> ManimState:
 - **线条和箭头**: Line(), Arrow(), DashedLine()
 - **组合对象**: VGroup(), VDict()
 - **3D对象**: ThreeDScene, Cube(), Sphere()
+- **表格**: IntegerTable(), MathTable()
+
+### 重要参数限制
+- **Table/Cell 边框宽度**: 使用 `stroke_width` 参数，不要使用 `linewidth`
+- 错误示例: `Table(..., cell_config={'linewidth': 2})` ❌
+- 正确示例: `Table(..., cell_config={'stroke_width': 2})` ✅
 
 ### 性能优化要求（关键！）
 1. **限制self.play()调用**: 整个场景的 `self.play()` 调用次数应控制在 10-15 次以内，包括所有元素的创建、变换和淡出
@@ -155,7 +161,7 @@ class AnimationScene(Scene):  # 对于3D场景使用 ThreeDScene
 ### 4. 动画播放规范
 - 使用 `self.play(Animation(mobject, run_time=1))` 控制时长
 - 使用 `self.wait(seconds)` 添加停顿
-- 多个对象同时动画: `self.play(Animation(a), Animation(b), run_time=1)`
+- 多个对象同时动画: `self.play(Animation(mobj_a), Animation(mobj_b), run_time=1)`
 - 连续播放: `self.play(Animation1(), Animation2(), Animation3())`
 - 分组动画: `self.play(AnimationGroup(*animations))`
 
@@ -351,6 +357,7 @@ for bar in bars:
 ✓ **限制self.play()调用**: 整个场景的 `self.play()` 调用次数应控制在 10-15 次以内，避免用循环创建太多动画帧
 ✓ **元素无重叠**: 所有 `next_to()` 必须指定 `buff>=0.5`，或使用 `VGroup.arrange()` 自动布局
 ✓ **2D/3D对象分离**: ThreeDScene 中必须使用 `Line3D`, `Arrow3D` 等3D对象，**绝对禁止使用 `DashedLine`, `Line`, `Arrow` 等2D对象**
+✓ **Table/Cell样式限制**: Table 和 Cell 类不支持 `linewidth` 参数！创建表格时不要传递 `linewidth` 给 Cell。如需设置边框宽度，使用 `stroke_width` 参数或创建后使用 `.set_stroke()` 方法
 
 ### 14. 质量检查清单
 - [ ] 代码语法正确（所有括号、引号配对）
@@ -496,20 +503,55 @@ for i in range(10):  # 这会创建10个self.play()调用，渲染很慢
             generated_code = generated_code[3:-3].strip()
 
         def check_code_completeness(code):
-            """检查代码括号是否配对"""
+            """检查代码括号和引号是否配对"""
             stack = []
             brackets = {'(': ')', '[': ']', '{': '}'}
             in_string = False
             string_char = None
+            string_start_line = 1
             i = 0
+            current_line = 1
+
             while i < len(code):
                 char = code[i]
-                if char in '"\'' and (i == 0 or code[i-1] != '\\'):
+
+                # 跟踪行号用于错误报告
+                if char == '\n':
+                    current_line += 1
+
+                # 检查三引号字符串（多行字符串）
+                if i + 2 < len(code) and code[i:i+3] in ('"""', "'''"):
                     if not in_string:
                         in_string = True
-                        string_char = char
-                    elif char == string_char:
+                        string_char = code[i:i+3]
+                        string_start_line = current_line
+                        i += 3
+                        continue
+                    elif code[i:i+3] == string_char:
                         in_string = False
+                        string_char = None
+                        i += 3
+                        continue
+
+                # 检查普通字符串引号
+                if char in '"\'' and (i == 0 or code[i-1] != '\\') and not in_string:
+                    # 检查是否是三引号的开始（已经处理过，这里跳过）
+                    if i + 2 < len(code) and code[i:i+3] in ('"""', "'''"):
+                        i += 1
+                        continue
+                    in_string = True
+                    string_char = char
+                    string_start_line = current_line
+                elif char in '"\'' and (i == 0 or code[i-1] != '\\') and in_string:
+                    # 检查是否是三引号的结束（已经处理过，这里跳过）
+                    if i + 2 < len(code) and code[i:i+3] in ('"""', "'''"):
+                        i += 1
+                        continue
+                    if char == string_char:
+                        in_string = False
+                        string_char = None
+
+                # 在字符串外检查括号
                 if not in_string:
                     if char in brackets:
                         stack.append(char)
@@ -520,8 +562,15 @@ for i in range(10):  # 这会创建10个self.play()调用，渲染很慢
                         if char != expected:
                             return False, f"括号不匹配: 期望 '{expected}'，找到 '{char}'"
                 i += 1
+
+            # 检查是否有未闭合的字符串
+            if in_string:
+                return False, f"未闭合的字符串引号 {repr(string_char)} (从第{string_start_line}行开始)"
+
+            # 检查是否有未闭合的括号
             if stack:
                 return False, f"未闭合的括号: {stack}"
+
             return True, "代码完整"
 
         is_complete, check_msg = check_code_completeness(generated_code)
@@ -568,9 +617,9 @@ def execute_code(state: ManimState) -> ManimState:
         import glob
         import time
         from datetime import datetime
+        from config import Config
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        videos_dir = os.path.join(script_dir, "videos")
+        videos_dir = Config.VIDEOS_DIR
 
         if not os.path.exists(videos_dir):
             os.makedirs(videos_dir)

@@ -1,35 +1,44 @@
 # 环境变量文件
+backend/.env
 .env
 
-# Python虚拟环境
+# Python 虚拟环境
+backend/venv/
 venv/
 env/
 
-# 生成的图片文件夹
+# 生成的文件
+backend/static/images/
+backend/static/docs/
+backend/static/videos/
+
+# 旧文件路径（已废弃）
 images/
-
-# 生成的文档文件夹
 docs/
-
-# 生成的视频文件夹
 videos/
 
-# 生成的图片
-plot.png
+# Python 编译文件
+__pycache__/
+*.pyc
+*.pyo
+
+# 前端依赖和构建
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# 生成的文件
 *.png
 *.jpg
 *.jpeg
-*.pdf
 *.svg
-
-# Python编译文件
-__pycache__/
-*.pyc
+*.mp4
+*.pdf
 
 # 日志文件
 *.log
 
-# IDE配置
+# IDE 配置
 .vscode/
 .idea/
 *.swp

@@ -1,25 +1,39 @@
 #!/bin/bash
 
-echo "🚀 启动 AI 智能绘图工作流 Web 服务器..."
+echo "======================================="
+echo "  Bamboo AI 工作流系统"
+echo "======================================="
 echo ""
 
-# 检查虚拟环境
-if [ ! -d "venv" ]; then
-    echo "❌ 虚拟环境不存在，请先运行："
-    echo "   python -m venv venv"
-    echo "   source venv/bin/activate"
-    echo "   pip install -r requirements.txt"
+# 检查并启动后端
+if [ -d "backend" ]; then
+    echo "Starting backend server..."
+
+    # 进入后端目录
+    cd backend
+
+    # 检查虚拟环境
+    if [ ! -d "venv" ]; then
+        echo "[ERROR] Virtual environment not found, creating..."
+        python -m venv venv
+    fi
+
+    # 激活虚拟环境
+    source venv/bin/activate
+
+    # 检查.env文件
+    if [ ! -f ".env" ]; then
+        echo "[ERROR] .env file not found, please configure:"
+        echo "   1. Copy environment variable example file"
+        echo "   2. Edit backend/.env, add your DEEPSEEK_API_KEY"
+        deactivate
+        exit 1
+    fi
+
+    # 安装依赖并启动
+    pip install -r requirements.txt -q
+    python app.py
+else
+    echo "[ERROR] backend directory not found"
     exit 1
 fi
-
-# 检查.env文件
-if [ ! -f ".env" ]; then
-    echo "❌ .env 文件不存在，请先配置："
-    echo "   cp .env.example .env"
-    echo "   然后编辑 .env 文件，添加你的 ZHIPUAI_API_KEY"
-    exit 1
-fi
-
-# 激活虚拟环境并启动服务器
-source venv/bin/activate
-python app.py

@@ -1,0 +1,220 @@
+/**
+ * WorkflowViewToolbar 样式
+ * 优化后的工具栏样式，更好的视觉层次和现代设计
+ */
+
+.workflow-view-toolbar {
+  width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+  border: 1px solid #e8e9ea;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.toolbar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+
+/* 视图模式切换器样式 */
+.view-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.workflow-view-toolbar .ant-segmented {
+  background: linear-gradient(135deg, #e8e9eb 0%, #e0e2e6 100%);
+  padding: 3px;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.workflow-view-toolbar .ant-segmented-thumb {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+}
+
+.workflow-view-toolbar .ant-segmented-item {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.workflow-view-toolbar .ant-segmented-item:hover {
+  color: #1890ff;
+}
+
+.workflow-view-toolbar .ant-segmented-item-selected {
+  color: #1890ff;
+  font-weight: 600;
+}
+
+.workflow-view-toolbar .view-label {
+  font-size: 13px;
+}
+
+/* 进度指示器样式 */
+.progress-indicator {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.progress-indicator .ant-progress-text {
+  font-size: 10px !important;
+  font-weight: 600;
+}
+
+.progress-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #595959;
+}
+
+.progress-text.complete {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+/* 控制按钮样式 */
+.control-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  border: 1px solid #e8e9ea;
+}
+
+.control-btn:hover {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border-color: #91d5ff;
+  color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.15);
+}
+
+.control-btn.compact-active {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border-color: #1890ff;
+  color: #1890ff;
+  font-weight: 600;
+}
+
+/* 分割线样式 */
+.workflow-view-toolbar .ant-divider-vertical {
+  height: 24px;
+  margin: 0 8px;
+  border-color: #d9d9d9;
+}
+
+/* 深色模式支持 */
+:root[data-theme='dark'] .workflow-view-toolbar {
+  background: linear-gradient(135deg, #1f1f1f 0%, #141414 100%);
+  border-color: #303030;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme='dark'] .workflow-view-toolbar .ant-segmented {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+}
+
+:root[data-theme='dark'] .workflow-view-toolbar .ant-segmented-thumb {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2f2f2f 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme='dark'] .control-btn {
+  background: transparent;
+  border-color: #3a3a3a;
+  color: #d9d9d9;
+}
+
+:root[data-theme='dark'] .control-btn:hover {
+  background: linear-gradient(135deg, #111b26 0%, #0c1322 100%);
+  border-color: #1677cc;
+  color: #1677cc;
+}
+
+:root[data-theme='dark'] .control-btn.compact-active {
+  background: linear-gradient(135deg, #111b26 0%, #0c1322 100%);
+  border-color: #1677cc;
+  color: #1677cc;
+}
+
+:root[data-theme='dark'] .progress-text {
+  color: #bfbfbf;
+}
+
+:root[data-theme='dark'] .workflow-view-toolbar .ant-divider-vertical {
+  border-color: #404040;
+}
+
+/* 移动端响应式 */
+@media (max-width: 768px) {
+  .workflow-view-toolbar {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .toolbar-main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .toolbar-main > .ant-space {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .view-label {
+    display: none;
+  }
+
+  .control-btn {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .control-btn span:not(.anticon) {
+    display: none;
+  }
+
+  .progress-indicator .ant-progress-text {
+    font-size: 9px !important;
+  }
+
+  .progress-text {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .workflow-view-toolbar {
+    padding: 8px 10px;
+  }
+
+  .workflow-view-toolbar .ant-segmented {
+    flex: 1;
+  }
+
+  .workflow-view-toolbar .ant-segmented-item {
+    flex: 1;
+    justify-content: center;
+    padding: 4px 6px;
+  }
+}
