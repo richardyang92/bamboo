@@ -36,6 +36,14 @@
 - 🔗 **无缝集成**：图片与文档内容完美融合
 - 💡 **灵活配置**：支持自定义图片生成选项
 
+### 🤖 多模型支持
+- 🔄 **多提供商**：支持 DeepSeek 和 Ollama 两个 LLM 提供商
+- 🎯 **模型切换**：运行时动态切换不同模型
+- 🧠 **推理模式**：支持显示模型思考过程（DeepSeek-R1、DeepSeek-Reasoner）
+- 📊 **模型管理**：自动检测本地 Ollama 模型列表
+- 🎛️ **全局选择**：全局模型选择栏，统一管理所有工作流的模型
+- ⚡ **流式显示**：区分普通内容和思考内容，提供更好的 AI 响应体验
+
 ### 🌐 Web界面
 - 📡 **实时更新**：通过WebSocket实时推送执行进度
 - 📜 **历史记录**：查看和管理所有生成的图表和文档
@@ -86,13 +94,35 @@ cd backend
 cp .env.example .env
 ```
 
-编辑 `backend/.env` 文件，添加你的 DeepSeek API 密钥：
+编辑 `backend/.env` 文件，添加你的 API 密钥：
 
 ```
 DEEPSEEK_API_KEY=你的DeepSeek密钥
+DEFAULT_LLM_PROVIDER=deepseek
 ```
 
-> 💡 **提示**：获取 DeepSeek API 密钥请访问 https://platform.deepseek.com
+**支持的 LLM 提供商：**
+
+1. **DeepSeek** (默认)
+   - 模型：`deepseek-chat`、`deepseek-reasoner`
+   - 需要配置 `DEEPSEEK_API_KEY`
+   - 获取密钥：https://platform.deepseek.com
+
+2. **Ollama** (本地模型)
+   - 支持 `llama3.1`、`llama3`、`mistral`、`codellama`、`qwen2.5`、`deepseek-coder`、`deepseek-r1` 等
+   - 需要先安装并启动 Ollama 服务
+   - 安装：https://ollama.com/download
+   - 启动服务：`ollama serve`
+   - 拉取模型示例：`ollama pull llama3.1`
+
+**环境变量说明：**
+- `DEEPSEEK_API_KEY` - DeepSeek API 密钥（必填）
+- `DEFAULT_LLM_PROVIDER` - 默认 LLM 提供商（`deepseek` 或 `ollama`，默认：`deepseek`）
+- `OLLAMA_BASE_URL` - Ollama 服务地址（默认：`http://localhost:11434/v1`）
+- `DEEPSEEK_MODEL` - DeepSeek 默认模型（默认：`deepseek-chat`）
+- `OLLAMA_MODEL` - Ollama 默认模型（默认：`llama3.1`）
+
+> 💡 **提示**：无需配置 API 密钥即可切换使用 Ollama 本地模型
 
 ## 使用方式
 
@@ -152,13 +182,18 @@ python app.py
 ### Web 界面功能
 
 主页面 (`/`) 功能：
+- 🤖 **全局模型选择**：顶部全局模型栏，统一管理所有工作流的模型选择
 - 📊 **智能绘图**：实时输入绘图需求，生成图表
 - 📝 **文档生成**：输入主题，自动生成包含图表的 Markdown 文档
 - 🎬 **动画生成**：生成数学教学动画，支持多种质量选项
 - ✏️ **AI 编辑器**：智能文档编辑，支持 AI 修改选中文本
 - 🎨 **图片生成**：在文档编辑器中直接生成图表并插入
+- 🧠 **推理模式**：支持显示模型思考过程（DeepSeek-R1、DeepSeek-Reasoner）
+- 📊 **节点图视图**：可视化展示工作流执行状态和节点关系
+- ⏱️ **时间线视图**：按时间轴展示工作流执行步骤
 - 📊 **可视化展示**：实时显示工作流执行步骤
 - ⚡ **实时更新**：WebSocket 推送状态更新
+- 🔄 **模型切换**：运行时动态切换不同的 LLM 模型
 
 历史记录页面 (`/history`) 功能：
 - 🖼️ **预览功能**：预览生成的图表、文档和视频
@@ -375,6 +410,76 @@ bamboo/
 ## API 接口
 
 后端提供以下 RESTful API 接口（详见 [backend/app.py](backend/app.py)）：
+
+### 模型管理
+
+#### GET /api/models
+获取可用的模型列表
+
+**响应**：
+```json
+{
+  "providers": {
+    "deepseek": {
+      "provider": "deepseek",
+      "models": ["deepseek-chat", "deepseek-reasoner"],
+      "supports_reasoning": true,
+      "current": "deepseek-chat"
+    },
+    "ollama": {
+      "provider": "ollama",
+      "models": ["llama3.1", "llama3", "mistral", ...],
+      "supports_reasoning": false,
+      "current": "llama3.1"
+    }
+  },
+  "current_provider": "deepseek",
+  "current_config": {
+    "provider": "deepseek",
+    "model": "deepseek-chat",
+    "supports_reasoning": false,
+    "enable_thinking": false
+  }
+}
+```
+
+#### POST /api/models/switch
+切换当前使用的模型（运行时）
+
+**请求体**：
+```json
+{
+  "provider": "ollama",
+  "model": "llama3.1",
+  "enable_thinking": false
+}
+```
+
+**响应**：
+```json
+{
+  "success": true,
+  "current_config": {
+    "provider": "ollama",
+    "model": "llama3.1",
+    "supports_reasoning": false,
+    "enable_thinking": false
+  }
+}
+```
+
+#### GET /api/models/current
+获取当前使用的模型配置
+
+**响应**：
+```json
+{
+  "provider": "deepseek",
+  "model": "deepseek-chat",
+  "supports_reasoning": false,
+  "enable_thinking": false
+}
+```
 
 ### 绘图相关
 
@@ -633,14 +738,16 @@ import matplotlib.pyplot as plt
 ## 注意事项
 
 1. **API 密钥安全**：不要将你的 API 密钥提交到版本控制系统
-2. **模型选择**：目前使用的是 DeepSeek 模型，提供高性价比的代码生成能力
-3. **代码安全**：生成的代码会在安全环境中执行，但仍建议谨慎处理未知输入
-4. **中文显示**：程序已配置中文支持，但可能需要根据你的系统调整字体设置
-5. **端口配置**：后端默认使用 5001 端口，前端开发服务器默认使用 5173 端口
-6. **Manim 依赖**：Manim 需要安装 FFmpeg 和 LaTeX，首次使用可能需要较长时间安装依赖
-7. **动画渲染**：Manim 动画渲染可能需要 30 秒到 5 分钟，取决于场景复杂度和质量设置
-8. **开发环境**：开发模式下需要同时运行后端和前端两个服务
-9. **生产部署**：生产环境需要先构建前端，然后由后端统一服务静态文件
+2. **模型选择**：支持 DeepSeek 和 Ollama 两个提供商，可在 Web 界面动态切换
+3. **Ollama 服务**：使用 Ollama 模型前需确保服务已启动（`ollama serve`）
+4. **推理模式**：只有特定模型支持推理模式（DeepSeek-R1、DeepSeek-Reasoner）
+5. **代码安全**：生成的代码会在安全环境中执行，但仍建议谨慎处理未知输入
+6. **中文显示**：程序已配置中文支持，但可能需要根据你的系统调整字体设置
+7. **端口配置**：后端默认使用 5001 端口，前端开发服务器默认使用 5173 端口
+8. **Manim 依赖**：Manim 需要安装 FFmpeg 和 LaTeX，首次使用可能需要较长时间安装依赖
+9. **动画渲染**：Manim 动画渲染可能需要 30 秒到 5 分钟，取决于场景复杂度和质量设置
+10. **开发环境**：开发模式下需要同时运行后端和前端两个服务
+11. **生产部署**：生产环境需要先构建前端，然后由后端统一服务静态文件
 
 ## 开发指南
 
@@ -675,6 +782,7 @@ import matplotlib.pyplot as plt
 - **HTTP 客户端**: Axios 1.13.5
 - **Markdown 渲染**: react-markdown 10.1.0
 - **数学公式**: KaTeX 0.16.28
+- **流程图组件**: ReactFlow (节点图可视化)
 - **实时通信**: 原生 WebSocket API
 
 ## DeepSeek API 优势
@@ -735,6 +843,25 @@ cd frontend
 rm -rf node_modules package-lock.json
 npm install
 ```
+
+### 9. Ollama 服务无法连接
+请检查：
+- Ollama 服务是否已启动：`ollama serve`
+- 服务地址是否正确：默认 `http://localhost:11434`
+- 模型是否已下载：`ollama list`，如需下载：`ollama pull llama3.1`
+
+### 10. 模型切换不生效
+请检查：
+- 是否通过 Web 界面的全局模型选择器进行切换
+- Ollama 服务是否正在运行
+- 模型名称是否正确（区分大小写）
+
+### 11. 推理模式无法启用
+推理模式仅对以下模型可用：
+- DeepSeek-Reasoner
+- DeepSeek-R1 (Ollama)
+
+其他模型不支持推理模式，即使启用也不会显示思考内容。
 
 ## 扩展建议
 

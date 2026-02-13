@@ -40,6 +40,9 @@
   padding: 14px;
   background: #ffffff;
   min-height: 60px;
+  max-height: 500px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 .stream-content-placeholder {
@@ -68,6 +71,39 @@
   word-wrap: break-word;
 }
 
+/* 思考内容样式 */
+.stream-content-reasoning {
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8eeff 100%);
+  border-left: 3px solid #667eea;
+}
+
+.reasoning-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.reasoning-text {
+  margin: 0;
+  padding: 0;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* 深色模式支持 */
+:root[data-theme='dark'] .stream-content-reasoning {
+  background: linear-gradient(135deg, #1a2634 0%, #1e3a5f 100%);
+  border-left-color: #3b82f6;
+}
+
+:root[data-theme='dark'] .reasoning-text {
+  color: #c5c8c6;
+}
+
 /* 深色模式支持 */
 :root[data-theme='dark'] .stream-content-item.active {
   border-color: #1677cc;
@@ -94,6 +130,8 @@
 
 :root[data-theme='dark'] .stream-content-body {
   background: #141414;
+  max-height: 500px;
+  overflow-y: auto;
 }
 
 :root[data-theme='dark'] .stream-content-placeholder {
