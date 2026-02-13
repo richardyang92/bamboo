@@ -24,7 +24,8 @@ interface UseWebSocketReturn {
   currentStep: string;
   connectionState: ConnectionState;
   reconnectAttempts: number;
-  streamContent: Map<string, string>;
+  streamContent: Map<string, string>;  // 普通内容
+  reasoningContent: Map<string, string>;  // 新增：思考内容
   currentNode: string | null;
   isStreaming: boolean;
 
@@ -36,6 +37,7 @@ interface UseWebSocketReturn {
   // 新增方法
   clearStreamContent: () => void;
   getStreamContent: (node: string) => string;
+  getReasoningContent: (node: string) => string;  // 新增：获取思考内容方法
   getConnectionState: () => ConnectionState;
 }
 
@@ -54,6 +56,7 @@ export function useWebSocket(workflowType: WorkflowType): UseWebSocketReturn {
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const [reconnectAttempts, setReconnectAttempts] = useState<number>(0);
   const [streamContent, setStreamContent] = useState<Map<string, string>>(new Map());
+  const [reasoningContent, setReasoningContent] = useState<Map<string, string>>(new Map());  // 新增：思考内容状态
   const [currentNode, setCurrentNode] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
 
@@ -84,6 +87,7 @@ export function useWebSocket(workflowType: WorkflowType): UseWebSocketReturn {
   // 使用 ref 来避免循环依赖
   const clearStreamContentRef = useRef(() => {
     setStreamContent(new Map());
+    setReasoningContent(new Map());  // 新增：清理思考内容
     setCurrentNode(null);
     setIsStreaming(false);
   });
@@ -121,12 +125,27 @@ export function useWebSocket(workflowType: WorkflowType): UseWebSocketReturn {
   // 处理流式内容消息
   const handleStreamContent = useCallback((data: WebSocketMessage) => {
     if (data.workflow_type === workflowType && data.node && data.content) {
-      setStreamContent(prev => {
-        const newMap = new Map(prev);
-        const existing = newMap.get(data.node!) || '';
-        newMap.set(data.node!, existing + data.content!);
-        return newMap;
-      });
+      // 根据 content_type 区分思考内容和普通内容
+      const isReasoning = data.content_type === 'reasoning';
+
+      if (isReasoning) {
+        // 思考内容
+        setReasoningContent(prev => {
+          const newMap = new Map(prev);
+          const existing = newMap.get(data.node!) || '';
+          newMap.set(data.node!, existing + data.content!);
+          return newMap;
+        });
+      } else {
+        // 普通内容
+        setStreamContent(prev => {
+          const newMap = new Map(prev);
+          const existing = newMap.get(data.node!) || '';
+          newMap.set(data.node!, existing + data.content!);
+          return newMap;
+        });
+      }
+
       setCurrentNode(data.node);
       setIsStreaming(true);
 
@@ -143,12 +162,17 @@ export function useWebSocket(workflowType: WorkflowType): UseWebSocketReturn {
   // 清除流式内容
   const clearStreamContent = useCallback(() => {
     clearStreamContentRef.current();
-  }, []);
+  }, [clearStreamContentRef]);
 
   // 获取指定节点的流式内容
   const getStreamContent = useCallback((node: string): string => {
     return streamContent.get(node) || '';
   }, [streamContent]);
+
+  // 获取指定节点的思考内容
+  const getReasoningContent = useCallback((node: string): string => {
+    return reasoningContent.get(node) || '';
+  }, [reasoningContent]);
 
   // 获取连接状态
   const getConnectionState = useCallback((): ConnectionState => {
@@ -237,6 +261,7 @@ export function useWebSocket(workflowType: WorkflowType): UseWebSocketReturn {
     connectionState,
     reconnectAttempts,
     streamContent,
+    reasoningContent,  // 思考内容
     currentNode,
     isStreaming,
 
@@ -248,6 +273,7 @@ export function useWebSocket(workflowType: WorkflowType): UseWebSocketReturn {
     // 新增方法
     clearStreamContent,
     getStreamContent,
+    getReasoningContent,  // 获取思考内容
     getConnectionState,
   };
 }

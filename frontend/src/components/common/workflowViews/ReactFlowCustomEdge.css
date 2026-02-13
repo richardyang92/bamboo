@@ -1,0 +1,112 @@
+/**
+ * Custom React Flow Edge Styles
+ */
+
+.custom-edge {
+  transition: all 0.35s ease;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.custom-edge:hover {
+  stroke-width: 2.5 !important;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.1));
+}
+
+/* Success edges */
+.custom-edge.success {
+  filter: drop-shadow(0 0 2px rgba(82, 196, 26, 0.2));
+}
+
+.custom-edge.success:hover {
+  filter: drop-shadow(0 0 4px rgba(82, 196, 26, 0.3));
+}
+
+/* Failure edges */
+.custom-edge.failure {
+  filter: drop-shadow(0 0 2px rgba(255, 77, 79, 0.2));
+}
+
+.custom-edge.failure:hover {
+  filter: drop-shadow(0 0 4px rgba(255, 77, 79, 0.3));
+}
+
+/* Retry edges */
+.custom-edge.retry {
+  filter: drop-shadow(0 0 4px rgba(250, 140, 22, 0.4));
+  stroke-dasharray: 5 3;
+}
+
+.custom-edge.retry:hover {
+  filter: drop-shadow(0 0 6px rgba(250, 140, 22, 0.5));
+  animation: retry-glow 2s ease-in-out infinite;
+}
+
+@keyframes retry-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgba(250, 140, 22, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(250, 140, 22, 0.7));
+  }
+}
+
+/* Selected state */
+.custom-edge.selected {
+  filter: drop-shadow(0 0 6px rgba(24, 144, 255, 0.4));
+  stroke-width: 2.5 !important;
+}
+
+/* Edge labels */
+.edge-label {
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.edge-label:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Animated edges (for active connections) */
+.custom-edge.animated {
+  stroke-dasharray: 5 3;
+  animation: dash-flow 1.5s linear infinite;
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+
+/* Dark mode support */
+:root[data-theme='dark'] .edge-label {
+  background: #262626;
+  border-color: #404040;
+  color: #d9d9d9;
+}
+
+:root[data-theme='dark'] .custom-edge {
+  opacity: 0.8;
+}
+
+:root[data-theme='dark'] .custom-edge.success {
+  stroke: #498317;
+  filter: drop-shadow(0 0 2px rgba(73, 131, 23, 0.3));
+}
+
+:root[data-theme='dark'] .custom-edge.failure {
+  stroke: #a8071a;
+  filter: drop-shadow(0 0 2px rgba(168, 7, 26, 0.3));
+}
+
+:root[data-theme='dark'] .custom-edge.retry {
+  stroke: #d46b08;
+  filter: drop-shadow(0 0 4px rgba(212, 107, 8, 0.4));
+}
+
+:root[data-theme='dark'] .custom-edge.default {
+  stroke: #404040;
+}

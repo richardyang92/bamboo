@@ -1,0 +1,357 @@
+/**
+ * WorkflowTimeline 样式 - CLI日志风格
+ * 参考现代CLI工具：Vercel CLI, npm, Docker, Railway
+ */
+
+/* ==================== 容器 ==================== */
+.cli-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e0e0e0;
+}
+
+/* ==================== 空状态 ==================== */
+.cli-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: #666;
+  font-style: italic;
+}
+
+.cli-spinner {
+  animation: spin 1s linear infinite;
+  color: #666;
+}
+
+.cli-empty-text {
+  color: #666;
+  font-size: 12px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ==================== 步骤 ==================== */
+.cli-step {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 步骤头部行 */
+.cli-step-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.cli-step-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* 时间戳 */
+.cli-time {
+  color: #666;
+  font-size: 11px;
+  flex-shrink: 0;
+  font-feature-settings: 'tnum';
+}
+
+/* 状态图标容器 */
+.cli-status-wrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* 图标基础样式 */
+.cli-icon {
+  flex-shrink: 0;
+}
+
+.cli-icon-success {
+  color: #22c55e;
+}
+
+.cli-icon-error {
+  color: #ef4444;
+}
+
+.cli-icon-running {
+  color: #3b82f6;
+}
+
+.cli-icon-spinning {
+  animation: spin 1s linear infinite;
+}
+
+.cli-icon-pending {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #666;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 步骤名称 */
+.cli-step-name {
+  color: #e0e0e0;
+  font-weight: 500;
+  flex: 1;
+}
+
+/* 耗时 */
+.cli-duration {
+  color: #666;
+  font-size: 11px;
+  flex-shrink: 0;
+  font-feature-settings: 'tnum';
+}
+
+/* 展开提示 */
+.cli-expand-hint {
+  color: #444;
+  font-size: 10px;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.cli-step-header:hover .cli-expand-hint {
+  color: #666;
+}
+
+/* ==================== 详细内容区域 ==================== */
+.cli-step-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 24px;
+  padding-right: 8px;
+  padding-bottom: 8px;
+}
+
+/* ==================== 错误信息 ==================== */
+.cli-error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 2px solid #ef4444;
+  border-radius: 0 4px 4px 0;
+  margin-top: 4px;
+}
+
+.cli-error-icon {
+  color: #ef4444;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.cli-error-text {
+  color: #fca5a5;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+/* ==================== 内容区块 ==================== */
+.cli-section {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+/* 区块头部 */
+.cli-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  color: #888;
+  transition: color 0.2s;
+  width: fit-content;
+  border-radius: 4px;
+}
+
+.cli-section-header:hover {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cli-section-header-static {
+  cursor: default;
+}
+
+.cli-section-header-static:hover {
+  color: #888;
+  background: transparent;
+}
+
+.cli-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+  color: #666;
+}
+
+.cli-chevron-fixed {
+  transform: rotate(90deg);
+  opacity: 0.5;
+}
+
+.cli-section-icon {
+  flex-shrink: 0;
+  color: #666;
+}
+
+.cli-section-label {
+  font-weight: 500;
+}
+
+/* 区块内容 */
+.cli-section-content {
+  padding: 8px 12px;
+  margin: 2px 0;
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 2px solid #333;
+  border-radius: 0 4px 4px 0;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.cli-thinking-content {
+  border-left-color: #6366f1;
+}
+
+/* ==================== 文本样式 ==================== */
+.cli-text {
+  margin: 0;
+  padding: 0;
+  color: #b0b0b0;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+}
+
+/* ==================== 光标动画 ==================== */
+.cli-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: #3b82f6;
+  margin-left: 4px;
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ==================== 滚动条样式 ==================== */
+.cli-section-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cli-section-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cli-section-content::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+.cli-section-content::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Firefox 滚动条 */
+.cli-section-content {
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 768px) {
+  .cli-timeline {
+    font-size: 12px;
+  }
+
+  .cli-time {
+    font-size: 10px;
+  }
+
+  .cli-step-details {
+    padding-left: 16px;
+  }
+
+  .cli-section-content {
+    padding: 6px 8px;
+    max-height: 250px;
+  }
+}
+
+/* ==================== 深色模式适配（如果系统有浅色模式） ==================== */
+@media (prefers-color-scheme: light) {
+  .cli-timeline {
+    color: #333;
+  }
+
+  .cli-time,
+  .cli-duration,
+  .cli-expand-hint {
+    color: #999;
+  }
+
+  .cli-step-name {
+    color: #333;
+  }
+
+  .cli-icon-pending {
+    border-color: #999;
+  }
+
+  .cli-section-header {
+    color: #666;
+  }
+
+  .cli-section-content {
+    background: rgba(0, 0, 0, 0.03);
+    border-left-color: #ddd;
+  }
+
+  .cli-thinking-content {
+    border-left-color: #6366f1;
+  }
+
+  .cli-text {
+    color: #555;
+  }
+
+  .cli-step-header:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}

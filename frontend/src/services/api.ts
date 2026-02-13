@@ -6,12 +6,16 @@ import axios, { AxiosError } from 'axios';
 import type {
   AIModifyResponse,
   GenerateImageResponse,
-  HistoryItem
+  HistoryItem,
+  AvailableModels,
+  ModelConfig,
+  LLMProvider
 } from '../types';
 
 // 创建 axios 实例
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001',
+  // 开发环境使用 Vite 代理，生产环境使用环境变量
+  baseURL: import.meta.env.VITE_API_URL || '',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -46,10 +50,18 @@ api.interceptors.response.use(
 // ==================== 绘图工作流 API ====================
 
 /**
- * 启动绘图工作流
+ * 启动绘图工作流（支持模型选择）
  */
-export const startDrawingWorkflow = async (prompt: string) => {
-  return api.post('/api/drawing/workflow', { prompt });
+export const startDrawingWorkflow = async (
+  prompt: string,
+  modelConfig?: { provider?: LLMProvider; model?: string; enable_thinking?: boolean }
+) => {
+  return api.post('/api/drawing/workflow', {
+    prompt,
+    model_provider: modelConfig?.provider,
+    model_name: modelConfig?.model,
+    enable_thinking: modelConfig?.enable_thinking,
+  });
 };
 
 /**
@@ -90,10 +102,18 @@ export const clearDrawingHistory = async () => {
 // ==================== 文档工作流 API ====================
 
 /**
- * 启动文档生成工作流
+ * 启动文档生成工作流（支持模型选择）
  */
-export const startDocumentWorkflow = async (prompt: string) => {
-  return api.post('/api/document/workflow-with-images', { prompt });
+export const startDocumentWorkflow = async (
+  prompt: string,
+  modelConfig?: { provider?: LLMProvider; model?: string; enable_thinking?: boolean }
+) => {
+  return api.post('/api/document/workflow-with-images', {
+    prompt,
+    model_provider: modelConfig?.provider,
+    model_name: modelConfig?.model,
+    enable_thinking: modelConfig?.enable_thinking,
+  });
 };
 
 /**
@@ -158,10 +178,20 @@ export const clearDocumentHistory = async () => {
 // ==================== Manim 动画工作流 API ====================
 
 /**
- * 启动 Manim 动画工作流
+ * 启动 Manim 动画工作流（支持模型选择）
  */
-export const startManimWorkflow = async (prompt: string, quality: string = 'medium') => {
-  return api.post('/api/manim/workflow', { prompt, quality });
+export const startManimWorkflow = async (
+  prompt: string,
+  quality: string = 'medium',
+  modelConfig?: { provider?: LLMProvider; model?: string; enable_thinking?: boolean }
+) => {
+  return api.post('/api/manim/workflow', {
+    prompt,
+    quality,
+    model_provider: modelConfig?.provider,
+    model_name: modelConfig?.model,
+    enable_thinking: modelConfig?.enable_thinking,
+  });
 };
 
 /**
@@ -209,3 +239,29 @@ export const healthCheck = async () => {
 };
 
 export default api;
+
+// ==================== 模型管理 API ====================
+
+/**
+ * 获取可用的模型列表
+ */
+export const getAvailableModels = async (): Promise<AvailableModels> => {
+  return api.get('/api/models');
+};
+
+/**
+ * 切换当前使用的模型
+ */
+export const switchModel = async (
+  provider: LLMProvider,
+  model: string
+): Promise<{ success: boolean; current_config: ModelConfig }> => {
+  return api.post('/api/models/switch', { provider, model });
+};
+
+/**
+ * 获取当前使用的模型
+ */
+export const getCurrentModel = async (): Promise<ModelConfig> => {
+  return api.get('/api/models/current');
+};

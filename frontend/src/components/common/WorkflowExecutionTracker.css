@@ -1,6 +1,6 @@
 /**
  * WorkflowExecutionTracker 样式
- * 优化后的主容器样式，统一的视觉设计
+ * 仅流程图视图，简化版工作流执行追踪器
  */
 
 .workflow-execution-tracker {
@@ -19,102 +19,44 @@
   }
 }
 
-.workflow-execution-tracker.empty {
-  min-height: 180px;
+/* 流程图头部信息 */
+.workflow-graph-header {
+  padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #e8e9ea;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  border: 2px dashed #d9d9d9;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
-  animation: empty-state-pulse 3s ease-in-out infinite;
+  border-radius: 12px 12px 0 0;
 }
 
-@keyframes empty-state-pulse {
-  0%, 100% {
-    border-color: #d9d9d9;
-  }
-  50% {
-    border-color: #bfbfbf;
-  }
-}
-
-.workflow-execution-tracker.empty p {
-  color: #8c8c8c;
+.workflow-graph-header .step-count {
   font-size: 14px;
+  color: #595959;
   font-weight: 500;
 }
 
-.workflow-execution-tracker .workflow-view-content {
-  margin-top: 12px;
-  animation: content-slide-in 0.5s ease-out;
-}
-
-@keyframes content-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 视图模式特定样式 */
-.workflow-execution-tracker.cards {
-  /* 卡片视图特定样式 */
-}
-
-.workflow-execution-tracker.graph {
-  /* 流程图视图特定样式 */
-}
-
-.workflow-execution-tracker.timeline {
-  /* 时间线视图特定样式 */
-}
-
-/* 视图切换过渡效果 */
-.workflow-execution-tracker.cards,
-.workflow-execution-tracker.graph,
-.workflow-execution-tracker.timeline {
-  transition: all 0.3s ease;
+.workflow-view-content {
+  /* 流程图视图内容区域 */
 }
 
 /* 深色模式支持 */
-:root[data-theme='dark'] .workflow-execution-tracker.empty {
-  background: linear-gradient(135deg, #1f1f1f 0%, #141414 100%);
-  border-color: #303030;
+:root[data-theme='dark'] .workflow-graph-header {
+  background: #1f1f1f;
+  border-bottom-color: #303030;
 }
 
-:root[data-theme='dark'] .workflow-execution-tracker.empty p {
+:root[data-theme='dark'] .workflow-graph-header .step-count {
   color: #8c8c8c;
 }
 
 /* 移动端响应式 */
 @media (max-width: 768px) {
-  .workflow-execution-tracker {
-    padding: 0;
+  .workflow-graph-header {
+    padding: 10px 12px;
   }
 
-  .workflow-execution-tracker.empty {
-    min-height: 140px;
+  .workflow-graph-header .step-count {
     font-size: 13px;
-    border-radius: 10px;
-  }
-
-  .workflow-execution-tracker .workflow-view-content {
-    margin-top: 8px;
-  }
-}
-
-@media (max-width: 480px) {
-  .workflow-execution-tracker.empty {
-    min-height: 120px;
-    padding: 20px;
-  }
-
-  .workflow-execution-tracker.empty p {
-    font-size: 12px;
   }
 }

@@ -176,6 +176,19 @@ const WorkflowNodeCard: React.FC<WorkflowNodeCardProps> = ({
             }}
           >
             {step.name}
+            {/* CodeAct 模式：显示重试信息 */}
+            {step.retry_info && step.retry_info.current > 0 && (
+              <Tag
+                color="orange"
+                style={{
+                  fontSize: '11px',
+                  marginLeft: '8px',
+                  lineHeight: '20px'
+                }}
+              >
+                重试 {step.retry_info.current}/{step.retry_info.max}
+              </Tag>
+            )}
           </Text>
           {isRunning && (
             <Tag color="processing" style={{ fontSize: '11px', margin: 0 }}>

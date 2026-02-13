@@ -33,6 +33,18 @@ export const getInitialSteps = (workflowType: WorkflowType): WorkflowStep[] => {
           timestamp: now,
         },
         {
+          step: 'analyze_execution_result',
+          name: '分析执行结果',
+          status: 'pending',
+          timestamp: now,
+        },
+        {
+          step: 'fix_code_with_feedback',
+          name: '修复代码',
+          status: 'pending',
+          timestamp: now,
+        },
+        {
           step: 'save_image',
           name: '验证图片保存',
           status: 'pending',
@@ -150,6 +162,7 @@ export const mergeStepStatus = (
         timestamp: backendStep.timestamp || step.timestamp,
         completed_at: backendStep.completed_at,
         error: backendStep.error,
+        retry_info: backendStep.retry_info,  // 保留重试信息
       };
     }
     // 没有后端数据，保持 pending 状态

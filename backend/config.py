@@ -22,6 +22,17 @@ class Config:
     # DeepSeek API 配置
     DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
 
+    # ========== LLM 模型配置 ==========
+    # 默认 LLM 提供商
+    DEFAULT_LLM_PROVIDER = os.getenv('DEFAULT_LLM_PROVIDER', 'deepseek')
+
+    # DeepSeek 模型配置
+    DEEPSEEK_MODEL = os.getenv('DEEPSEEK_MODEL', 'deepseek-chat')
+
+    # Ollama 模型配置
+    OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+    OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'deepseek-ocr:latest')
+
     # CORS 配置 - 前端开发服务器地址
     FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
     CORS_ORIGINS = [
@@ -47,6 +58,37 @@ class Config:
         dirs = [Config.IMAGES_DIR, Config.DOCS_DIR, Config.VIDEOS_DIR]
         for directory in dirs:
             os.makedirs(directory, exist_ok=True)
+
+    @classmethod
+    def get_current_model_config(cls) -> dict:
+        """获取当前模型配置"""
+        provider = cls.DEFAULT_LLM_PROVIDER
+
+        if provider == 'deepseek':
+            return {
+                'provider': 'deepseek',
+                'model': cls.DEEPSEEK_MODEL,
+                'api_key': cls.DEEPSEEK_API_KEY,
+                'base_url': 'https://api.deepseek.com',
+                'supports_reasoning': 'reasoner' in cls.DEEPSEEK_MODEL
+            }
+        elif provider == 'ollama':
+            return {
+                'provider': 'ollama',
+                'model': cls.OLLAMA_MODEL,
+                'api_key': 'ollama',
+                'base_url': cls.OLLAMA_BASE_URL,
+                'supports_reasoning': False
+            }
+
+        # 默认使用 DeepSeek
+        return {
+            'provider': 'deepseek',
+            'model': cls.DEEPSEEK_MODEL,
+            'api_key': cls.DEEPSEEK_API_KEY,
+            'base_url': 'https://api.deepseek.com',
+            'supports_reasoning': 'reasoner' in cls.DEEPSEEK_MODEL
+        }
 
 # 在导入时确保目录存在
 Config.ensure_directories()

@@ -3,7 +3,7 @@
  * 管理应用的全局工作流状态
  */
 import { createContext, useContext, useReducer, useCallback, useMemo } from 'react';
-import type { WorkflowType, WorkflowStatus } from '../types';
+import type { WorkflowType, WorkflowStatus, ModelConfig } from '../types';
 import type { ReactNode } from 'react';
 
 // 工作流状态接口
@@ -12,6 +12,7 @@ interface WorkflowState {
   drawing: WorkflowStatus;
   document_with_images: WorkflowStatus;
   manim: WorkflowStatus;
+  modelConfig: ModelConfig & { enable_thinking?: boolean };  // 新增：全局模型配置
 }
 
 // Context 接口
@@ -21,6 +22,7 @@ interface WorkflowContextValue {
   updateWorkflowStatus: (type: WorkflowType, status: Partial<WorkflowStatus>) => void;
   clearWorkflow: (type: WorkflowType) => void;
   clearAllWorkflows: () => void;
+  setModelConfig: (config: ModelConfig & { enable_thinking?: boolean }) => void;  // 新增：设置模型配置
 }
 
 // 初始状态
@@ -32,11 +34,20 @@ const createInitialWorkflowStatus = (): WorkflowStatus => ({
   error: undefined,
 });
 
+// 默认模型配置
+const defaultModelConfig: ModelConfig & { enable_thinking?: boolean } = {
+  provider: 'deepseek',
+  model: 'deepseek-chat',
+  supports_reasoning: false,
+  enable_thinking: false,
+};
+
 const initialState: WorkflowState = {
   currentWorkflow: 'drawing',
   drawing: createInitialWorkflowStatus(),
   document_with_images: createInitialWorkflowStatus(),
   manim: createInitialWorkflowStatus(),
+  modelConfig: defaultModelConfig,
 };
 
 // Action 类型
@@ -44,7 +55,8 @@ type WorkflowAction =
   | { type: 'SET_CURRENT_WORKFLOW'; payload: WorkflowType }
   | { type: 'UPDATE_WORKFLOW_STATUS'; workflowType: WorkflowType; payload: Partial<WorkflowStatus> }
   | { type: 'CLEAR_WORKFLOW'; workflowType: WorkflowType }
-  | { type: 'CLEAR_ALL_WORKFLOWS' };
+  | { type: 'CLEAR_ALL_WORKFLOWS' }
+  | { type: 'SET_MODEL_CONFIG'; payload: ModelConfig & { enable_thinking?: boolean } };
 
 // Reducer
 function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
@@ -76,6 +88,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         drawing: createInitialWorkflowStatus(),
         document_with_images: createInitialWorkflowStatus(),
         manim: createInitialWorkflowStatus(),
+      };
+
+    case 'SET_MODEL_CONFIG':
+      return {
+        ...state,
+        modelConfig: action.payload,
       };
 
     default:
@@ -117,6 +135,11 @@ export function WorkflowProvider({ children }: WorkflowProviderProps) {
     dispatch({ type: 'CLEAR_ALL_WORKFLOWS' });
   }, []);
 
+  // 设置模型配置
+  const setModelConfig = useCallback((config: ModelConfig & { enable_thinking?: boolean }) => {
+    dispatch({ type: 'SET_MODEL_CONFIG', payload: config });
+  }, []);
+
   // Context 值
   const value = useMemo<WorkflowContextValue>(
     () => ({
@@ -125,8 +148,9 @@ export function WorkflowProvider({ children }: WorkflowProviderProps) {
       updateWorkflowStatus,
       clearWorkflow,
       clearAllWorkflows,
+      setModelConfig,
     }),
-    [state, setCurrentWorkflow, updateWorkflowStatus, clearWorkflow, clearAllWorkflows]
+    [state, setCurrentWorkflow, updateWorkflowStatus, clearWorkflow, clearAllWorkflows, setModelConfig]
   );
 
   return <WorkflowContext.Provider value={value}>{children}</WorkflowContext.Provider>;

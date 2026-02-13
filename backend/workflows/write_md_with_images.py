@@ -3,9 +3,9 @@ import sys
 import re
 from typing import TypedDict, List, Dict
 from langgraph.graph import StateGraph, END
-from openai import OpenAI
 from dotenv import load_dotenv
 from config import Config
+from llm_providers.factory import LLMClientFactory
 
 # 加载.env文件中的环境变量
 load_dotenv()
@@ -104,20 +104,15 @@ def generate_outline(state: GraphState, stream_callback=None) -> GraphState:
     user_prompt = state["refined_prompt"]
 
     try:
-        api_key = os.getenv("DEEPSEEK_API_KEY")
-        print(f"   [DEBUG] API Key 状态: {'已设置' if api_key else '未设置'}")
+        # 初始化LLM客户端
+        client = LLMClientFactory.create_client()
 
-        if not api_key:
-            return {"error": "未设置 DEEPSEEK_API_KEY，请在 .env 文件中配置"}
+        if not client.config.api_key or client.config.api_key == 'ollama':
+            if client.config.provider == 'deepseek':
+                return {"error": "未设置 DEEPSEEK_API_KEY，请在 .env 文件中配置"}
 
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.deepseek.com"
-        )
-
-        print(f"   [DEBUG] 正在调用 DeepSeek 模型生成大纲（流式模式）...")
-        stream = client.chat.completions.create(
-            model="deepseek-chat",
+        print(f"   [DEBUG] 正在调用 {client.config.provider} 模型生成大纲（流式模式）...")
+        stream = client.chat_completion(
             messages=[
                 {
                     "role": "system",
@@ -163,9 +158,11 @@ def generate_outline(state: GraphState, stream_callback=None) -> GraphState:
 5. 只返回大纲内容，使用Markdown格式"""
                 }
             ],
+            model=client.config.model_name,
             temperature=0.5,
             max_tokens=3000,
-            stream=True
+            stream=True,
+            think=client.config.enable_thinking  # 新增：启用 thinking 模式
         )
 
         # 收集流式响应
@@ -210,22 +207,18 @@ def generate_content(state: GraphState, stream_callback=None) -> GraphState:
     print("3. 正在生成文档内容...")
 
     try:
-        api_key = os.getenv("DEEPSEEK_API_KEY")
+        # 初始化LLM客户端
+        client = LLMClientFactory.create_client()
 
-        if not api_key:
-            return {"error": "未设置 DEEPSEEK_API_KEY，请在 .env 文件中配置"}
-
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.deepseek.com"
-        )
+        if not client.config.api_key or client.config.api_key == 'ollama':
+            if client.config.provider == 'deepseek':
+                return {"error": "未设置 DEEPSEEK_API_KEY，请在 .env 文件中配置"}
 
         outline = state["document_outline"]
         user_prompt = state["refined_prompt"]
 
-        print(f"   [DEBUG] 正在调用 DeepSeek 模型生成完整文档（流式模式）...")
-        stream = client.chat.completions.create(
-            model="deepseek-chat",
+        print(f"   [DEBUG] 正在调用 {client.config.provider} 模型生成完整文档（流式模式）...")
+        stream = client.chat_completion(
             messages=[
                 {
                     "role": "system",
@@ -311,9 +304,11 @@ def generate_content(state: GraphState, stream_callback=None) -> GraphState:
 请开始生成完整文档："""
                 }
             ],
+            model=client.config.model_name,
             temperature=0.4,
             max_tokens=8000,
-            stream=True
+            stream=True,
+            think=client.config.enable_thinking  # 新增：启用 thinking 模式
         )
 
         # 收集流式响应
@@ -403,21 +398,17 @@ def identify_image_requests(state: GraphState) -> GraphState:
 def enhance_image_prompt_with_llm(image_description: str, document_context: str, original_prompt: str) -> str:
     """使用大模型增强图片描述，使其更适合生成高质量绘图"""
     try:
-        api_key = os.getenv("DEEPSEEK_API_KEY")
-        
-        if not api_key:
-            print(f"   [WARNING] 未设置 DEEPSEEK_API_KEY，跳过图片描述增强")
-            return image_description
-        
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.deepseek.com"
-        )
-        
+        # 初始化LLM客户端
+        client = LLMClientFactory.create_client()
+
+        if not client.config.api_key or client.config.api_key == 'ollama':
+            if client.config.provider == 'deepseek':
+                print(f"   [WARNING] 未设置 DEEPSEEK_API_KEY，跳过图片描述增强")
+                return image_description
+
         print(f"   [DEBUG] 正在增强图片描述: '{image_description}'")
-        
-        stream = client.chat.completions.create(
-            model="deepseek-chat",
+
+        stream = client.chat_completion(
             messages=[
                 {
                     "role": "system",
@@ -449,9 +440,11 @@ def enhance_image_prompt_with_llm(image_description: str, document_context: str,
 请提供增强后的绘图指令："""
                 }
             ],
+            model=client.config.model_name,
             temperature=0.3,
             max_tokens=500,
-            stream=True
+            stream=True,
+            think=client.config.enable_thinking  # 新增：启用 thinking 模式
         )
         
         # 收集流式响应

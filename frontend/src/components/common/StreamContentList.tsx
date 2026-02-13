@@ -12,6 +12,7 @@ import './StreamContentList.css';
 interface StreamContentListProps {
   steps: WorkflowStep[];
   streamContent: Map<string, string>;
+  reasoningContent: Map<string, string>;  // 新增：思考内容
   currentNode: string | null;
   isStreaming: boolean;
   workflowType: WorkflowType;
@@ -21,6 +22,7 @@ interface StreamContentListProps {
 const StreamContentList: React.FC<StreamContentListProps> = ({
   steps,
   streamContent,
+  reasoningContent,  // 新增：接收思考内容
   currentNode,
   isStreaming,
   workflowType,
@@ -34,6 +36,7 @@ const StreamContentList: React.FC<StreamContentListProps> = ({
   const itemsWithContent = steps.map(step => ({
     ...step,
     content: streamContent.get(step.step) || '',
+    reasoningContent: reasoningContent.get(step.step) || '',  // 新增：获取思考内容
   }));
 
   // 自动展开当前流式节点
@@ -134,6 +137,7 @@ const StreamContentList: React.FC<StreamContentListProps> = ({
             <StreamContentItem
               step={item}
               content={item.content}
+              reasoningContent={item.reasoningContent}
               isActive={item.step === currentNode}
               isStreaming={item.step === currentNode && isStreaming}
               workflowType={workflowType}

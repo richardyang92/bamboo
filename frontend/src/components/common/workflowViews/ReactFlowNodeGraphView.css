@@ -1,0 +1,164 @@
+/**
+ * React Flow Node Graph View Container Styles
+ */
+
+.react-flow-graph-view {
+  width: 100%;
+  height: 600px;
+  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+  border-radius: 12px;
+  border: 1px solid #e8e9ea;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+.react-flow-graph-view.empty {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+/* Override React Flow styles */
+.react-flow-graph-view .react-flow__background {
+  background: transparent;
+}
+
+.react-flow-graph-view .react-flow__controls {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e8e9ea;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.react-flow-graph-view .react-flow__controls-button {
+  background: white;
+  border: 1px solid #e8e9ea;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.react-flow-graph-view .react-flow__controls-button:hover {
+  background: #f5f7fa;
+  border-color: #1890ff;
+  transform: scale(1.05);
+}
+
+.react-flow-graph-view .react-flow__controls-button svg {
+  width: 14px;
+  height: 14px;
+  stroke: #595959;
+}
+
+.react-flow-graph-view .react-flow__minimap {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e8e9ea;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.react-flow-graph-view .react-flow__minimap-mask {
+  fill: rgba(0, 0, 0, 0.05);
+}
+
+/* Edge path styling */
+.react-flow-graph-view .react-flow__edge-path {
+  transition: all 0.35s ease;
+}
+
+/* Selection styles */
+.react-flow-graph-view .react-flow__nodesselection-rect {
+  background: rgba(24, 144, 255, 0.1);
+  border: 1px solid #1890ff;
+}
+
+/* Dark mode support */
+:root[data-theme='dark'] .react-flow-graph-view {
+  background: linear-gradient(135deg, #1f1f1f 0%, #141414 100%);
+  border-color: #303030;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme='dark'] .react-flow-graph-view .react-flow__background {
+  background: transparent;
+}
+
+:root[data-theme='dark'] .react-flow-graph-view .react-flow__controls {
+  background: rgba(38, 38, 38, 0.9);
+  border-color: #404040;
+}
+
+:root[data-theme='dark'] .react-flow-graph-view .react-flow__controls-button {
+  background: #262626;
+  border-color: #404040;
+}
+
+:root[data-theme='dark'] .react-flow-graph-view .react-flow__controls-button:hover {
+  background: #303030;
+  border-color: #1677cc;
+}
+
+:root[data-theme='dark'] .react-flow-graph-view .react-flow__controls-button svg {
+  stroke: #d9d9d9;
+}
+
+:root[data-theme='dark'] .react-flow-graph-view .react-flow__minimap {
+  background: rgba(31, 31, 31, 0.9);
+  border-color: #404040;
+}
+
+:root[data-theme='dark'] .react-flow-graph-view .react-flow__minimap-mask {
+  fill: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme='dark'] .react-flow-graph-view .react-flow__edge-path {
+  opacity: 0.8;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .react-flow-graph-view {
+    height: 500px;
+    border-radius: 10px;
+  }
+
+  .react-flow-graph-view .react-flow__controls {
+    padding: 6px;
+    gap: 3px;
+  }
+
+  .react-flow-graph-view .react-flow__controls-button {
+    width: 26px;
+    height: 26px;
+  }
+
+  .react-flow-graph-view .react-flow__controls-button svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .react-flow-graph-view {
+    height: 400px;
+  }
+
+  .react-flow-graph-view .react-flow__controls {
+    padding: 4px;
+    gap: 2px;
+  }
+
+  .react-flow-graph-view .react-flow__minimap {
+    display: none;
+  }
+}

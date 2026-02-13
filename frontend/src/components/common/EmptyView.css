@@ -1,0 +1,21 @@
+/**
+ * EmptyView 样式
+ */
+.cli-empty-view {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  color: #666;
+  font-size: 13px;
+}
+
+.cli-empty-icon {
+  color: #666;
+  flex-shrink: 0;
+}
+
+.cli-empty-text {
+  font-style: italic;
+}

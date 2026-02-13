@@ -4,8 +4,8 @@ import threading
 import subprocess
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
-from openai import OpenAI
 from dotenv import load_dotenv
+from llm_providers.factory import LLMClientFactory
 
 load_dotenv()
 
@@ -387,19 +387,15 @@ def generate_code(state: ManimState, stream_callback=None) -> ManimState:
     print("2. 正在生成 Manim 动画代码...")
 
     try:
-        api_key = os.getenv("DEEPSEEK_API_KEY")
+        # 初始化LLM客户端
+        client = LLMClientFactory.create_client()
 
-        if not api_key:
-            return {"error": "未设置 DEEPSEEK_API_KEY，请在 .env 文件中配置"}
-
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.deepseek.com"
-        )
+        if not client.config.api_key or client.config.api_key == 'ollama':
+            if client.config.provider == 'deepseek':
+                return {"error": "未设置 DEEPSEEK_API_KEY，请在 .env 文件中配置"}
 
         user_prompt = state["refined_prompt"]
-        stream = client.chat.completions.create(
-            model="deepseek-chat",
+        stream = client.chat_completion(
             messages=[
                 {
                     "role": "system",
@@ -482,9 +478,11 @@ for i in range(10):  # 这会创建10个self.play()调用，渲染很慢
 请直接输出可执行的 Python 代码，不要包含任何解释。"""
                 }
             ],
+            model=client.config.model_name,
             temperature=0.3,
             max_tokens=6000,
-            stream=True
+            stream=True,
+            think=client.config.enable_thinking  # 新增：启用 thinking 模式
         )
 
         generated_code = ""

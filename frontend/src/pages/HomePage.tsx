@@ -8,6 +8,7 @@ import { useWorkflow } from '../contexts/WorkflowContext';
 import DrawingPanel from '../components/drawing/DrawingPanel';
 import DocumentPanel from '../components/document/DocumentPanel';
 import ManimPanel from '../components/manim/ManimPanel';
+import GlobalModelBar from '../components/common/GlobalModelBar';
 
 function HomePage() {
   const { setCurrentWorkflow } = useWorkflow();
@@ -49,7 +50,11 @@ function HomePage() {
   ];
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px' }}>
+      {/* 全局模型配置栏 */}
+      <GlobalModelBar />
+
+      {/* 工作流标签页 */}
       <Tabs
         activeKey={activeTab}
         onChange={handleTabChange}

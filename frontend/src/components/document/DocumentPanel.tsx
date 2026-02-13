@@ -6,6 +6,7 @@ import { useState, useMemo } from 'react';
 import { Card, Input, Button, Space, Tabs, message, Image } from 'antd';
 import { SendOutlined, LoadingOutlined, PictureOutlined } from '@ant-design/icons';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useWorkflow } from '../../contexts/WorkflowContext';
 import * as api from '../../services/api';
 import WorkflowStatusIndicator from '../common/WorkflowStatusIndicator';
 import WorkflowExecutionTracker from '../common/WorkflowExecutionTracker';
@@ -30,8 +31,10 @@ function DocumentPanel() {
     currentNode,
     isStreaming,
     streamContent,
+    reasoningContent,  // 新增：获取思考内容
   } = useWebSocket('document_with_images');
 
+  const { state: { modelConfig } } = useWorkflow();
   const [prompt, setPrompt] = useState('');
 
   const handleStart = async () => {
@@ -41,7 +44,11 @@ function DocumentPanel() {
     }
 
     try {
-      await api.startDocumentWorkflow(prompt);
+      await api.startDocumentWorkflow(prompt, {
+        provider: modelConfig.provider,
+        model: modelConfig.model,
+        enable_thinking: modelConfig.enable_thinking,
+      });
       message.success('文档工作流已启动');
     } catch (err) {
       message.error(err instanceof Error ? err.message : '启动失败');
@@ -137,6 +144,7 @@ function DocumentPanel() {
           <StreamContentList
             steps={steps}
             streamContent={streamContent}
+            reasoningContent={reasoningContent}
             currentNode={currentNode}
             isStreaming={isStreaming}
             workflowType="document_with_images"
@@ -146,25 +154,9 @@ function DocumentPanel() {
 
       {/* 右侧结果区域 */}
       <div className="workflow-panel-right">
-        {isRunning ? (
-          /* 运行时：显示执行进度 */
-          steps.length > 0 && (
-            <Card title="执行进度">
-              <WorkflowExecutionTracker
-                steps={steps}
-                currentStep={currentStep}
-                workflowType="document_with_images"
-                onStreamContentClick={() => {
-                  const streamViewer = document.querySelector('.stream-content-viewer');
-                  streamViewer?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              />
-            </Card>
-          )
-        ) : (
-          /* 完成后：显示生成结果 */
-          result && result.url ? (
-            <Card title="生成结果">
+        {result && result.url ? (
+          /* 优先：显示生成结果 */
+          <Card title="生成结果">
               <Tabs
                 items={[
                   {
@@ -390,12 +382,21 @@ function DocumentPanel() {
                 ]}
               />
             </Card>
+          ) : steps.length > 0 ? (
+            /* 有步骤历史：显示执行进度 */
+            <Card title="执行进度">
+              <WorkflowExecutionTracker
+                steps={steps}
+                currentStep={currentStep}
+                workflowType="document_with_images"
+              />
+            </Card>
           ) : (
+            /* 默认：显示占位符 */
             <Card title="生成结果">
               <ResultPlaceholder type="document" error={error} />
             </Card>
-          )
-        )}
+          )}
       </div>
     </div>
   );

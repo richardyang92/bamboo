@@ -8,6 +8,7 @@ import sys
 from workflows.draw_pic import create_graph, GraphState
 from datetime import datetime
 from config import Config
+from llm_providers.factory import LLMClientFactory
 
 # Fix UTF-8 encoding on Windows
 if sys.platform == 'win32':
@@ -107,22 +108,33 @@ def update_and_emit_status(workflow_type):
     print(f"[DEBUG] 状态更新已发送: {workflow_type} - {status.get('status', 'unknown')}")
 
 # 辅助函数：发送流式响应内容
-def emit_stream_content(workflow_type, node_name, content):
-    """发送AI流式响应内容到前端"""
+def emit_stream_content(workflow_type, node_name, content, content_type='content'):
+    """发送AI流式响应内容到前端
+
+    Args:
+        workflow_type: 工作流类型
+        node_name: 节点名称
+        content: 内容文本
+        content_type: 内容类型 ('content' 或 'reasoning')
+    """
     message = {
         'type': 'stream_content',
         'workflow_type': workflow_type,
         'node': node_name,
-        'content': content
+        'content': content,
+        'content_type': content_type  # 新增：区分普通内容和思考内容
     }
     broadcast_to_workflow(workflow_type, message)
-    print(f"[DEBUG] 流式内容已发送: {workflow_type}/{node_name}, 长度: {len(content)} 字符")
+    content_label = '思考内容' if content_type == 'reasoning' else '流式内容'
+    print(f"[DEBUG] {content_label}已发送: {workflow_type}/{node_name}, 长度: {len(content)} 字符")
 
 # 状态映射
 DRAWING_STEP_NAMES = {
     'refine_prompt': '润色提示词',
     'generate_code': '生成绘图代码',
     'execute_code': '执行绘图代码',
+    'analyze_execution_result': '分析执行结果',
+    'fix_code_with_feedback': '修复代码',
     'save_image': '验证图片保存'
 }
 
@@ -145,6 +157,122 @@ def health_check():
         'status': 'healthy',
         'workflows': ['drawing', 'document_with_images', 'manim']
     })
+
+# ========== 模型管理 API ==========
+
+def get_ollama_models():
+    """从 Ollama API 获取已安装的模型列表"""
+    import requests
+    try:
+        # 调用 Ollama API 获取模型列表
+        base_url = Config.OLLAMA_BASE_URL.replace('/v1', '')
+        ollama_url = f'{base_url}/api/tags'
+        print(f"[DEBUG] 正在从 Ollama API 获取模型列表: {ollama_url}")
+
+        response = requests.get(ollama_url, timeout=2)
+        print(f"[DEBUG] Ollama API 响应状态: {response.status_code}")
+
+        if response.status_code == 200:
+            data = response.json()
+            models = [model['name'] for model in data.get('models', [])]
+            print(f"[DEBUG] 从 Ollama 获取到 {len(models)} 个模型: {models}")
+            return models
+        else:
+            print(f"[DEBUG] Ollama API 返回状态码: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"[DEBUG] 获取 Ollama 模型列表失败: {e}")
+        print(f"[DEBUG] 请确保 Ollama 服务正在运行: ollama serve")
+        return None
+
+@app.route('/api/models', methods=['GET'])
+def get_available_models():
+    """获取可用的模型列表"""
+    print("[DEBUG] ===== /api/models 被调用 =====")
+    # DeepSeek 模型（固定列表）
+    deepseek_models = ['deepseek-chat', 'deepseek-reasoner']
+
+    # 尝试从 Ollama API 获取模型列表
+    ollama_models = get_ollama_models()
+
+    if ollama_models is None:
+        # Ollama 服务不可用，使用默认列表
+        print("[DEBUG] Ollama 服务不可用，使用默认模型列表")
+        ollama_models = ['llama3.1', 'llama3', 'mistral', 'codellama', 'qwen2.5', 'deepseek-coder']
+    else:
+        print(f"[DEBUG] /api/models 返回 Ollama 实际模型列表: {ollama_models}")
+
+    # 检查 Ollama 模型列表中是否有支持思考的模型
+    thinking_models = ['deepseek-r1']
+    ollama_supports_reasoning = any(
+        any(tm in model.lower() for tm in thinking_models)
+        for model in ollama_models
+    )
+
+    models = {
+        'deepseek': {
+            'provider': 'deepseek',
+            'models': deepseek_models,
+            'supports_reasoning': True,
+            'current': Config.DEEPSEEK_MODEL
+        },
+        'ollama': {
+            'provider': 'ollama',
+            'models': ollama_models,
+            'supports_reasoning': ollama_supports_reasoning,
+            'current': ollama_models[0] if ollama_models else Config.OLLAMA_MODEL
+        }
+    }
+
+    response = {
+        'providers': models,
+        'current_provider': Config.DEFAULT_LLM_PROVIDER,
+        'current_config': Config.get_current_model_config()
+    }
+    print(f"[DEBUG] 返回的响应: {response}")
+    return jsonify(response)
+
+@app.route('/api/models/switch', methods=['POST'])
+def switch_model():
+    """切换当前使用的模型（运行时）"""
+    data = request.json
+    provider = data.get('provider')
+    model = data.get('model')
+    enable_thinking = data.get('enable_thinking', False)
+
+    if not provider or not model:
+        return jsonify({'error': '缺少必要参数: provider 和 model'}), 400
+
+    if provider not in ['deepseek', 'ollama']:
+        return jsonify({'error': '不支持的提供商'}), 400
+
+    # 验证模型名称
+    if provider == 'deepseek':
+        if model not in ['deepseek-chat', 'deepseek-reasoner']:
+            return jsonify({'error': '不支持的 DeepSeek 模型'}), 400
+    elif provider == 'ollama':
+        # 对于 Ollama，验证模型是否存在
+        ollama_models = get_ollama_models()
+        if ollama_models is None:
+            # Ollama 服务不可用，使用默认列表验证
+            default_models = ['llama3.1', 'llama3', 'mistral', 'codellama', 'qwen2.5', 'deepseek-coder']
+            if model not in default_models:
+                return jsonify({'error': f'不支持的 Ollama 模型: {model}. Ollama 服务可能未启动'}), 400
+        elif model not in ollama_models:
+            return jsonify({'error': f'模型 {model} 未在 Ollama 中找到'}), 400
+
+    # 更新运行时配置（包括 enable_thinking）
+    LLMClientFactory.set_runtime_config(provider, model, enable_thinking)
+
+    return jsonify({
+        'success': True,
+        'current_config': LLMClientFactory.get_current_config()
+    })
+
+@app.route('/api/models/current', methods=['GET'])
+def get_current_model():
+    """获取当前使用的模型配置"""
+    return jsonify(LLMClientFactory.get_current_config())
 
 @app.route('/')
 @app.route('/<path:path>')
@@ -174,9 +302,19 @@ def run_drawing_workflow():
     """启动绘图工作流"""
     data = request.json
     user_prompt = data.get('prompt', '')
+    model_provider = data.get('model_provider')
+    model_name = data.get('model_name')
+    enable_thinking = data.get('enable_thinking', False)
 
     if not user_prompt:
         return jsonify({'error': '请输入绘图需求'}), 400
+
+    # 如果指定了模型配置，先设置运行时配置
+    if model_provider and model_name:
+        try:
+            LLMClientFactory.set_runtime_config(model_provider, model_name, enable_thinking)
+        except Exception as e:
+            return jsonify({'error': f'模型配置失败: {str(e)}'}), 400
 
     # 立即更新状态为运行中，提供即时反馈
     workflow_statuses['drawing'] = {
@@ -262,9 +400,19 @@ def run_document_with_images_workflow():
     """启动带图片的文档生成工作流"""
     data = request.json
     user_prompt = data.get('prompt', '')
+    model_provider = data.get('model_provider')
+    model_name = data.get('model_name')
+    enable_thinking = data.get('enable_thinking', False)
 
     if not user_prompt:
         return jsonify({'error': '请输入文档主题'}), 400
+
+    # 如果指定了模型配置，先设置运行时配置
+    if model_provider and model_name:
+        try:
+            LLMClientFactory.set_runtime_config(model_provider, model_name, enable_thinking)
+        except Exception as e:
+            return jsonify({'error': f'模型配置失败: {str(e)}'}), 400
 
     # 立即更新状态为运行中
     workflow_statuses['document_with_images'] = {
@@ -479,9 +627,19 @@ def run_manim_workflow():
     data = request.json
     user_prompt = data.get('prompt', '')
     quality = data.get('quality', 'medium')
+    model_provider = data.get('model_provider')
+    model_name = data.get('model_name')
+    enable_thinking = data.get('enable_thinking', False)
 
     if not user_prompt:
         return jsonify({'error': '请输入动画需求'}), 400
+
+    # 如果指定了模型配置，先设置运行时配置
+    if model_provider and model_name:
+        try:
+            LLMClientFactory.set_runtime_config(model_provider, model_name, enable_thinking)
+        except Exception as e:
+            return jsonify({'error': f'模型配置失败: {str(e)}'}), 400
 
     # 立即更新状态为运行中
     workflow_statuses['manim'] = {
@@ -725,7 +883,10 @@ def run_drawing_workflow_thread(user_prompt):
             from langgraph.graph import StateGraph, END
 
             # 原始节点函数
-            from workflows.draw_pic import refine_prompt, generate_code, execute_code, save_image
+            from workflows.draw_pic import (
+                refine_prompt, generate_code, execute_code,
+                analyze_execution_result, fix_code_with_feedback, save_image
+            )
 
             # 包装节点以添加进度报告
             def monitored_refine_prompt(state):
@@ -765,9 +926,9 @@ def run_drawing_workflow_thread(user_prompt):
                 })
                 update_and_emit_status('drawing')
                 
-                # 定义流式回调函数
-                def stream_callback(content):
-                    emit_stream_content('drawing', 'generate_code', content)
+                # 定义流式回调函数（支持内容类型）
+                def stream_callback(content, content_type='content'):
+                    emit_stream_content('drawing', 'generate_code', content, content_type)
                 
                 # 执行节点逻辑，传入流式回调
                 result = generate_code(state, stream_callback=stream_callback)
@@ -852,16 +1013,127 @@ def run_drawing_workflow_thread(user_prompt):
                     print(f"[DEBUG] 图片大小: {result.get('image_size', 0)} 字节")
                 return result
 
-            # 构建图
+            def monitored_analyze_execution_result(state):
+                print(f"\n[DEBUG] >>> 节点 'analyze_execution_result' 开始执行")
+
+                # 立即设置状态并发送更新
+                workflow_statuses['drawing']['current_step'] = 'analyze_execution_result'
+                workflow_statuses['drawing']['steps'].append({
+                    'step': 'analyze_execution_result',
+                    'name': DRAWING_STEP_NAMES['analyze_execution_result'],
+                    'status': 'running',
+                    'timestamp': datetime.now().isoformat()
+                })
+                update_and_emit_status('drawing')
+
+                # 执行节点逻辑
+                result = analyze_execution_result(state)
+
+                # 节点完成时立即更新状态
+                if result.get('error'):
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['drawing']['steps'][-1]['error'] = result.get('error', '未知错误')
+                else:
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
+                update_and_emit_status('drawing')
+
+                print(f"[DEBUG] <<< 节点 'analyze_execution_result' 执行完成")
+                retry_info = f" [重试 {result.get('retry_count', 0)}/{result.get('max_retries', 3)}]" if result.get('retry_count', 0) > 0 else ""
+                if result.get('error'):
+                    print(f"[DEBUG] analyze_execution_result 返回错误: {result['error']}")
+                elif result.get('need_retry'):
+                    print(f"[DEBUG] 需要重试{retry_info}，进入修复节点")
+                else:
+                    print(f"[DEBUG] 执行成功，准备保存图片")
+                return result
+
+            def monitored_fix_code_with_feedback(state):
+                print(f"\n[DEBUG] >>> 节点 'fix_code_with_feedback' 开始执行")
+
+                # 立即设置状态并发送更新
+                workflow_statuses['drawing']['current_step'] = 'fix_code_with_feedback'
+                retry_count = state.get('retry_count', 1)
+                max_retries = state.get('max_retries', 3)
+                workflow_statuses['drawing']['steps'].append({
+                    'step': 'fix_code_with_feedback',
+                    'name': DRAWING_STEP_NAMES['fix_code_with_feedback'],
+                    'status': 'running',
+                    'timestamp': datetime.now().isoformat(),
+                    'retry_info': {
+                        'current': retry_count,
+                        'max': max_retries
+                    }
+                })
+                update_and_emit_status('drawing')
+
+                # 定义流式回调函数
+                def stream_callback(content, content_type='content'):
+                    emit_stream_content('drawing', 'fix_code_with_feedback', content, content_type)
+
+                # 执行节点逻辑，传入流式回调
+                result = fix_code_with_feedback(state, stream_callback=stream_callback)
+
+                # 节点完成时立即更新状态
+                if result.get('error'):
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'error'
+                    workflow_statuses['drawing']['steps'][-1]['error'] = result.get('error', '未知错误')
+                else:
+                    workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
+                workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
+                update_and_emit_status('drawing')
+
+                print(f"[DEBUG] <<< 节点 'fix_code_with_feedback' 执行完成")
+                if result.get('error'):
+                    print(f"[DEBUG] fix_code_with_feedback 返回错误: {result['error']}")
+                else:
+                    print(f"[DEBUG] 修复后的代码长度: {len(result.get('generated_code', ''))} 字符")
+                return result
+
+            # 构建图（CodeAct模式：带反馈循环）
             workflow = StateGraph(GraphState)
             workflow.add_node("refine_prompt", monitored_refine_prompt)
             workflow.add_node("generate_code", monitored_generate_code)
             workflow.add_node("execute_code", monitored_execute_code)
+            workflow.add_node("analyze_execution_result", monitored_analyze_execution_result)  # 新增
+            workflow.add_node("fix_code_with_feedback", monitored_fix_code_with_feedback)    # 新增
             workflow.add_node("save_image", monitored_save_image)
             workflow.set_entry_point("refine_prompt")
+
+            # 定义工作流边
             workflow.add_edge("refine_prompt", "generate_code")
             workflow.add_edge("generate_code", "execute_code")
-            workflow.add_edge("execute_code", "save_image")
+            workflow.add_edge("execute_code", "analyze_execution_result")  # 修改：执行后先分析
+
+            # 条件边：根据分析结果决定是保存还是重试
+            def should_retry(state):
+                """判断是否需要重试修复代码
+
+                优先级顺序（重要！）：
+                1. 先检查 need_retry - 如果需要重试，不管是否有错误都要进入修复流程
+                2. 再检查 error - 如果有错误且不需要重试，结束工作流
+                3. 否则保存图片
+                """
+                if state.get("need_retry", False):
+                    # 需要修复代码，即使有旧错误也要进入修复流程
+                    return "fix_code"
+                if state.get("error"):
+                    # 有错误信息且不再需要重试，结束工作流
+                    return "end"
+                return "save_image"
+
+            workflow.add_conditional_edges(
+                "analyze_execution_result",
+                should_retry,
+                {
+                    "fix_code": "fix_code_with_feedback",  # 需要修复
+                    "save_image": "save_image",            # 成功，保存图片
+                    "end": END                              # 失败，结束
+                }
+            )
+
+            # CodeAct反馈循环：修复后重新执行
+            workflow.add_edge("fix_code_with_feedback", "execute_code")
             workflow.add_edge("save_image", END)
 
             return workflow.compile()
@@ -876,7 +1148,14 @@ def run_drawing_workflow_thread(user_prompt):
             "generated_code": "",
             "image_path": "",
             "image_size": 0,
-            "error": ""
+            "error": "",
+            # CodeAct 模式初始化字段
+            "execution_output": "",
+            "execution_success": False,
+            "retry_count": 0,
+            "max_retries": 3,
+            "fix_feedback": "",
+            "need_retry": False
         }
         print(f"[DEBUG] 初始状态: {initial_state}")
 

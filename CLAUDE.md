@@ -37,12 +37,6 @@ DEEPSEEK_API_KEY=your_key_here
 
 ### Running the Application
 
-**Quick Start (Backend only):**
-```bash
-./start.sh           # Linux/Mac
-start.bat            # Windows
-```
-
 **Development Mode (Full Stack):**
 ```bash
 # Terminal 1: Backend
@@ -97,8 +91,6 @@ bamboo/
 │   │   └── main.tsx     # React entry point
 │   ├── vite.config.ts    # Vite dev server with proxy
 │   └── package.json
-├── start.sh             # Quick start script (Linux/Mac)
-└── start.bat            # Quick start script (Windows)
 ```
 
 ### Technology Stack

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Card, Input, Button, Space, Tabs, Select, message } from 'antd';
 import { SendOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useWorkflow } from '../../contexts/WorkflowContext';
 import * as api from '../../services/api';
 import WorkflowStatusIndicator from '../common/WorkflowStatusIndicator';
 import WorkflowExecutionTracker from '../common/WorkflowExecutionTracker';
@@ -25,8 +26,10 @@ function ManimPanel() {
     currentNode,
     isStreaming,
     streamContent,
+    reasoningContent,  // 新增：获取思考内容
   } = useWebSocket('manim');
 
+  const { state: { modelConfig } } = useWorkflow();
   const [prompt, setPrompt] = useState('');
   const [quality, setQuality] = useState<'low' | 'medium' | 'high' | '4k'>('medium');
 
@@ -37,7 +40,11 @@ function ManimPanel() {
     }
 
     try {
-      await api.startManimWorkflow(prompt, quality);
+      await api.startManimWorkflow(prompt, quality, {
+        provider: modelConfig.provider,
+        model: modelConfig.model,
+        enable_thinking: modelConfig.enable_thinking,
+      });
       message.success('动画工作流已启动');
     } catch (err) {
       message.error(err instanceof Error ? err.message : '启动失败');
@@ -117,6 +124,7 @@ function ManimPanel() {
           <StreamContentList
             steps={steps}
             streamContent={streamContent}
+            reasoningContent={reasoningContent}
             currentNode={currentNode}
             isStreaming={isStreaming}
             workflowType="manim"
@@ -126,57 +134,50 @@ function ManimPanel() {
 
       {/* 右侧结果区域 */}
       <div className="workflow-panel-right">
-        {isRunning ? (
-          /* 运行时：显示执行进度 */
-          steps.length > 0 && (
-            <Card title="执行进度">
-              <WorkflowExecutionTracker
-                steps={steps}
-                currentStep={currentStep}
-                workflowType="manim"
-                onStreamContentClick={() => {
-                  const streamViewer = document.querySelector('.stream-content-viewer');
-                  streamViewer?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              />
-            </Card>
-          )
+        {result && result.video_url ? (
+          /* 优先：显示生成结果 */
+          <Card title="生成结果">
+            <Tabs
+              items={[
+                {
+                  key: 'video',
+                  label: '视频',
+                  children: (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0 }}>
+                      <video
+                        src={result.video_url}
+                        controls
+                        style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 320px)' }}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  key: 'code',
+                  label: '代码',
+                  children: (
+                    <pre style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px' }}>
+                      {result.generated_code}
+                    </pre>
+                  ),
+                },
+              ]}
+            />
+          </Card>
+        ) : steps.length > 0 ? (
+          /* 有步骤历史：显示执行进度 */
+          <Card title="执行进度">
+            <WorkflowExecutionTracker
+              steps={steps}
+              currentStep={currentStep}
+              workflowType="manim"
+            />
+          </Card>
         ) : (
-          /* 完成后：显示生成结果 */
-          result && result.video_url ? (
-            <Card title="生成结果">
-              <Tabs
-                items={[
-                  {
-                    key: 'video',
-                    label: '视频',
-                    children: (
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0 }}>
-                        <video
-                          src={result.video_url}
-                          controls
-                          style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 320px)' }}
-                        />
-                      </div>
-                    ),
-                  },
-                  {
-                    key: 'code',
-                    label: '代码',
-                    children: (
-                      <pre style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px' }}>
-                        {result.generated_code}
-                      </pre>
-                    ),
-                  },
-                ]}
-              />
-            </Card>
-          ) : (
-            <Card title="生成结果">
-              <ResultPlaceholder type="manim" error={error} />
-            </Card>
-          )
+          /* 默认：显示占位符 */
+          <Card title="生成结果">
+            <ResultPlaceholder type="manim" error={error} />
+          </Card>
         )}
       </div>
     </div>
