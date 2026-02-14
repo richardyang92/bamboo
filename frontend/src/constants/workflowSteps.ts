@@ -155,14 +155,19 @@ export const mergeStepStatus = (
   return initialSteps.map(step => {
     const backendStep = backendStepMap.get(step.step);
     if (backendStep) {
-      // 使用后端返回的状态信息
+      // 使用后端返回的状态信息，保留所有后端字段（包括图片进度等）
       return {
         ...step,
         status: backendStep.status,
         timestamp: backendStep.timestamp || step.timestamp,
         completed_at: backendStep.completed_at,
         error: backendStep.error,
-        retry_info: backendStep.retry_info,  // 保留重试信息
+        retry_info: backendStep.retry_info,
+        // 图片生成进度信息
+        current_image_index: backendStep.current_image_index,
+        total_images: backendStep.total_images,
+        current_image_description: backendStep.current_image_description,
+        progress_text: backendStep.progress_text,
       };
     }
     // 没有后端数据，保持 pending 状态

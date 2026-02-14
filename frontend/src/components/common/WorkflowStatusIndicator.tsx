@@ -25,11 +25,12 @@ interface WorkflowStatusIndicatorProps {
 }
 
 // 工作流状态映射
-const workflowStatusConfig: Record<WorkflowStatusType, { status: 'success' | 'processing' | 'error' | 'default'; text: string }> = {
+const workflowStatusConfig: Record<WorkflowStatusType, { status: 'success' | 'processing' | 'error' | 'default' | 'warning'; text: string }> = {
   idle: { status: 'default', text: '空闲' },
   running: { status: 'processing', text: '运行中' },
   completed: { status: 'success', text: '已完成' },
   error: { status: 'error', text: '出错' },
+  stopped: { status: 'warning', text: '已停止' },
 };
 
 // 连接状态映射

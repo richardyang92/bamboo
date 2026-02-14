@@ -99,6 +99,13 @@ export const clearDrawingHistory = async () => {
   return api.post('/api/drawing/clear');
 };
 
+/**
+ * 停止绘图工作流
+ */
+export const stopDrawingWorkflow = async () => {
+  return api.post('/api/drawing/stop');
+};
+
 // ==================== 文档工作流 API ====================
 
 /**
@@ -175,6 +182,13 @@ export const clearDocumentHistory = async () => {
   return api.post('/api/document/clear');
 };
 
+/**
+ * 停止文档工作流
+ */
+export const stopDocumentWorkflow = async () => {
+  return api.post('/api/document/stop');
+};
+
 // ==================== Manim 动画工作流 API ====================
 
 /**
@@ -220,6 +234,13 @@ export const deleteVideo = async (filename: string) => {
  */
 export const clearManimHistory = async () => {
   return api.post('/api/manim/clear');
+};
+
+/**
+ * 停止 Manim 工作流
+ */
+export const stopManimWorkflow = async () => {
+  return api.post('/api/manim/stop');
 };
 
 // ==================== 统一 API ====================

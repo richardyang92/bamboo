@@ -4,13 +4,14 @@
  */
 import { useState, useMemo } from 'react';
 import { Card, Input, Button, Space, Tabs, message, Image } from 'antd';
-import { SendOutlined, LoadingOutlined, PictureOutlined } from '@ant-design/icons';
+import { SendOutlined, LoadingOutlined, PictureOutlined, StopOutlined } from '@ant-design/icons';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useWorkflow } from '../../contexts/WorkflowContext';
 import * as api from '../../services/api';
 import WorkflowStatusIndicator from '../common/WorkflowStatusIndicator';
 import WorkflowExecutionTracker from '../common/WorkflowExecutionTracker';
-import StreamContentList from '../common/StreamContentList';
+import WorkflowTimeline from '../common/WorkflowTimeline';
+import EmptyView from '../common/EmptyView';
 import ResultPlaceholder from '../common/ResultPlaceholder';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -61,6 +62,15 @@ function DocumentPanel() {
       message.success('历史记录已清除');
     } catch (err) {
       message.error(err instanceof Error ? err.message : '清除失败');
+    }
+  };
+
+  const handleStop = async () => {
+    try {
+      await api.stopDocumentWorkflow();
+      message.success('工作流已停止');
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '停止失败');
     }
   };
 
@@ -133,6 +143,15 @@ function DocumentPanel() {
                 >
                   {isRunning ? '生成中...' : '开始生成'}
                 </Button>
+                {isRunning && (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={handleStop}
+                  >
+                    停止
+                  </Button>
+                )}
                 <Button onClick={handleClear} disabled={isRunning}>
                   清除历史
                 </Button>
@@ -140,15 +159,22 @@ function DocumentPanel() {
             </Space>
           </Card>
 
-          {/* 流式内容展示 */}
-          <StreamContentList
-            steps={steps}
-            streamContent={streamContent}
-            reasoningContent={reasoningContent}
-            currentNode={currentNode}
-            isStreaming={isStreaming}
-            workflowType="document_with_images"
-          />
+          {/* 工作流执行时间线 */}
+          <Card
+            title="执行时间线">
+            {steps.filter(s => s.status !== 'pending').length > 0 ? (
+              <WorkflowTimeline
+                steps={steps}
+                streamContent={streamContent}
+                reasoningContent={reasoningContent}
+                currentNode={currentNode}
+                isStreaming={isStreaming}
+                workflowType="document_with_images"
+              />
+            ) : (
+              <EmptyView workflowType="document_with_images" />
+            )}
+          </Card>
         </Space>
       </div>
 

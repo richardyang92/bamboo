@@ -4,13 +4,14 @@
  */
 import { useState } from 'react';
 import { Card, Input, Button, Space, Tabs, Select, message } from 'antd';
-import { SendOutlined, LoadingOutlined } from '@ant-design/icons';
+import { SendOutlined, LoadingOutlined, StopOutlined } from '@ant-design/icons';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useWorkflow } from '../../contexts/WorkflowContext';
 import * as api from '../../services/api';
 import WorkflowStatusIndicator from '../common/WorkflowStatusIndicator';
 import WorkflowExecutionTracker from '../common/WorkflowExecutionTracker';
-import StreamContentList from '../common/StreamContentList';
+import WorkflowTimeline from '../common/WorkflowTimeline';
+import EmptyView from '../common/EmptyView';
 import ResultPlaceholder from '../common/ResultPlaceholder';
 
 const { TextArea } = Input;
@@ -57,6 +58,15 @@ function ManimPanel() {
       message.success('历史记录已清除');
     } catch (err) {
       message.error(err instanceof Error ? err.message : '清除失败');
+    }
+  };
+
+  const handleStop = async () => {
+    try {
+      await api.stopManimWorkflow();
+      message.success('工作流已停止');
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '停止失败');
     }
   };
 
@@ -113,6 +123,15 @@ function ManimPanel() {
                 >
                   {isRunning ? '渲染中...' : '开始渲染'}
                 </Button>
+                {isRunning && (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={handleStop}
+                  >
+                    停止
+                  </Button>
+                )}
                 <Button onClick={handleClear} disabled={isRunning}>
                   清除历史
                 </Button>
@@ -120,15 +139,21 @@ function ManimPanel() {
             </Space>
           </Card>
 
-          {/* 流式内容展示 */}
-          <StreamContentList
-            steps={steps}
-            streamContent={streamContent}
-            reasoningContent={reasoningContent}
-            currentNode={currentNode}
-            isStreaming={isStreaming}
-            workflowType="manim"
-          />
+          {/* 工作流执行时间线 */}
+          <Card title="执行时间线">
+            {steps.filter(s => s.status !== 'pending').length > 0 ? (
+              <WorkflowTimeline
+                steps={steps}
+                streamContent={streamContent}
+                reasoningContent={reasoningContent}
+                currentNode={currentNode}
+                isStreaming={isStreaming}
+                workflowType="manim"
+              />
+            ) : (
+              <EmptyView workflowType="manim" />
+            )}
+          </Card>
         </Space>
       </div>
 
@@ -143,11 +168,11 @@ function ManimPanel() {
                   key: 'video',
                   label: '视频',
                   children: (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0, height: '100%' }}>
                       <video
                         src={result.video_url}
                         controls
-                        style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 320px)' }}
+                        style={{ maxWidth: '100%', maxHeight: '100%' }}
                       />
                     </div>
                   ),

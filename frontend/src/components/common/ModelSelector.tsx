@@ -6,9 +6,25 @@ import { useState, useEffect } from 'react';
 import { Select, Space, Tag, message, Switch, Tooltip } from 'antd';
 import { RobotOutlined, ThunderboltOutlined, BulbOutlined } from '@ant-design/icons';
 import * as api from '../../services/api';
-import type { LLMProvider, ModelConfig, AvailableModels } from '../../types';
+import type { LLMProvider, ModelConfig, AvailableModels, ModelInfo } from '../../types';
 
 const { Option } = Select;
+
+// 兼容新旧数据格式：将字符串数组或 ModelInfo 数组统一转换为 ModelInfo 数组
+const normalizeModels = (models: string[] | ModelInfo[]): ModelInfo[] => {
+  if (!models || models.length === 0) return [];
+
+  // 如果第一个元素是字符串，说明是旧格式
+  if (typeof models[0] === 'string') {
+    return (models as string[]).map(name => ({
+      name,
+      supports_thinking: false  // 旧格式默认不支持思考
+    }));
+  }
+
+  // 新格式，直接返回
+  return models as ModelInfo[];
+};
 
 interface ModelSelectorProps {
   onModelChange?: (config: ModelConfig & { enable_thinking?: boolean }) => void;
@@ -16,37 +32,27 @@ interface ModelSelectorProps {
   size?: 'small' | 'middle' | 'large';
 }
 
-// 判断模型是否为思考模型
-const isThinkingModel = (model: string): boolean => {
-  const modelLower = model.toLowerCase();
-  return (
-    modelLower.includes('reasoner') ||
-    modelLower.includes('deepseek-r1') ||
-    modelLower.includes('qwen3') ||
-    modelLower.includes('glm4') ||
-    modelLower.includes('glm-4') ||
-    modelLower.includes('gpt-oss')
-  );
-};
-
 // 默认模型配置（当后端不可用时使用）
 // 注意：这是备用配置，实际使用时会从后端 API 获取真实模型列表
 const DEFAULT_MODELS: AvailableModels = {
   providers: {
     deepseek: {
       provider: 'deepseek',
-      models: ['deepseek-chat', 'deepseek-reasoner'],
+      models: [
+        { name: 'deepseek-chat', supports_thinking: false },
+        { name: 'deepseek-reasoner', supports_thinking: true }
+      ],
       supports_reasoning: true,
       current: 'deepseek-chat'
     },
     ollama: {
       provider: 'ollama',
       models: [
-        'deepseek-ocr:latest',
-        'qwen3-vl:8b',
-        'qwen3-coder-next:latest',
-        'gpt-oss:20b',
-        'glm-4.7-flash:latest'
+        { name: 'deepseek-ocr:latest', supports_thinking: false },
+        { name: 'qwen3-vl:8b', supports_thinking: false },
+        { name: 'qwen3-coder-next:latest', supports_thinking: false },
+        { name: 'gpt-oss:20b', supports_thinking: false },
+        { name: 'glm-4.7-flash:latest', supports_thinking: false }
       ],
       supports_reasoning: true,
       current: 'deepseek-ocr:latest'
@@ -68,6 +74,14 @@ function ModelSelector({ onModelChange, disabled = false, size = 'middle' }: Mod
   const [loading, setLoading] = useState(false);
   const [enableThinking, setEnableThinking] = useState(false);
 
+  // 根据后端数据判断模型是否支持思考
+  const isThinkingModel = (modelName: string): boolean => {
+    if (!models) return false;
+    const providerConfig = models.providers[currentProvider];
+    const modelInfo = providerConfig.models.find(m => m.name === modelName);
+    return modelInfo?.supports_thinking ?? false;
+  };
+
   // 加载可用模型
   useEffect(() => {
     loadModels();
@@ -83,9 +97,24 @@ function ModelSelector({ onModelChange, disabled = false, size = 'middle' }: Mod
         throw new Error('Invalid API response format');
       }
 
-      setModels(data);
-      setCurrentProvider(data.current_provider);
-      setCurrentModel(data.current_config.model);
+      // 兼容新旧数据格式：如果 models 是字符串数组，转换为 ModelInfo 数组
+      const normalizedData: AvailableModels = {
+        ...data,
+        providers: {
+          deepseek: {
+            ...data.providers.deepseek,
+            models: normalizeModels(data.providers.deepseek.models)
+          },
+          ollama: {
+            ...data.providers.ollama,
+            models: normalizeModels(data.providers.ollama.models)
+          }
+        }
+      };
+
+      setModels(normalizedData);
+      setCurrentProvider(normalizedData.current_provider);
+      setCurrentModel(normalizedData.current_config.model);
       setBackendAvailable(true);
     } catch (err) {
       console.warn('[ModelSelector] 后端不可用，使用默认配置:', err);
@@ -113,6 +142,11 @@ function ModelSelector({ onModelChange, disabled = false, size = 'middle' }: Mod
   const handleModelChange = async (model: string) => {
     if (!backendAvailable) {
       message.warning('后端服务不可用，无法切换模型');
+      return;
+    }
+
+    if (!currentProvider || !model) {
+      message.error('模型参数无效');
       return;
     }
 
@@ -177,7 +211,7 @@ function ModelSelector({ onModelChange, disabled = false, size = 'middle' }: Mod
         value={currentProvider}
         onChange={handleProviderChange}
         disabled={disabled || loading}
-        style={{ width: 110 }}
+        style={{ width: 130 }}
         size={size}
       >
         <Option value="deepseek">
@@ -200,15 +234,15 @@ function ModelSelector({ onModelChange, disabled = false, size = 'middle' }: Mod
         onChange={handleModelChange}
         disabled={disabled || loading}
         loading={loading}
-        style={{ width: 160 }}
+        style={{ width: 200 }}
         size={size}
       >
-        {availableModels.map(model => (
-          <Option key={model} value={model}>
+        {availableModels.filter(m => m && m.name).map(modelInfo => (
+          <Option key={modelInfo.name} value={modelInfo.name}>
             <Space size="small">
-              <span>{model}</span>
-              {/* 识别思考模型：DeepSeek reasoner、Ollama 的思考模型等 */}
-              {isThinkingModel(model) && (
+              <span>{modelInfo.name}</span>
+              {/* 识别思考模型：根据后端返回的能力信息判断 */}
+              {modelInfo.supports_thinking && (
                 <Tag color="purple" style={{ marginLeft: 4, fontSize: '10px' }}>
                   推理
                 </Tag>
@@ -236,7 +270,7 @@ function ModelSelector({ onModelChange, disabled = false, size = 'middle' }: Mod
       )}
 
       {/* 功能标识 */}
-      {providerConfig.supports_reasoning && isThinkingModel(currentModel) && (
+      {providerConfig.supports_reasoning && isCurrentModelThinking && (
         <Tag color="purple" style={{ fontSize: '11px' }}>思考模式</Tag>
       )}
       {currentProvider === 'ollama' && (

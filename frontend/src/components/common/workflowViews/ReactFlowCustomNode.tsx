@@ -18,6 +18,11 @@ const WorkflowCustomNode = memo((props: NodeProps) => {
     type: nodeType,
     status = 'pending',
     retryInfo,
+    // 图片生成进度信息
+    currentImageIndex,
+    totalImages,
+    currentImageDescription,
+    progressText,
   } = data;
 
   // Status color mapping
@@ -26,7 +31,13 @@ const WorkflowCustomNode = memo((props: NodeProps) => {
     running: '#1890ff',
     completed: '#52c41a',
     error: '#ff4d4f',
+    skipped: '#8c8c8c',
   }[status];
+
+  // 判断是否是图片生成步骤且有进度信息
+  const hasImageProgress = currentImageIndex !== undefined &&
+                          totalImages !== undefined &&
+                          status === 'running';
 
   // Render node type icon
   const renderNodeIcon = () => {
@@ -74,6 +85,11 @@ const WorkflowCustomNode = memo((props: NodeProps) => {
 
   // Status text mapping
   const getStatusText = () => {
+    // 如果有图片进度信息，显示进度文本
+    if (hasImageProgress && progressText) {
+      return progressText;
+    }
+
     switch (status) {
       case 'running':
         return '执行中...';
@@ -81,6 +97,8 @@ const WorkflowCustomNode = memo((props: NodeProps) => {
         return '已完成';
       case 'error':
         return '失败';
+      case 'skipped':
+        return '已跳过';
       case 'pending':
       default:
         return '等待中';
@@ -89,6 +107,9 @@ const WorkflowCustomNode = memo((props: NodeProps) => {
 
   // Retry badge
   const hasRetry = retryInfo && retryInfo.current > 0;
+
+  // Image progress badge (similar to retry badge)
+  const hasImageProgressBadge = hasImageProgress && totalImages > 0;
 
   return (
     <div
@@ -158,6 +179,23 @@ const WorkflowCustomNode = memo((props: NodeProps) => {
               fontWeight="bold"
             >
               {retryInfo.current}/{retryInfo.max}
+            </text>
+          </g>
+        )}
+
+        {/* Image progress badge */}
+        {hasImageProgressBadge && (
+          <g className="image-progress-badge">
+            <rect x="120" y="5" width="50" height="16" rx="4" fill="#1890ff" />
+            <text
+              x="145"
+              y="16"
+              textAnchor="middle"
+              fill="white"
+              fontSize="9"
+              fontWeight="bold"
+            >
+              {currentImageIndex}/{totalImages}
             </text>
           </g>
         )}

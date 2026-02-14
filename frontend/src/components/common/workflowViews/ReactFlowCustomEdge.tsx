@@ -29,6 +29,7 @@ const WorkflowCustomEdge = memo((props: EdgeProps) => {
   const edgeData = data as WorkflowEdgeData;
   const edgeType = edgeData?.type || 'default';
   const label = edgeData?.label;
+  const condition = edgeData?.condition;
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -39,13 +40,20 @@ const WorkflowCustomEdge = memo((props: EdgeProps) => {
     targetPosition,
   });
 
-  // Color based on edge type
-  const strokeColor = {
-    success: '#52c41a',
-    failure: '#ff4d4f',
-    retry: '#fa8c16',
-    default: '#d9d9d9',
-  }[edgeType];
+  // Color based on edge type and condition
+  const getStrokeColor = () => {
+    if (edgeType === 'conditional') {
+      // 条件边根据 condition 字段区分颜色
+      return condition === 'no_images' ? '#8c8c8c' : '#1890ff';  // 跳过路径用灰色，正常路径用蓝色
+    }
+    return {
+      success: '#52c41a',
+      failure: '#ff4d4f',
+      retry: '#fa8c16',
+      default: '#d9d9d9',
+    }[edgeType];
+  };
+  const strokeColor = getStrokeColor();
 
   return (
     <>
@@ -55,6 +63,7 @@ const WorkflowCustomEdge = memo((props: EdgeProps) => {
         fill="none"
         stroke={strokeColor}
         strokeWidth={selected ? 2.5 : 1.5}
+        strokeDasharray={edgeType === 'conditional' ? '5,5' : 'none'}
         className={`custom-edge ${edgeType} ${selected ? 'selected' : ''}`}
         style={style}
       />

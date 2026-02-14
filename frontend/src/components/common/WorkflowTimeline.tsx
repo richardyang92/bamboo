@@ -3,7 +3,7 @@
  * 模拟现代CLI工具（Vercel/npm/Docker）的输出风格
  */
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Loader2, AlertCircle, ChevronRight, ChevronDown, Brain, FileOutput } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle, ChevronRight, ChevronDown, Brain, FileOutput, MinusCircle } from 'lucide-react';
 import type { WorkflowStep, WorkflowType, StepStatus } from '../../types';
 import StreamContentItem from './StreamContentItem';
 import './WorkflowTimeline.css';
@@ -51,6 +51,9 @@ const StepIcon: React.FC<{ status: StepStatus; isStreaming: boolean }> = ({ stat
   }
   if (status === 'error') {
     return <AlertCircle className="cli-icon cli-icon-error" strokeWidth={2} size={14} />;
+  }
+  if (status === 'skipped') {
+    return <MinusCircle className="cli-icon cli-icon-skipped" strokeWidth={2} size={14} />;
   }
   if (status === 'running' || isStreaming) {
     return <Loader2 className="cli-icon cli-icon-spinning cli-icon-running" strokeWidth={2} size={14} />;

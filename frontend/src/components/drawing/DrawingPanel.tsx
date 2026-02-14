@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { Card, Input, Button, Space, Image, Tabs, message } from 'antd';
-import { SendOutlined, LoadingOutlined } from '@ant-design/icons';
+import { SendOutlined, LoadingOutlined, StopOutlined } from '@ant-design/icons';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useWorkflow } from '../../contexts/WorkflowContext';
 import * as api from '../../services/api';
@@ -60,6 +60,15 @@ function DrawingPanel() {
     }
   };
 
+  const handleStop = async () => {
+    try {
+      await api.stopDrawingWorkflow();
+      message.success('工作流已停止');
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '停止失败');
+    }
+  };
+
   const isRunning = status === 'running';
 
   return (
@@ -96,6 +105,15 @@ function DrawingPanel() {
                 >
                   {isRunning ? '生成中...' : '开始生成'}
                 </Button>
+                {isRunning && (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={handleStop}
+                  >
+                    停止
+                  </Button>
+                )}
                 <Button onClick={handleClear} disabled={isRunning}>
                   清除历史
                 </Button>
@@ -132,11 +150,11 @@ function DrawingPanel() {
                   key: 'image',
                   label: '图片',
                   children: (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0, height: '100%' }}>
                       <Image
                         src={result.image_url}
                         alt="生成的图表"
-                        style={{ maxHeight: 'calc(100vh - 320px)', maxWidth: '100%', objectFit: 'contain' }}
+                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
                       />
                     </div>
                   ),

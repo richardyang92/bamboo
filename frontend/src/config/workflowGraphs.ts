@@ -180,7 +180,7 @@ export const DOCUMENT_NODES: Node<WorkflowNodeData>[] = [
     position: { x: 0, y: 0 },
     data: {
       label: '识别图片需求',
-      type: 'process',
+      type: 'decision',
       stepId: 'identify_image_requests',
       workflowType: 'document_with_images',
     },
@@ -253,12 +253,31 @@ export const DOCUMENT_EDGES: Edge<WorkflowEdgeData>[] = [
     type: 'custom',
     data: { type: 'default', workflowType: 'document_with_images' },
   },
+  // 条件边：有图片需求
   {
     id: 'e-identify-generate',
     source: 'identify_image_requests',
     target: 'generate_images',
     type: 'custom',
-    data: { type: 'default', workflowType: 'document_with_images' },
+    label: '有图片',
+    data: {
+      type: 'conditional',
+      workflowType: 'document_with_images',
+      condition: 'has_images'
+    },
+  },
+  // 条件边：无图片需求（跳过生图流程）
+  {
+    id: 'e-identify-save-skip',
+    source: 'identify_image_requests',
+    target: 'save_document',
+    type: 'custom',
+    label: '无图片',
+    data: {
+      type: 'conditional',
+      workflowType: 'document_with_images',
+      condition: 'no_images'
+    },
   },
   {
     id: 'e-generate-embed',

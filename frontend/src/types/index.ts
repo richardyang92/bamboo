@@ -3,10 +3,10 @@
  */
 
 // 工作流状态类型
-export type WorkflowStatusType = 'idle' | 'running' | 'completed' | 'error';
+export type WorkflowStatusType = 'idle' | 'running' | 'completed' | 'error' | 'stopped';
 
 // 工作流步骤状态
-export type StepStatus = 'pending' | 'running' | 'completed' | 'error';
+export type StepStatus = 'pending' | 'running' | 'completed' | 'error' | 'skipped';
 
 // 工作流类型
 export type WorkflowType = 'drawing' | 'document_with_images' | 'manim';
@@ -24,6 +24,11 @@ export interface WorkflowStep {
         current: number;  // 当前重试次数
         max: number;     // 最大重试次数
     };
+    // 图片生成进度信息（用于 generate_images 步骤）
+    current_image_index?: number;  // 当前图片索引（从1开始）
+    total_images?: number;          // 总图片数量
+    current_image_description?: string;  // 当前正在生成的图片描述
+    progress_text?: string;          // 进度文本
 }
 
 // 工作流状态
@@ -159,12 +164,18 @@ export interface ModelConfig {
     supports_reasoning: boolean;
 }
 
+// 模型信息（包含能力）
+export interface ModelInfo {
+    name: string;
+    supports_thinking: boolean;
+}
+
 // 可用模型列表
 export interface AvailableModels {
     providers: {
         [key in LLMProvider]: {
             provider: LLMProvider;
-            models: string[];
+            models: ModelInfo[];  // 改为 ModelInfo 数组，包含能力信息
             supports_reasoning: boolean;
             current: string;
         };
@@ -206,7 +217,7 @@ export interface GenerateImageResponse {
 export type NodeType = 'start' | 'process' | 'decision' | 'end' | 'retry';
 
 // Edge type categories for workflow graphs
-export type EdgeType = 'success' | 'failure' | 'retry' | 'default';
+export type EdgeType = 'success' | 'failure' | 'retry' | 'default' | 'conditional';
 
 // Custom node data structure for React Flow
 // Using index signature to satisfy React Flow's type constraints
@@ -220,6 +231,11 @@ export interface WorkflowNodeData {
         current: number;
         max: number;
     };
+    // 图片生成进度信息（用于 generate_images 节点）
+    currentImageIndex?: number;
+    totalImages?: number;
+    currentImageDescription?: string;
+    progressText?: string;
     [key: string]: any; // Index signature for additional properties
 }
 
@@ -229,5 +245,6 @@ export interface WorkflowEdgeData {
     label?: string;
     type: EdgeType;
     workflowType: WorkflowType;
+    condition?: 'has_images' | 'no_images';  // 条件边的判断条件
     [key: string]: any; // Index signature for additional properties
 }

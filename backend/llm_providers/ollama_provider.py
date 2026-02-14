@@ -75,6 +75,67 @@ class StreamChunk:
     choices: list[StreamChoice]
 
 
+def get_ollama_model_capabilities(model_name: str, base_url: str = "http://localhost:11434") -> dict:
+    """获取 Ollama 模型的能力信息
+
+    通过 client.show() 方法获取模型的 capabilities，判断是否支持思考模式等。
+
+    Args:
+        model_name: 模型名称
+        base_url: Ollama 服务地址
+
+    Returns:
+        包含能力信息的字典:
+        {
+            'supports_thinking': bool,  # 是否支持思考/推理模式
+            'capabilities': list,       # 完整的能力列表
+            'details': dict             # 模型详情（family, parameter_size 等）
+        }
+    """
+    result = {
+        'supports_thinking': False,
+        'capabilities': [],
+        'details': {}
+    }
+
+    try:
+        from ollama import Client
+        client = Client(host=base_url)
+
+        # 使用 show() 方法获取模型信息
+        info = client.show(model_name)
+
+        # 获取 capabilities 列表
+        capabilities = getattr(info, 'capabilities', None)
+        if capabilities is None:
+            # 尝试从 dict 格式获取
+            capabilities = info.get('capabilities', []) if isinstance(info, dict) else []
+
+        result['capabilities'] = list(capabilities) if capabilities else []
+
+        # 检查是否支持思考模式
+        result['supports_thinking'] = 'thinking' in result['capabilities']
+
+        # 获取模型详情
+        details = getattr(info, 'details', None)
+        if details is None:
+            details = info.get('details', {}) if isinstance(info, dict) else {}
+        result['details'] = details if isinstance(details, dict) else {}
+
+        print(f"[DEBUG] 模型 {model_name} capabilities: {result['capabilities']}, supports_thinking: {result['supports_thinking']}")
+
+    except ImportError:
+        print("[WARNING] ollama SDK 未安装，无法获取模型能力信息")
+    except Exception as e:
+        print(f"[WARNING] 获取模型 {model_name} 能力信息失败: {e}")
+        # 回退到硬编码的推理模型列表
+        reasoning_models = ['deepseek-r1', 'deepseek-v3', 'qwen3', 'phi-4']
+        model_lower = model_name.lower()
+        result['supports_thinking'] = any(rm in model_lower for rm in reasoning_models)
+
+    return result
+
+
 class OllamaClient(LLMClient):
     """Ollama 本地模型客户端（使用官方 SDK）"""
 
@@ -345,15 +406,26 @@ class OllamaClient(LLMClient):
     def supports_reasoning_content(self) -> bool:
         """检查模型是否支持推理内容（如 deepseek-r1 等）
 
-        推理模型通常会在 response.message.reasoning_content 中返回思考过程
+        优先使用动态获取的 capabilities 判断，失败时回退到硬编码列表
         """
-        # 已知的推理模型列表（仅包含真正支持推理的模型）
+        model_name = self.config.model_name or ''
+        if not model_name:
+            return False
+
+        # 尝试动态获取模型能力
+        try:
+            capabilities_info = get_ollama_model_capabilities(model_name, self.base_url)
+            return capabilities_info.get('supports_thinking', False)
+        except Exception:
+            pass
+
+        # 回退到硬编码的推理模型列表
         reasoning_models = [
             'deepseek-r1',
             'deepseek-r1:latest',
         ]
 
-        model_lower = (self.config.model_name or '').lower()
+        model_lower = model_name.lower()
         return any(rm in model_lower for rm in reasoning_models)
 
     def get_reasoning_field_name(self) -> str:

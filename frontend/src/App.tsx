@@ -26,6 +26,9 @@ function AppContent() {
     <Layout style={{ minHeight: '100vh' }}>
       <Header
         style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -60,8 +63,8 @@ function AppContent() {
             background: colorBgContainer,
             borderRadius: borderRadiusLG,
             margin: '16px',
-            height: 'calc(100vh - 64px - 32px)',
-            maxHeight: 'calc(100vh - 64px - 32px)',
+            flex: 1,
+            minHeight: 0,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',

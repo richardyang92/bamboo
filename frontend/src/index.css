@@ -110,25 +110,35 @@ body {
   padding: 0 !important;
 }
 
-/* Card body 限制高度，内部滚动 */
+/* 修复 Card 标题内状态指示器的垂直对齐 */
+.workflow-panel-left .ant-card-head .workflow-status-indicator,
+.workflow-panel-left .ant-card-head .workflow-status-indicator .ant-space {
+  align-items: center !important;
+}
+
+.workflow-panel-left .ant-card-head .workflow-status-indicator .ant-badge,
+.workflow-panel-left .ant-card-head .workflow-status-indicator .ant-typography {
+  line-height: 1 !important;
+}
+
+/* Card body 自适应高度，内部滚动 */
 .workflow-panel-right .ant-card .ant-card-body {
   flex: 1;
   min-height: 0;
-  max-height: calc(100vh - 260px);
   overflow: auto;
   padding: 16px;
 }
 
 /* 图片自适应高度 */
 .workflow-panel-right .ant-image {
-  max-height: calc(100vh - 320px);
+  max-height: 100%;
   width: auto;
   max-width: 100%;
   object-fit: contain;
 }
 
 .workflow-panel-right .ant-image img {
-  max-height: calc(100vh - 320px);
+  max-height: 100%;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -136,7 +146,7 @@ body {
 
 /* 视频自适应高度 */
 .workflow-panel-right video {
-  max-height: calc(100vh - 320px);
+  max-height: 100%;
   width: auto;
   max-width: 100%;
 }
@@ -151,7 +161,6 @@ body {
 .workflow-panel-right .ant-tabs .ant-tabs-content-holder {
   flex: 1;
   min-height: 0;
-  max-height: calc(100vh - 320px);
   overflow: auto;
 }
 
@@ -161,7 +170,7 @@ body {
 
 /* 代码块自适应 */
 .workflow-panel-right pre {
-  max-height: calc(100vh - 360px);
+  max-height: 100%;
   overflow: auto;
 }
 

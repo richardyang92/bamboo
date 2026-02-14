@@ -69,7 +69,34 @@ const ReactFlowNodeGraphView: React.FC<ReactFlowNodeGraphViewProps> = ({
       return [];
     }
 
-    // Create dagre graph for layout calculation
+    const nodeCount = baseGraph.nodes.length;
+
+    // 节点多时，使用手动布局实现多列显示
+    // 避免节点因排成一行而变得太小
+    if (nodeCount > 5) {
+      // 每列最多 4 个节点
+      const maxNodesPerColumn = 4;
+      const columnCount = Math.ceil(nodeCount / maxNodesPerColumn);
+      const nodeWidth = 180;
+      const nodeHeight = 60;
+      const horizontalSpacing = 80;  // 列间距
+      const verticalSpacing = 80;      // 行间距
+
+      return baseGraph.nodes.map((node, index) => {
+        const columnIndex = Math.floor(index / maxNodesPerColumn);
+        const rowIndex = index % maxNodesPerColumn;
+
+        return {
+          ...node,
+          position: {
+            x: columnIndex * (nodeWidth + horizontalSpacing),
+            y: rowIndex * (nodeHeight + verticalSpacing),
+          },
+        };
+      });
+    }
+
+    // 节点少时，使用 dagre 自动布局
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
     dagreGraph.setGraph({ rankdir: 'TB', ranksep: 100, nodesep: 80 });
@@ -108,6 +135,11 @@ const ReactFlowNodeGraphView: React.FC<ReactFlowNodeGraphViewProps> = ({
         ...node.data,
         status: stepMap.get(node.data.stepId)?.status || 'pending',
         retryInfo: stepMap.get(node.data.stepId)?.retry_info,
+        // 图片生成进度信息
+        currentImageIndex: stepMap.get(node.data.stepId)?.current_image_index,
+        totalImages: stepMap.get(node.data.stepId)?.total_images,
+        currentImageDescription: stepMap.get(node.data.stepId)?.current_image_description,
+        progressText: stepMap.get(node.data.stepId)?.progress_text,
       },
     }))
   );
@@ -138,6 +170,11 @@ const ReactFlowNodeGraphView: React.FC<ReactFlowNodeGraphViewProps> = ({
           ...node.data,
           status: step?.status || 'pending',
           retryInfo: step?.retry_info,
+          // 图片生成进度信息
+          currentImageIndex: step?.current_image_index,
+          totalImages: step?.total_images,
+          currentImageDescription: step?.current_image_description,
+          progressText: step?.progress_text,
         },
       };
     });
@@ -197,6 +234,8 @@ const ReactFlowNodeGraphView: React.FC<ReactFlowNodeGraphViewProps> = ({
         return '#1890ff';
       case 'error':
         return '#ff4d4f';
+      case 'skipped':
+        return '#8c8c8c';
       default:
         return '#d9d9d9';
     }

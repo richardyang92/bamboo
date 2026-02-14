@@ -9,6 +9,7 @@ from workflows.draw_pic import create_graph, GraphState
 from datetime import datetime
 from config import Config
 from llm_providers.factory import LLMClientFactory
+from llm_providers.ollama_provider import get_ollama_model_capabilities
 
 # Fix UTF-8 encoding on Windows
 if sys.platform == 'win32':
@@ -64,6 +65,21 @@ workflow_statuses = {
 
 # 用于线程间通信的锁
 status_lock = threading.Lock()
+
+# 工作流停止标志（用于中断正在运行的工作流）
+workflow_stop_flags = {
+    'drawing': False,
+    'document_with_images': False,
+    'manim': False
+}
+
+def should_stop_workflow(workflow_type: str) -> bool:
+    """检查工作流是否应该停止"""
+    return workflow_stop_flags.get(workflow_type, False)
+
+def reset_stop_flag(workflow_type: str):
+    """重置工作流停止标志"""
+    workflow_stop_flags[workflow_type] = False
 
 # 为了向后兼容，保留旧的 workflow_status 引用
 workflow_status = workflow_statuses['drawing']
@@ -185,6 +201,41 @@ def get_ollama_models():
         print(f"[DEBUG] 请确保 Ollama 服务正在运行: ollama serve")
         return None
 
+def get_model_capabilities(provider: str, model_names: list) -> list:
+    """为模型列表添加能力信息
+
+    Args:
+        provider: 提供商名称 ('deepseek' | 'ollama')
+        model_names: 模型名称列表
+
+    Returns:
+        包含模型能力信息的列表，每个元素为 {'name': str, 'supports_thinking': bool}
+    """
+    models_with_info = []
+    for model in model_names:
+        if provider == 'deepseek':
+            # DeepSeek: 只有 reasoner 系列支持思考
+            supports_thinking = 'reasoner' in model.lower()
+        elif provider == 'ollama':
+            # Ollama: 使用 client.show() 动态获取模型能力
+            # 检查 capabilities 中是否包含 "thinking"
+            try:
+                capabilities_info = get_ollama_model_capabilities(model)
+                supports_thinking = capabilities_info.get('supports_thinking', False)
+            except Exception as e:
+                print(f"[DEBUG] 获取模型 {model} 能力失败: {e}，使用回退逻辑")
+                # 回退到硬编码列表
+                thinking_models = ['deepseek-r1', 'deepseek-v3', 'qwen3', 'phi-4']
+                supports_thinking = any(tm in model.lower() for tm in thinking_models)
+        else:
+            supports_thinking = False
+
+        models_with_info.append({
+            'name': model,
+            'supports_thinking': supports_thinking
+        })
+    return models_with_info
+
 @app.route('/api/models', methods=['GET'])
 def get_available_models():
     """获取可用的模型列表"""
@@ -202,23 +253,23 @@ def get_available_models():
     else:
         print(f"[DEBUG] /api/models 返回 Ollama 实际模型列表: {ollama_models}")
 
+    # 为模型添加能力信息
+    deepseek_models_with_info = get_model_capabilities('deepseek', deepseek_models)
+    ollama_models_with_info = get_model_capabilities('ollama', ollama_models)
+
     # 检查 Ollama 模型列表中是否有支持思考的模型
-    thinking_models = ['deepseek-r1']
-    ollama_supports_reasoning = any(
-        any(tm in model.lower() for tm in thinking_models)
-        for model in ollama_models
-    )
+    ollama_supports_reasoning = any(m['supports_thinking'] for m in ollama_models_with_info)
 
     models = {
         'deepseek': {
             'provider': 'deepseek',
-            'models': deepseek_models,
+            'models': deepseek_models_with_info,
             'supports_reasoning': True,
             'current': Config.DEEPSEEK_MODEL
         },
         'ollama': {
             'provider': 'ollama',
-            'models': ollama_models,
+            'models': ollama_models_with_info,
             'supports_reasoning': ollama_supports_reasoning,
             'current': ollama_models[0] if ollama_models else Config.OLLAMA_MODEL
         }
@@ -392,6 +443,19 @@ def clear_drawing_history():
     update_and_emit_status('drawing')
     print("[DEBUG] 绘图历史已清除，状态已发送")
     return jsonify({'message': '绘图历史记录已清除'})
+
+@app.route('/api/drawing/stop', methods=['POST'])
+def stop_drawing_workflow():
+    """停止绘图工作流"""
+    if workflow_statuses['drawing']['status'] != 'running':
+        return jsonify({'message': '工作流未在运行中'})
+
+    workflow_stop_flags['drawing'] = True
+    workflow_statuses['drawing']['status'] = 'stopped'
+    workflow_statuses['drawing']['error'] = '用户取消操作'
+    update_and_emit_status('drawing')
+    print("[DEBUG] 绘图工作流已停止")
+    return jsonify({'message': '绘图工作流已停止'})
 
 # ==================== 文档工作流端点 ====================
 
@@ -587,6 +651,19 @@ def clear_document_history():
     print("[DEBUG] 文档历史已清除，状态已发送")
     return jsonify({'message': '文档历史记录已清除'})
 
+@app.route('/api/document/stop', methods=['POST'])
+def stop_document_workflow():
+    """停止文档工作流"""
+    if workflow_statuses['document_with_images']['status'] != 'running':
+        return jsonify({'message': '工作流未在运行中'})
+
+    workflow_stop_flags['document_with_images'] = True
+    workflow_statuses['document_with_images']['status'] = 'stopped'
+    workflow_statuses['document_with_images']['error'] = '用户取消操作'
+    update_and_emit_status('document_with_images')
+    print("[DEBUG] 文档工作流已停止")
+    return jsonify({'message': '文档工作流已停止'})
+
 @app.route('/api/documents/<filename>')
 def get_document(filename):
     """获取文档内容"""
@@ -706,6 +783,19 @@ def clear_manim_history():
     update_and_emit_status('manim')
     print("[DEBUG] Manim 历史已清除，状态已发送")
     return jsonify({'message': 'Manim 历史记录已清除'})
+
+@app.route('/api/manim/stop', methods=['POST'])
+def stop_manim_workflow():
+    """停止 Manim 工作流"""
+    if workflow_statuses['manim']['status'] != 'running':
+        return jsonify({'message': '工作流未在运行中'})
+
+    workflow_stop_flags['manim'] = True
+    workflow_statuses['manim']['status'] = 'stopped'
+    workflow_statuses['manim']['error'] = '用户取消操作'
+    update_and_emit_status('manim')
+    print("[DEBUG] Manim 工作流已停止")
+    return jsonify({'message': 'Manim 工作流已停止'})
 
  # ==================== 统一历史记录端点 ====================
 
@@ -873,6 +963,9 @@ def run_drawing_workflow_thread(user_prompt):
     print(f"\n[DEBUG] ===== 绘图工作流线程启动 =====")
     print(f"[DEBUG] 用户提示词: '{user_prompt}'")
 
+    # 重置停止标志
+    reset_stop_flag('drawing')
+
     try:
         # 状态已在 /api/drawing/workflow 中重置，这里只需确认
         print(f"[DEBUG] 绘图工作流状态: {workflow_statuses['drawing']['status']}")
@@ -890,6 +983,11 @@ def run_drawing_workflow_thread(user_prompt):
 
             # 包装节点以添加进度报告
             def monitored_refine_prompt(state):
+                # 检查停止标志
+                if should_stop_workflow('drawing'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 节点 'refine_prompt' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -914,6 +1012,11 @@ def run_drawing_workflow_thread(user_prompt):
                 return result
 
             def monitored_generate_code(state):
+                # 检查停止标志
+                if should_stop_workflow('drawing'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 节点 'generate_code' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -950,6 +1053,11 @@ def run_drawing_workflow_thread(user_prompt):
                 return result
 
             def monitored_execute_code(state):
+                # 检查停止标志
+                if should_stop_workflow('drawing'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 节点 'execute_code' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -982,6 +1090,11 @@ def run_drawing_workflow_thread(user_prompt):
                 return result
 
             def monitored_save_image(state):
+                # 检查停止标志
+                if should_stop_workflow('drawing'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 节点 'save_image' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1014,6 +1127,11 @@ def run_drawing_workflow_thread(user_prompt):
                 return result
 
             def monitored_analyze_execution_result(state):
+                # 检查停止标志
+                if should_stop_workflow('drawing'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 节点 'analyze_execution_result' 开始执行")
 
                 # 立即设置状态并发送更新
@@ -1049,6 +1167,11 @@ def run_drawing_workflow_thread(user_prompt):
                 return result
 
             def monitored_fix_code_with_feedback(state):
+                # 检查停止标志
+                if should_stop_workflow('drawing'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 节点 'fix_code_with_feedback' 开始执行")
 
                 # 立即设置状态并发送更新
@@ -1163,6 +1286,12 @@ def run_drawing_workflow_thread(user_prompt):
         result = {}
         try:
             for event in graph.stream(initial_state):
+                # 检查停止标志
+                if should_stop_workflow('drawing'):
+                    print(f"[DEBUG] 检测到停止信号，中断工作流执行")
+                    result["error"] = "用户取消操作"
+                    break
+
                 # event 是一个字典，包含节点名称和更新的状态
                 for node_name, node_output in event.items():
                     print(f"[DEBUG] 节点 '{node_name}' 完成输出")
@@ -1171,7 +1300,7 @@ def run_drawing_workflow_thread(user_prompt):
 
                     # 实时发送进度更新到前端
                     update_and_emit_status('drawing')
-                    
+
         except Exception as stream_error:
             print(f"[ERROR] 流式执行过程中出错: {str(stream_error)}")
             import traceback
@@ -1228,9 +1357,16 @@ def run_document_with_images_thread(user_prompt):
     print(f"\n[DEBUG] ===== 带图片的文档工作流线程启动 =====")
     print(f"[DEBUG] 用户提示词: '{user_prompt}'")
 
+    # 重置停止标志
+    reset_stop_flag('document_with_images')
+
     try:
         # 导入带图片的文档工作流
-        from workflows.write_md_with_images import create_graph as create_doc_with_images_graph, GraphState as DocWithImagesGraphState
+        from workflows.write_md_with_images import (
+            create_graph as create_doc_with_images_graph,
+            GraphState as DocWithImagesGraphState,
+            set_image_progress_callback
+        )
 
         # 添加步骤名称映射
         DOC_WITH_IMAGES_STEP_NAMES = {
@@ -1256,8 +1392,35 @@ def run_document_with_images_thread(user_prompt):
                 save_document, verify_document
             )
 
+            # 定义图片生成进度更新回调函数
+            def image_progress_callback(current_index: int, total: int, description: str):
+                """图片生成进度更新回调"""
+                print(f"[DEBUG] 图片生成进度: {current_index}/{total} - {description}")
+
+                # 更新当前步骤的进度信息
+                with status_lock:
+                    # 查找正在运行的 generate_images 步骤
+                    for step in workflow_statuses['document_with_images']['steps']:
+                        if step['step'] == 'generate_images' and step['status'] == 'running':
+                            step['current_image_index'] = current_index
+                            step['total_images'] = total
+                            step['current_image_description'] = description
+                            step['progress_text'] = f"正在生成第 {current_index}/{total} 张图片: {description}"
+                            break
+
+                # 立即发送进度更新
+                update_and_emit_status('document_with_images')
+
+            # 设置回调函数到工作流模块
+            set_image_progress_callback(image_progress_callback)
+
             # 包装节点以添加进度报告
             def monitored_refine_prompt(state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 带图片文档节点 'refine_prompt' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1286,6 +1449,11 @@ def run_document_with_images_thread(user_prompt):
                 return result
 
             def monitored_generate_outline(state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 带图片文档节点 'generate_outline' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1318,6 +1486,11 @@ def run_document_with_images_thread(user_prompt):
                 return result
 
             def monitored_generate_content(state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 带图片文档节点 'generate_content' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1350,6 +1523,11 @@ def run_document_with_images_thread(user_prompt):
                 return result
 
             def monitored_identify_image_requests(state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 带图片文档节点 'identify_image_requests' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1378,6 +1556,11 @@ def run_document_with_images_thread(user_prompt):
                 return result
 
             def monitored_generate_images(state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 带图片文档节点 'generate_images' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1406,6 +1589,11 @@ def run_document_with_images_thread(user_prompt):
                 return result
 
             def monitored_embed_images(state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 带图片文档节点 'embed_images' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1434,6 +1622,11 @@ def run_document_with_images_thread(user_prompt):
                 return result
 
             def monitored_save_document(state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 带图片文档节点 'save_document' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1462,6 +1655,11 @@ def run_document_with_images_thread(user_prompt):
                 return result
 
             def monitored_verify_document(state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> 带图片文档节点 'verify_document' 开始执行")
                 
                 # 立即设置状态并发送更新
@@ -1503,7 +1701,44 @@ def run_document_with_images_thread(user_prompt):
             workflow.add_edge("refine_prompt", "generate_outline")
             workflow.add_edge("generate_outline", "generate_content")
             workflow.add_edge("generate_content", "identify_image_requests")
-            workflow.add_edge("identify_image_requests", "generate_images")
+
+            # 条件边：判断是否需要生成图片
+            def monitored_should_generate_images(state):
+                """判断是否需要生成图片"""
+                image_requests = state.get("image_requests", [])
+                has_images = bool(image_requests)
+
+                if has_images:
+                    print(f"[INFO] 检测到 {len(image_requests)} 个图片需求，进入生图流程")
+                    return "generate_images"
+                else:
+                    print(f"[INFO] 无图片需求，跳过生图流程，直接保存文档")
+                    # 为跳过的步骤添加 skipped 状态记录
+                    skipped_steps = [
+                        ('generate_images', '生成图表'),
+                        ('embed_images', '整合图片到文档')
+                    ]
+                    for step_id in skipped_steps:
+                        workflow_statuses['document_with_images']['steps'].append({
+                            'step': step_id,
+                            'name': DOC_WITH_IMAGES_STEP_NAMES[step_id],
+                            'status': 'skipped',
+                            'timestamp': datetime.now().isoformat(),
+                            'completed_at': datetime.now().isoformat()
+                        })
+                    update_and_emit_status('document_with_images')
+                    return "save_document"
+
+            # 使用条件边替代固定边
+            workflow.add_conditional_edges(
+                "identify_image_requests",
+                monitored_should_generate_images,
+                {
+                    "generate_images": "generate_images",
+                    "save_document": "save_document"
+                }
+            )
+
             workflow.add_edge("generate_images", "embed_images")
             workflow.add_edge("embed_images", "save_document")
             workflow.add_edge("save_document", "verify_document")
@@ -1533,6 +1768,12 @@ def run_document_with_images_thread(user_prompt):
         result = {}
         try:
             for event in graph.stream(initial_state):
+                # 检查停止标志
+                if should_stop_workflow('document_with_images'):
+                    print(f"[DEBUG] 检测到停止信号，中断工作流执行")
+                    result["error"] = "用户取消操作"
+                    break
+
                 # event 是一个字典，包含节点名称和更新的状态
                 for node_name, node_output in event.items():
                     print(f"[DEBUG] 节点 '{node_name}' 完成输出")
@@ -1541,7 +1782,7 @@ def run_document_with_images_thread(user_prompt):
 
                     # 实时发送进度更新到前端
                     update_and_emit_status('document_with_images')
-                    
+
         except Exception as stream_error:
             print(f"[ERROR] 流式执行过程中出错: {str(stream_error)}")
             import traceback
@@ -1599,6 +1840,9 @@ def run_manim_workflow_thread(user_prompt, quality):
     print(f"[DEBUG] 用户提示词: '{user_prompt}'")
     print(f"[DEBUG] 渲染质量: '{quality}'")
 
+    # 重置停止标志
+    reset_stop_flag('manim')
+
     try:
         # 导入 Manim 动画工作流
         from workflows.manim_gen import create_graph as create_manim_graph, ManimState
@@ -1615,6 +1859,11 @@ def run_manim_workflow_thread(user_prompt, quality):
 
             # 包装节点以添加进度报告
             def monitored_refine_prompt(state):
+                # 检查停止标志
+                if should_stop_workflow('manim'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> Manim 节点 'refine_prompt' 开始执行")
 
                 workflow_statuses['manim']['current_step'] = 'refine_prompt'
@@ -1640,6 +1889,11 @@ def run_manim_workflow_thread(user_prompt, quality):
                 return result
 
             def monitored_generate_code(state):
+                # 检查停止标志
+                if should_stop_workflow('manim'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> Manim 节点 'generate_code' 开始执行")
 
                 workflow_statuses['manim']['current_step'] = 'generate_code'
@@ -1672,6 +1926,11 @@ def run_manim_workflow_thread(user_prompt, quality):
                 return result
 
             def monitored_execute_code(state):
+                # 检查停止标志
+                if should_stop_workflow('manim'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> Manim 节点 'execute_code' 开始执行")
 
                 workflow_statuses['manim']['current_step'] = 'execute_code'
@@ -1701,6 +1960,11 @@ def run_manim_workflow_thread(user_prompt, quality):
                 return result
 
             def monitored_save_video(state):
+                # 检查停止标志
+                if should_stop_workflow('manim'):
+                    print(f"[DEBUG] 工作流已被用户停止")
+                    return {"error": "用户取消操作"}
+
                 print(f"\n[DEBUG] >>> Manim 节点 'save_video' 开始执行")
 
                 workflow_statuses['manim']['current_step'] = 'save_video'
@@ -1762,6 +2026,12 @@ def run_manim_workflow_thread(user_prompt, quality):
         result = {}
         try:
             for event in graph.stream(initial_state):
+                # 检查停止标志
+                if should_stop_workflow('manim'):
+                    print(f"[DEBUG] 检测到停止信号，中断工作流执行")
+                    result["error"] = "用户取消操作"
+                    break
+
                 for node_name, node_output in event.items():
                     print(f"[DEBUG] 节点 '{node_name}' 完成输出")
                     result.update(node_output)

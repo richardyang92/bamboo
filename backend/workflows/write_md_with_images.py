@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-from typing import TypedDict, List, Dict
+from typing import TypedDict, List, Dict, Callable, Optional
 from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
 from config import Config
@@ -9,6 +9,18 @@ from llm_providers.factory import LLMClientFactory
 
 # 加载.env文件中的环境变量
 load_dotenv()
+
+# 全局进度更新回调函数（由 app.py 设置）
+_image_progress_callback: Optional[Callable[[int, int, str], None]] = None
+
+def set_image_progress_callback(callback: Callable[[int, int, str], None]):
+    """设置图片生成进度回调函数
+
+    Args:
+        callback: 回调函数，接收参数 (current_index, total, description)
+    """
+    global _image_progress_callback
+    _image_progress_callback = callback
 
 # 定义状态结构
 class GraphState(TypedDict):
@@ -22,6 +34,10 @@ class GraphState(TypedDict):
     output_path: str
     file_size: int
     error: str
+    # 图片生成进度字段
+    current_image_index: int  # 当前正在生成的图片索引（从0开始）
+    total_images: int  # 总图片数量
+    current_image_description: str  # 当前正在生成的图片描述
 
 # 润色写作需求的节点
 def refine_prompt(state: GraphState) -> GraphState:
@@ -530,27 +546,44 @@ def generate_images(state: GraphState) -> GraphState:
 
         image_requests = state["image_requests"]
         generated_images = []
+        total_images = len(image_requests)
 
         if not image_requests:
             print(f"   [INFO] 没有需要生成的图片")
-            return {"generated_images": []}
+            return {
+                "generated_images": [],
+                "current_image_index": 0,
+                "total_images": 0,
+                "current_image_description": ""
+            }
+
+        # 初始化进度状态
+        progress_updates = []
 
         # 生成每张图片
-        for i, req in enumerate(image_requests, 1):
-            print(f"   [DEBUG] 正在生成图片 {i}/{len(image_requests)}: {req['description']}")
+        for i, req in enumerate(image_requests):
+            current_index = i  # 0-based index
+            print(f"   [DEBUG] 正在生成图片 {i+1}/{total_images}: {req['description']}")
+
+            # 准备进度更新（将在节点返回后发送）
+            progress_updates.append({
+                "current_image_index": current_index,
+                "total_images": total_images,
+                "current_image_description": req['description']
+            })
 
             try:
                 # 提取文档上下文
                 document_context = extract_document_context(state, req)
                 original_prompt = state.get("user_prompt", "")
-                
+
                 # 使用大模型增强图片描述
                 enhanced_description = enhance_image_prompt_with_llm(
-                    req['description'], 
-                    document_context, 
+                    req['description'],
+                    document_context,
                     original_prompt
                 )
-                
+
                 # 生成自定义文件名（基于原始描述）
                 from datetime import datetime
                 import re
@@ -572,12 +605,12 @@ def generate_images(state: GraphState) -> GraphState:
                         "relative_path": result['relative_path'],
                         "size": result['image_size']
                     })
-                    print(f"   [DEBUG] ✓ 图片 {i} 生成成功: {custom_filename} (大小: {result['image_size']} 字节)")
+                    print(f"   [DEBUG] ✓ 图片 {i+1} 生成成功: {custom_filename} (大小: {result['image_size']} 字节)")
                     print(f"   [DEBUG]   原始描述: {req['description']}")
                     print(f"   [DEBUG]   增强描述: {enhanced_description[:100]}...")
                 else:
                     # 图片生成失败
-                    print(f"   [DEBUG] ✗ 图片 {i} 生成失败: {result.get('error', '未知错误')}")
+                    print(f"   [DEBUG] ✗ 图片 {i+1} 生成失败: {result.get('error', '未知错误')}")
                     generated_images.append({
                         "number": req['number'],
                         "description": req['description'],
@@ -588,13 +621,20 @@ def generate_images(state: GraphState) -> GraphState:
                         "size": 0
                     })
 
+                # 触发进度更新回调（无论成功还是失败）
+                if _image_progress_callback:
+                    try:
+                        _image_progress_callback(current_index + 1, total_images, req['description'])
+                    except Exception as callback_error:
+                        print(f"   [WARNING] 进度回调失败: {callback_error}")
+
             except Exception as e:
-                print(f"   [DEBUG] ✗ 图片 {i} 生成失败: {str(e)}")
+                print(f"   [DEBUG] ✗ 图片 {i+1} 生成失败: {str(e)}")
                 import traceback
                 traceback.print_exc()
                 enhanced_description = enhance_image_prompt_with_llm(
-                    req['description'], 
-                    extract_document_context(state, req), 
+                    req['description'],
+                    extract_document_context(state, req),
                     state.get("user_prompt", "")
                 )
                 generated_images.append({
@@ -607,8 +647,22 @@ def generate_images(state: GraphState) -> GraphState:
                     "size": 0
                 })
 
+                # 触发进度更新回调（即使发生异常）
+                if _image_progress_callback:
+                    try:
+                        _image_progress_callback(current_index + 1, total_images, req['description'])
+                    except Exception as callback_error:
+                        print(f"   [WARNING] 进度回调失败: {callback_error}")
+
         print(f"✅ 图表生成完成，共 {len(generated_images)} 张")
-        return {"generated_images": generated_images}
+
+        # 返回结果，包含最终进度状态（表示全部完成）
+        return {
+            "generated_images": generated_images,
+            "current_image_index": total_images,  # 等于总数表示完成
+            "total_images": total_images,
+            "current_image_description": "图片生成完成"
+        }
     except Exception as e:
         import traceback
         error_msg = f"生成图表失败: {str(e)}"
@@ -684,7 +738,15 @@ def save_document(state: GraphState) -> GraphState:
         output_path = os.path.join(docs_dir, f"doc_{keywords}_{timestamp}.md")
         print(f"   [DEBUG] 目标文件名: '{output_path}'")
 
-        content = state["final_content"]
+        # 根据是否跳过生图流程，选择合适的内容源
+        # 如果有 final_content（已嵌入图片），使用它；否则使用 markdown_content（原始内容）
+        if state.get("final_content"):
+            content = state["final_content"]
+            print(f"   [DEBUG] 使用已嵌入图片的内容")
+        else:
+            content = state["markdown_content"]
+            print(f"   [DEBUG] 使用原始 Markdown 内容（无图片）")
+
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
@@ -745,6 +807,21 @@ def verify_document(state: GraphState) -> GraphState:
         traceback.print_exc()
         return {"error": error_msg}
 
+# 条件判断函数：是否需要生成图片
+def should_generate_images(state: GraphState) -> str:
+    """判断是否需要生成图片
+
+    Returns:
+        "generate_images": 有图片需求，执行生图流程
+        "save_document": 无图片需求，跳过生图流程
+    """
+    if state.get("image_requests"):
+        print(f"   [INFO] 检测到 {len(state['image_requests'])} 个图片需求，进入生图流程")
+        return "generate_images"
+    else:
+        print(f"   [INFO] 无图片需求，跳过生图流程，直接保存文档")
+        return "save_document"
+
 # 创建工作流图
 def create_graph():
     """创建并编译工作流图"""
@@ -764,7 +841,17 @@ def create_graph():
     workflow.add_edge("refine_prompt", "generate_outline")
     workflow.add_edge("generate_outline", "generate_content")
     workflow.add_edge("generate_content", "identify_image_requests")
-    workflow.add_edge("identify_image_requests", "generate_images")
+
+    # 添加条件边：根据是否有图片需求决定后续流程
+    workflow.add_conditional_edges(
+        "identify_image_requests",
+        should_generate_images,
+        {
+            "generate_images": "generate_images",
+            "save_document": "save_document"
+        }
+    )
+
     workflow.add_edge("generate_images", "embed_images")
     workflow.add_edge("embed_images", "save_document")
     workflow.add_edge("save_document", "verify_document")
