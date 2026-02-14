@@ -13,7 +13,7 @@ The project has been refactored into a modern **frontend-backend architecture**:
 - **Backend**: Flask API with WebSocket support, LangGraph workflows
 - **Frontend**: React 19 + TypeScript + Vite
 
-All workflows use DeepSeek AI model for code/content generation.
+All workflows support multiple LLM providers (DeepSeek and Ollama) with runtime model switching.
 
 ## Development Commands
 
@@ -33,7 +33,13 @@ npm install
 Configure environment in `backend/.env`:
 ```
 DEEPSEEK_API_KEY=your_key_here
+DEFAULT_LLM_PROVIDER=deepseek
+OLLAMA_BASE_URL=http://localhost:11434
 ```
+
+**Supported LLM Providers:**
+- **DeepSeek** (default): Requires `DEEPSEEK_API_KEY`, models: `deepseek-chat`, `deepseek-reasoner`
+- **Ollama** (local): Requires running `ollama serve`, supports models like `llama3.1`, `deepseek-r1`
 
 ### Running the Application
 
@@ -112,6 +118,8 @@ bamboo/
 - Axios 1.13.5 (HTTP client)
 - react-markdown 10.1.0, KaTeX 0.16.28 (Markdown + Math)
 - react-router-dom 7.13.0 (Routing)
+- @xyflow/react (Workflow graph visualization)
+- react-syntax-highlighter (Code highlighting)
 
 ## LangGraph Workflow Architecture
 
@@ -139,6 +147,34 @@ class GraphState(TypedDict):
 | [backend/workflows/write_md_with_images.py](backend/workflows/write_md_with_images.py) | 8-step document workflow |
 | [backend/workflows/manim_gen.py](backend/workflows/manim_gen.py) | 4-step animation workflow |
 
+### LLM Provider Architecture
+
+The system uses a factory pattern for multi-provider LLM support in `backend/llm_providers/`:
+
+| File | Purpose |
+|------|---------|
+| [backend/llm_providers/base.py](backend/llm_providers/base.py) | Abstract base class and `ModelConfig` dataclass |
+| [backend/llm_providers/factory.py](backend/llm_providers/factory.py) | `LLMClientFactory` for creating clients, runtime config management |
+| [backend/llm_providers/deepseek_provider.py](backend/llm_providers/deepseek_provider.py) | DeepSeek API implementation |
+| [backend/llm_providers/ollama_provider.py](backend/llm_providers/ollama_provider.py) | Ollama local model implementation |
+
+**Usage pattern:**
+```python
+from llm_providers.factory import LLMClientFactory
+
+# Create client with default config
+client = LLMClientFactory.create_client()
+
+# Switch model at runtime
+LLMClientFactory.set_runtime_config('ollama', 'llama3.1', enable_thinking=False)
+
+# Get current config
+config = LLMClientFactory.get_current_config()
+# Returns: {'provider': 'ollama', 'model': 'llama3.1', 'supports_reasoning': False, 'enable_thinking': False}
+```
+
+**Reasoning model detection:** The factory auto-detects reasoning-capable models (DeepSeek-Reasoner, DeepSeek-R1 on Ollama) and enables thinking mode accordingly.
+
 ## Backend API Structure
 
 ### Configuration
@@ -155,6 +191,7 @@ Centralized configuration in [backend/config.py](backend/config.py):
 - `GET /api/images` - List images
 - `DELETE /api/images/<filename>` - Delete image
 - `POST /api/drawing/clear` - Clear history
+- `POST /api/drawing/stop` - Stop running workflow
 
 **Documents:**
 - `POST /api/document/workflow-with-images` - Start document workflow
@@ -163,12 +200,19 @@ Centralized configuration in [backend/config.py](backend/config.py):
 - `GET /api/documents` - List documents
 - `GET /api/documents/<filename>/content` - Get document content
 - `DELETE /api/documents/<filename>` - Delete document
+- `POST /api/document/stop` - Stop running workflow
 
 **Manim:**
 - `POST /api/manim/workflow` - Start Manim workflow (with quality param)
 - `GET /api/manim/videos` - List videos
 - `DELETE /api/manim/videos/<filename>` - Delete video
 - `POST /api/manim/clear` - Clear history
+- `POST /api/manim/stop` - Stop running workflow
+
+**Model Management:**
+- `GET /api/models` - List available models per provider
+- `POST /api/models/switch` - Switch model at runtime
+- `GET /api/models/current` - Get current model config
 
 **Unified:**
 - `GET /api/history` - List all items (images + docs + videos)
@@ -186,9 +230,26 @@ Centralized configuration in [backend/config.py](backend/config.py):
 
 **Message types:**
 - `status_update` - Workflow progress updates
-- `stream_content` - AI streaming responses
+- `stream_content` - AI streaming responses (with `content_type`: 'content' or 'reasoning')
 
 **Status tracking:** Isolated per workflow type in `workflow_statuses` dict in [backend/app.py](backend/app.py:40-62).
+
+### Workflow Stop Mechanism
+
+Each workflow can be stopped mid-execution via stop flags in [backend/app.py](backend/app.py:70-82):
+
+```python
+workflow_stop_flags = {
+    'drawing': False,
+    'document_with_images': False,
+    'manim': False
+}
+
+def should_stop_workflow(workflow_type: str) -> bool:
+    return workflow_stop_flags.get(workflow_type, False)
+```
+
+**Implementation pattern:** Each monitored node checks `should_stop_workflow()` at the start and returns `{"error": "用户取消操作"}` if true. The graph stream loop also checks between node executions.
 
 ## Frontend Architecture
 
@@ -199,9 +260,11 @@ Centralized configuration in [backend/config.py](backend/config.py):
 - [frontend/src/services/websocket.ts](frontend/src/services/websocket.ts) - WebSocket singleton with reconnection
 
 **Types:** [frontend/src/types/index.ts](frontend/src/types/index.ts) defines:
-- `WorkflowType`, `WorkflowStatusType`, `StepStatus`
+- `WorkflowType`, `WorkflowStatusType` (includes 'stopped'), `StepStatus` (includes 'skipped')
 - `WorkflowStatus`, `WorkflowStep`, `WorkflowResult`
 - `HistoryItem`, `WebSocketMessage`
+- `ModelConfig`, `AvailableModels`, `LLMProvider` for model management
+- `WorkflowNodeData`, `WorkflowEdgeData` for React Flow graphs
 
 **Components:** Organized by workflow type:
 - `components/drawing/` - Drawing workflow UI
@@ -225,7 +288,28 @@ proxy: {
 
 ## Code Patterns
 
-### DeepSeek API Integration
+### LLM Client Usage
+```python
+from llm_providers.factory import LLMClientFactory
+
+# Get client with current config
+client = LLMClientFactory.create_client()
+
+# Streaming response with callback
+response = client.chat_completion(
+    messages=[...],
+    model='deepseek-chat',
+    stream=True,
+    think=False  # Enable for reasoning models
+)
+for chunk in response:
+    content = chunk.choices[0].delta.content
+    reasoning = chunk.choices[0].delta.reasoning_content  # For reasoning models
+    if stream_callback:
+        stream_callback(content, reasoning)
+```
+
+### DeepSeek API Integration (Legacy)
 ```python
 from openai import OpenAI
 client = OpenAI(api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
@@ -268,10 +352,14 @@ output_path = os.path.join(Config.IMAGES_DIR, f"plot_{timestamp}.png")
 
 ### Monitored Workflow Node Pattern
 
-Nodes in [backend/app.py](backend/app.py:731-850) are wrapped for progress tracking:
+Nodes in [backend/app.py](backend/app.py) are wrapped for progress tracking and stop detection:
 
 ```python
 def monitored_refine_prompt(state):
+    # Check stop flag first
+    if should_stop_workflow('drawing'):
+        return {"error": "用户取消操作"}
+
     # Set status to running
     workflow_statuses['drawing']['steps'].append({
         'step': 'refine_prompt',
@@ -330,6 +418,11 @@ def monitored_refine_prompt(state):
    - `FRONTEND_URL` (for CORS)
 
 ## Common Issues
+
+### Ollama Connection Failed
+- Ensure Ollama service is running: `ollama serve`
+- Check `OLLAMA_BASE_URL` in config (default: `http://localhost:11434`)
+- Verify model is downloaded: `ollama list`, pull if needed: `ollama pull llama3.1`
 
 ### WebSocket Not Receiving Updates
 - Ensure workflow_type is set correctly on client connection
