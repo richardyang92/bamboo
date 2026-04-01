@@ -21,7 +21,6 @@ const WorkflowCustomNode = memo((props: NodeProps) => {
     // 图片生成进度信息
     currentImageIndex,
     totalImages,
-    currentImageDescription,
     progressText,
   } = data;
 

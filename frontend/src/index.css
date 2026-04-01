@@ -1,247 +1,611 @@
-/* Bamboo 全局样式 */
-* {
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #1E293B;
+  --color-secondary: #334155;
+  --color-accent: #22C55E;
+  --color-bg-dark: #0F172A;
+  --color-bg-card: #1E293B;
+  --color-bg-input: #0F172A;
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  --color-border: #334155;
+  --font-sans: 'Fira Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, monospace;
+}
+
+/* Base styles */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
-html,
-body,
-#root {
+html, body, #root {
   margin: 0;
   padding: 0;
   min-height: 100vh;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-    'Noto Color Emoji';
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 响应式工作流面板布局 */
-.workflow-panel {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  height: 100%;
-  min-height: 0; /* 关键：允许flex子元素收缩 */
-  overflow: hidden;
+code {
+  font-family: var(--font-mono);
 }
 
-@media (min-width: 768px) {
-  .workflow-panel {
-    grid-template-columns: 3fr 7fr; /* 左侧30%，右侧70% */
-  }
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.workflow-panel-left,
-.workflow-panel-right {
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==================== CLI Timeline styles (preserved from WorkflowTimeline.css) ==================== */
+/**
+ * WorkflowTimeline 样式 - CLI日志风格
+ * 参考现代CLI工具：Vercel CLI, npm, Docker, Railway
+ */
+
+/* ==================== 容器 ==================== */
+.cli-timeline {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0; /* 关键：允许flex子元素收缩 */
-  overflow: hidden;
+  gap: 4px;
+  padding: 8px 0;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e0e0e0;
 }
 
-/* 左侧面板内部滚动 */
-.workflow-panel-left .ant-space {
-  flex: 1;
-  min-height: 0; /* 关键：允许flex子元素收缩 */
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 8px;
-  padding-bottom: 16px;
-}
-
-/* 确保 Space 组件容器对齐 */
-.workflow-panel-left .ant-space,
-.workflow-panel-right .ant-space {
-  align-items: stretch !important;
-}
-
-/* 重置 Space item 的 margin 和 padding，确保顶部对齐 */
-.workflow-panel-left .ant-space > .ant-space-item:first-child,
-.workflow-panel-right .ant-space > .ant-space-item:first-child {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-}
-
-.workflow-panel-left .ant-card {
-  max-width: 100%;
-}
-
-/* 右侧面板 - 不滚动，让 Card 内部滚动 */
-.workflow-panel-right .ant-space {
-  flex: 1;
-  min-height: 0; /* 关键：允许flex子元素收缩 */
-  overflow: hidden;
-  padding-right: 8px;
-  padding-bottom: 16px;
-}
-
-/* 确保 Space 内部的 Card 撑满容器 */
-.workflow-panel-right .ant-space > .ant-space-item {
-  max-width: 100%;
-  flex: 1;
-  min-height: 0;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.workflow-panel-right .ant-card {
-  max-width: 100%;
-  height: 100%;
+/* ==================== 空状态 ==================== */
+.cli-empty-state {
   display: flex;
-  flex-direction: column;
-  margin: 0 !important;
-}
-
-/* 确保左右面板的 Card 标题区域对齐 */
-.workflow-panel-left .ant-card-head,
-.workflow-panel-right .ant-card-head {
-  min-height: auto !important;
-  padding: 16px 24px !important;
-}
-
-/* 确保 Card 标题内的 Space 不会影响高度 */
-.workflow-panel-left .ant-card-head .ant-space {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* 修复 Card 标题内状态指示器的垂直对齐 */
-.workflow-panel-left .ant-card-head .workflow-status-indicator,
-.workflow-panel-left .ant-card-head .workflow-status-indicator .ant-space {
-  align-items: center !important;
-}
-
-.workflow-panel-left .ant-card-head .workflow-status-indicator .ant-badge,
-.workflow-panel-left .ant-card-head .workflow-status-indicator .ant-typography {
-  line-height: 1 !important;
-}
-
-/* Card body 自适应高度，内部滚动 */
-.workflow-panel-right .ant-card .ant-card-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
+  align-items: center;
+  gap: 8px;
   padding: 16px;
+  color: #666;
+  font-style: italic;
 }
 
-/* 图片自适应高度 */
-.workflow-panel-right .ant-image {
-  max-height: 100%;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
+.cli-spinner {
+  animation: spin 1s linear infinite;
+  color: #666;
 }
 
-.workflow-panel-right .ant-image img {
-  max-height: 100%;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
+.cli-empty-text {
+  color: #666;
+  font-size: 12px;
 }
 
-/* 视频自适应高度 */
-.workflow-panel-right video {
-  max-height: 100%;
-  width: auto;
-  max-width: 100%;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-/* Tabs 内容区域限制 */
-.workflow-panel-right .ant-tabs {
+/* ==================== 步骤 ==================== */
+.cli-step {
   display: flex;
   flex-direction: column;
-  max-height: 100%;
 }
 
-.workflow-panel-right .ant-tabs .ant-tabs-content-holder {
+/* 步骤头部行 */
+.cli-step-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.cli-step-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* 时间戳 */
+.cli-time {
+  color: #666;
+  font-size: 11px;
+  flex-shrink: 0;
+  font-feature-settings: 'tnum';
+}
+
+/* 状态图标容器 */
+.cli-status-wrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* 图标基础样式 */
+.cli-icon {
+  flex-shrink: 0;
+}
+
+.cli-icon-success {
+  color: #22c55e;
+}
+
+.cli-icon-error {
+  color: #ef4444;
+}
+
+.cli-icon-running {
+  color: #3b82f6;
+}
+
+.cli-icon-spinning {
+  animation: spin 1s linear infinite;
+}
+
+.cli-icon-pending {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #666;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 步骤名称 */
+.cli-step-name {
+  color: #e0e0e0;
+  font-weight: 500;
   flex: 1;
-  min-height: 0;
-  overflow: auto;
 }
 
-.workflow-panel-right .ant-tabs-tabpane {
-  height: 100%;
+/* 耗时 */
+.cli-duration {
+  color: #666;
+  font-size: 11px;
+  flex-shrink: 0;
+  font-feature-settings: 'tnum';
 }
 
-/* 代码块自适应 */
-.workflow-panel-right pre {
-  max-height: 100%;
-  overflow: auto;
+/* 展开提示 */
+.cli-expand-hint {
+  color: #444;
+  font-size: 10px;
+  flex-shrink: 0;
+  transition: color 0.2s;
 }
 
-/* 工作流面板内部滚动条样式 */
-.workflow-panel-left .ant-space::-webkit-scrollbar,
-.workflow-panel-right .ant-space::-webkit-scrollbar {
-  width: 8px;
+.cli-step-header:hover .cli-expand-hint {
+  color: #666;
 }
 
-.workflow-panel-left .ant-space::-webkit-scrollbar-track,
-.workflow-panel-right .ant-space::-webkit-scrollbar-track {
+/* ==================== 详细内容区域 ==================== */
+.cli-step-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 24px;
+  padding-right: 8px;
+  padding-bottom: 8px;
+}
+
+/* ==================== 错误信息 ==================== */
+.cli-error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 2px solid #ef4444;
+  border-radius: 0 4px 4px 0;
+  margin-top: 4px;
+}
+
+.cli-error-icon {
+  color: #ef4444;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.cli-error-text {
+  color: #fca5a5;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+/* ==================== 内容区块 ==================== */
+.cli-section {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+/* 区块头部 */
+.cli-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
   background: transparent;
-}
-
-.workflow-panel-left .ant-space::-webkit-scrollbar-thumb,
-.workflow-panel-right .ant-space::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  color: #888;
+  transition: color 0.2s;
+  width: fit-content;
   border-radius: 4px;
 }
 
-.workflow-panel-left .ant-space::-webkit-scrollbar-thumb:hover,
-.workflow-panel-right .ant-space::-webkit-scrollbar-thumb:hover {
-  background: #bfbfbf;
+.cli-section-header:hover {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.04);
 }
 
-/* 暗色模式下的滚动条样式 */
-.dark .workflow-panel-left .ant-space::-webkit-scrollbar-thumb,
-.dark .workflow-panel-right .ant-space::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
+.cli-section-header-static {
+  cursor: default;
 }
 
-.dark .workflow-panel-left .ant-space::-webkit-scrollbar-thumb:hover,
-.dark .workflow-panel-right .ant-space::-webkit-scrollbar-thumb:hover {
-  background: #5a5a5a;
+.cli-section-header-static:hover {
+  color: #888;
+  background: transparent;
 }
 
-/* 流式内容查看器样式 - 撑满高度，保持宽度一致 */
-.workflow-panel-left .ant-space > .ant-space-item:has(.stream-content-viewer) {
-  flex: 1;
-  min-height: 0;
+.cli-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+  color: #666;
+}
+
+.cli-chevron-fixed {
+  transform: rotate(90deg);
+  opacity: 0.5;
+}
+
+.cli-section-icon {
+  flex-shrink: 0;
+  color: #666;
+}
+
+.cli-section-label {
+  font-weight: 500;
+}
+
+/* 区块内容 */
+.cli-section-content {
+  padding: 8px 12px;
+  margin: 2px 0;
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 2px solid #333;
+  border-radius: 0 4px 4px 0;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.cli-thinking-content {
+  border-left-color: #6366f1;
+}
+
+/* ==================== 文本样式 ==================== */
+.cli-text {
+  margin: 0;
+  padding: 0;
+  color: #b0b0b0;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+}
+
+/* ==================== 光标动画 ==================== */
+.cli-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: #3b82f6;
+  margin-left: 4px;
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ==================== 滚动条样式 ==================== */
+.cli-section-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cli-section-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cli-section-content::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+.cli-section-content::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Firefox 滚动条 */
+.cli-section-content {
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 768px) {
+  .cli-timeline {
+    font-size: 12px;
+  }
+
+  .cli-time {
+    font-size: 10px;
+  }
+
+  .cli-step-details {
+    padding-left: 16px;
+  }
+
+  .cli-section-content {
+    padding: 6px 8px;
+    max-height: 250px;
+  }
+}
+
+/* ==================== 深色模式适配（如果系统有浅色模式） ==================== */
+@media (prefers-color-scheme: light) {
+  .cli-timeline {
+    color: #333;
+  }
+
+  .cli-time,
+  .cli-duration,
+  .cli-expand-hint {
+    color: #999;
+  }
+
+  .cli-step-name {
+    color: #333;
+  }
+
+  .cli-icon-pending {
+    border-color: #999;
+  }
+
+  .cli-section-header {
+    color: #666;
+  }
+
+  .cli-section-content {
+    background: rgba(0, 0, 0, 0.03);
+    border-left-color: #ddd;
+  }
+
+  .cli-thinking-content {
+    border-left-color: #6366f1;
+  }
+
+  .cli-text {
+    color: #555;
+  }
+
+  .cli-step-header:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* ==================== EmptyView styles (preserved from EmptyView.css) ==================== */
+/**
+ * EmptyView 样式
+ */
+.cli-empty-view {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  color: #666;
+  font-size: 13px;
+}
+
+.cli-empty-icon {
+  color: #666;
+  flex-shrink: 0;
+}
+
+.cli-empty-text {
+  font-style: italic;
+}
+
+/* ==================== StreamContentItem styles (preserved from StreamContentItem.css) ==================== */
+/**
+ * StreamContentItem 样式
+ */
+
+.stream-content-item {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.stream-content-item.active {
+  border: 1px solid #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+.stream-content-item.streaming {
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: rgba(24, 144, 255, 0.3);
+  }
+  50% {
+    border-color: rgba(24, 144, 255, 0.8);
+  }
+}
+
+.stream-content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  min-height: 44px;
+}
+
+.stream-content-body {
+  padding: 14px;
+  background: #ffffff;
+  min-height: 60px;
+  max-height: 500px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.stream-content-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  min-height: 60px;
+}
+
+.stream-content-markdown {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.stream-content-text {
+  margin: 0;
+  padding: 0;
+  color: #333;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 思考内容样式 */
+.stream-content-reasoning {
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8eeff 100%);
+  border-left: 3px solid #667eea;
+}
+
+.reasoning-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.reasoning-text {
+  margin: 0;
+  padding: 0;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* 深色模式支持 */
+:root[data-theme='dark'] .stream-content-reasoning {
+  background: linear-gradient(135deg, #1a2634 0%, #1e3a5f 100%);
+  border-left-color: #3b82f6;
+}
+
+:root[data-theme='dark'] .reasoning-text {
+  color: #c5c8c6;
+}
+
+/* 深色模式支持 */
+:root[data-theme='dark'] .stream-content-item.active {
+  border-color: #1677cc;
+  box-shadow: 0 2px 8px rgba(22, 119, 204, 0.4);
+}
+
+:root[data-theme='dark'] .stream-content-item.streaming {
+  animation: pulse-border-dark 2s ease-in-out infinite;
+}
+
+@keyframes pulse-border-dark {
+  0%, 100% {
+    border-color: rgba(22, 119, 204, 0.3);
+  }
+  50% {
+    border-color: rgba(22, 119, 204, 0.8);
+  }
+}
+
+:root[data-theme='dark'] .stream-content-header {
+  background: #1f1f1f;
+  border-bottom-color: #303030;
+}
+
+:root[data-theme='dark'] .stream-content-body {
+  background: #141414;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+:root[data-theme='dark'] .stream-content-placeholder {
+  background: #1a1a1a;
+}
+
+:root[data-theme='dark'] .stream-content-markdown {
+  color: #d4d4d4;
+}
+
+:root[data-theme='dark'] .stream-content-text {
+  color: #d4d4d4;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .stream-content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .stream-content-body {
+    padding: 10px;
+  }
+}
+
+/* ---- Scrollbar styles ---- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }
+
+/* ---- Fade in animation ---- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .stream-content-viewer {
-  height: 100%;
-}
-
-/* 代码块样式 - 撑满父容器 */
-.code-block {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Steps 进度条样式优化 */
-.step-progress-display .ant-steps {
-  flex-wrap: wrap;
-}
-
-.step-progress-display .ant-steps-item {
-  flex: 1;
-  min-width: 0;
-}
-
-/* 移动端垂直布局 */
-@media (max-width: 767px) {
-  .steps-vertical .ant-steps {
-    flex-direction: column;
-  }
-
-  .steps-vertical .ant-steps-item {
-    flex: none;
-    min-width: 100%;
-  }
+  animation: fadeIn 0.3s ease-in-out;
 }

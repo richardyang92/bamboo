@@ -76,7 +76,6 @@ const ReactFlowNodeGraphView: React.FC<ReactFlowNodeGraphViewProps> = ({
     if (nodeCount > 5) {
       // 每列最多 4 个节点
       const maxNodesPerColumn = 4;
-      const columnCount = Math.ceil(nodeCount / maxNodesPerColumn);
       const nodeWidth = 180;
       const nodeHeight = 60;
       const horizontalSpacing = 80;  // 列间距

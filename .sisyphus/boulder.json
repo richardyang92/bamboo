@@ -1,0 +1,15 @@
+{
+  "active_plan": "/Users/yangyang/Projects/bamboo/.sisyphus/plans/ui-redesign.md",
+  "started_at": "2026-04-01T07:47:35.401Z",
+  "session_ids": [
+    "ses_2b8327225ffeFNtjOC7o1b8br3",
+    "ses_2b832fb31ffe11GKXZ5rHAhgPf",
+    "ses_2b7ef2c72ffemw2Y97AwWvxq2M",
+    "ses_2b7e3b5c3ffe1WnLfasXUcPqzi",
+    "ses_2b7e3c427ffeKj7y4tNQ0t5EVC",
+    "ses_2b7e3eb2cffezMitVg4b1mHPqF"
+  ],
+  "plan_name": "ui-redesign",
+  "agent": "atlas",
+  "task_sessions": {}
+}
