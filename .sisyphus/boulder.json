@@ -18,7 +18,9 @@
     "ses_2b7beb921ffeBS7PKqacy1kHjb",
     "ses_2b7b6a496ffeNULHpyJ761wjlh",
     "ses_2b7b5f2a8ffe0JQ4JdNrtrU879",
-    "ses_2b7acacdcffehuLM8320p2KmlQ"
+    "ses_2b7acacdcffehuLM8320p2KmlQ",
+    "ses_2b7a3c929ffesHxYwtCDii4AGU",
+    "ses_2b79e3d01ffe0uEYOiqXo6U0po"
   ],
   "plan_name": "ui-redesign",
   "agent": "atlas",
@@ -76,6 +78,24 @@
       "agent": "Sisyphus-Junior",
       "category": "quick",
       "updated_at": "2026-04-01T09:18:05.120Z"
+    },
+    "todo:16": {
+      "task_key": "todo:16",
+      "task_label": "16",
+      "task_title": "**End-to-End Integration Verification**",
+      "session_id": "ses_2b7a3c929ffesHxYwtCDii4AGU",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-04-01T09:30:20.897Z"
+    },
+    "todo:17": {
+      "task_key": "todo:17",
+      "task_label": "17",
+      "task_title": "**Final Cleanup and Bundle Optimization**",
+      "session_id": "ses_2b79e3d01ffe0uEYOiqXo6U0po",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-01T09:36:29.498Z"
     }
   }
 }

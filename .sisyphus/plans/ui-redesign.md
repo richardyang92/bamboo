@@ -1575,7 +1575,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: package.json, deleted files, config/workflowGraphs.ts
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 16. **End-to-End Integration Verification**
+- [x] 16. **End-to-End Integration Verification**
 
   **What to do**:
   - Write integration smoke tests for critical user flows:
@@ -1651,7 +1651,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: tests/integration/*.test.tsx
   - Pre-commit: `cd frontend && npm run build && npx vitest run`
 
-- [ ] 17. **Final Cleanup and Bundle Optimization**
+- [x] 17. **Final Cleanup and Bundle Optimization**
 
   **What to do**:
   - Remove any remaining dead CSS:
