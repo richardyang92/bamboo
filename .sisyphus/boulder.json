@@ -7,9 +7,32 @@
     "ses_2b7ef2c72ffemw2Y97AwWvxq2M",
     "ses_2b7e3b5c3ffe1WnLfasXUcPqzi",
     "ses_2b7e3c427ffeKj7y4tNQ0t5EVC",
-    "ses_2b7e3eb2cffezMitVg4b1mHPqF"
+    "ses_2b7e3eb2cffezMitVg4b1mHPqF",
+    "ses_2b7dca7b6ffe5LAwPc5vfjHYAF",
+    "ses_2b7d36eb4ffe4dGgpXoS3tOd9N",
+    "ses_2b7cd6ce5ffe31PZgs9B43uX2P",
+    "ses_2b7ccde84ffeBj57gVE8dYWDLn"
   ],
   "plan_name": "ui-redesign",
   "agent": "atlas",
-  "task_sessions": {}
+  "task_sessions": {
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "**Create Tailwind ModelSelector Component**",
+      "session_id": "ses_2b7d36eb4ffe4dGgpXoS3tOd9N",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-01T08:37:55.258Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "**Build IDE Layout Shell (Sidebar + Header + AppLayout)**",
+      "session_id": "ses_2b7cd6ce5ffe31PZgs9B43uX2P",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-04-01T08:44:52.903Z"
+    }
+  }
 }

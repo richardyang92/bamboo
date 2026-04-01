@@ -558,7 +558,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: services/toast.ts, services/__tests__/toast.test.ts
   - Pre-commit: `cd frontend && npm run build && npx vitest run`
 
-- [ ] 5. **Create Shared MarkdownRenderer Component**
+- [x] 5. **Create Shared MarkdownRenderer Component**
 
   **What to do**:
   - Create `frontend/src/components/shared/MarkdownRenderer.tsx`
@@ -641,7 +641,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: components/shared/MarkdownRenderer.tsx, components/shared/__tests__/MarkdownRenderer.test.tsx
   - Pre-commit: `cd frontend && npm run build && npx vitest run`
 
-- [ ] 6. **Create Tailwind ModelSelector Component**
+- [x] 6. **Create Tailwind ModelSelector Component**
 
   **What to do**:
   - Create `frontend/src/components/shared/ModelSelector.tsx` (overwrite existing Ant Design version)
@@ -723,7 +723,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: components/shared/ModelSelector.tsx, components/shared/__tests__/ModelSelector.test.tsx
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 7. **Build IDE Layout Shell (Sidebar + Header + AppLayout)**
+- [x] 7. **Build IDE Layout Shell (Sidebar + Header + AppLayout)**
 
   **What to do**:
   - Create `frontend/src/components/layout/Sidebar.tsx`:
@@ -827,7 +827,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: components/layout/Sidebar.tsx, components/layout/Header.tsx, components/layout/AppLayout.tsx, components/layout/__tests__/*.test.tsx
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 8. **Create Shared WorkflowPanel Base Component**
+- [x] 8. **Create Shared WorkflowPanel Base Component**
 
   **What to do**:
   - Create `frontend/src/components/shared/WorkflowPanel.tsx`
