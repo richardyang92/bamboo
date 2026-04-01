@@ -15,7 +15,10 @@
     "ses_2b7c60255ffe3pJ1y0nYe8cFVV",
     "ses_2b7c673a0ffegaPqpXAHIREJ1H",
     "ses_2b7c58fe2ffe9naUP4p1S35PjR",
-    "ses_2b7beb921ffeBS7PKqacy1kHjb"
+    "ses_2b7beb921ffeBS7PKqacy1kHjb",
+    "ses_2b7b6a496ffeNULHpyJ761wjlh",
+    "ses_2b7b5f2a8ffe0JQ4JdNrtrU879",
+    "ses_2b7acacdcffehuLM8320p2KmlQ"
   ],
   "plan_name": "ui-redesign",
   "agent": "atlas",
@@ -55,6 +58,24 @@
       "agent": "Sisyphus-Junior",
       "category": "deep",
       "updated_at": "2026-04-01T09:00:54.551Z"
+    },
+    "todo:13": {
+      "task_key": "todo:13",
+      "task_label": "13",
+      "task_title": "**Rewrite HistoryPage and PreviewModal**",
+      "session_id": "ses_2b7b6a496ffeNULHpyJ761wjlh",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-04-01T09:10:10.045Z"
+    },
+    "todo:15": {
+      "task_key": "todo:15",
+      "task_label": "15",
+      "task_title": "**Remove Ant Design and React Flow Dependencies**",
+      "session_id": "ses_2b7acacdcffehuLM8320p2KmlQ",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-01T09:18:05.120Z"
     }
   }
 }

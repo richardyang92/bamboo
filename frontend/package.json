@@ -12,7 +12,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@ant-design/icons": "^6.1.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
@@ -22,9 +21,6 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@types/dagre": "^0.7.53",
     "@types/katex": "^0.16.8",
-    "@xyflow/react": "^12.10.0",
-    "@xyflow/system": "^0.0.74",
-    "antd": "^6.3.0",
     "axios": "^1.13.5",
     "dagre": "^0.8.5",
     "dayjs": "^1.11.19",

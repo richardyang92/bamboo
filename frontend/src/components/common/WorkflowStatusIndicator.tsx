@@ -1,19 +1,7 @@
-/**
- * WorkflowStatusIndicator - 工作流和连接状态指示器
- * 显示工作流执行状态和WebSocket连接状态
- */
 import React from 'react';
-import { Badge, Space, Typography, Tooltip } from 'antd';
-import {
-  LoadingOutlined,
-  WifiOutlined,
-  DisconnectOutlined,
-} from '@ant-design/icons';
+import { Wifi, WifiOff, Loader2 } from 'lucide-react';
 import type { WorkflowType, WorkflowStatusType } from '../../types';
 
-const { Text } = Typography;
-
-// 连接状态类型（临时定义，稍后会移到types/index.ts）
 type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 
 interface WorkflowStatusIndicatorProps {
@@ -24,21 +12,25 @@ interface WorkflowStatusIndicatorProps {
   className?: string;
 }
 
-// 工作流状态映射
-const workflowStatusConfig: Record<WorkflowStatusType, { status: 'success' | 'processing' | 'error' | 'default' | 'warning'; text: string }> = {
-  idle: { status: 'default', text: '空闲' },
-  running: { status: 'processing', text: '运行中' },
-  completed: { status: 'success', text: '已完成' },
-  error: { status: 'error', text: '出错' },
-  stopped: { status: 'warning', text: '已停止' },
+const workflowStatusConfig: Record<WorkflowStatusType, { dotClass: string; text: string }> = {
+  idle: { dotClass: 'bg-gray-400', text: '空闲' },
+  running: { dotClass: 'bg-green-400 animate-pulse', text: '运行中' },
+  completed: { dotClass: 'bg-blue-400', text: '已完成' },
+  error: { dotClass: 'bg-red-400', text: '出错' },
+  stopped: { dotClass: 'bg-orange-400', text: '已停止' },
 };
 
-// 连接状态映射
-const connectionStatusConfig: Record<ConnectionState, { status: 'success' | 'error' | 'default' | 'warning'; text: string; icon: React.ReactNode }> = {
-  connected: { status: 'success', text: '已连接', icon: <WifiOutlined /> },
-  connecting: { status: 'default', text: '连接中...', icon: <LoadingOutlined spin /> },
-  disconnected: { status: 'error', text: '未连接', icon: <DisconnectOutlined /> },
-  reconnecting: { status: 'warning', text: '重连中...', icon: <LoadingOutlined spin /> },
+const connectionStatusConfig: Record<ConnectionState, { dotClass: string; text: string; icon: React.ReactNode }> = {
+  connected: { dotClass: 'bg-green-400', text: '已连接', icon: <Wifi className="w-3 h-3 text-green-400" /> },
+  connecting: { dotClass: 'bg-gray-400 animate-pulse', text: '连接中...', icon: <Loader2 className="w-3 h-3 text-gray-400 animate-spin" /> },
+  disconnected: { dotClass: 'bg-red-400', text: '未连接', icon: <WifiOff className="w-3 h-3 text-red-400" /> },
+  reconnecting: { dotClass: 'bg-orange-400 animate-pulse', text: '重连中...', icon: <Loader2 className="w-3 h-3 text-orange-400 animate-spin" /> },
+};
+
+const workflowTypeNames: Record<WorkflowType, string> = {
+  drawing: '绘图',
+  document_with_images: '文档',
+  manim: '动画',
 };
 
 const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = ({
@@ -48,44 +40,26 @@ const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = ({
   reconnectAttempts = 0,
   className = '',
 }) => {
-  const workflowConfig = workflowStatusConfig[workflowStatus];
-  const connectionConfig = connectionStatusConfig[connectionState];
-
-  // 工作流类型显示名称
-  const workflowTypeNames: Record<WorkflowType, string> = {
-    drawing: '绘图',
-    document_with_images: '文档',
-    manim: '动画',
-  };
-
-  // 重连信息
-  const reconnectInfo = reconnectAttempts > 0 ? ` (${reconnectAttempts}/${5})` : '';
+  const wfConfig = workflowStatusConfig[workflowStatus];
+  const connConfig = connectionStatusConfig[connectionState];
+  const reconnectInfo = reconnectAttempts > 0 ? ` (${reconnectAttempts}/5)` : '';
 
   return (
-    <Space className={`workflow-status-indicator ${className}`} size="middle">
-      {/* 工作流状态 */}
-      <Tooltip title={`工作流状态: ${workflowConfig.text}`}>
-        <Badge
-          status={workflowConfig.status}
-          text={
-            <Text style={{ fontSize: '12px' }}>
-              {workflowTypeNames[workflowType]}: {workflowConfig.text}
-            </Text>
-          }
-        />
-      </Tooltip>
+    <span className={`inline-flex items-center gap-3 ${className}`}>
+      <span className="inline-flex items-center gap-1.5 cursor-default" title={`工作流状态: ${wfConfig.text}`}>
+        <span className={`w-2 h-2 rounded-full ${wfConfig.dotClass}`} />
+        <span className="text-xs text-[var(--color-text-muted)]">
+          {workflowTypeNames[workflowType]}: {wfConfig.text}
+        </span>
+      </span>
 
-      {/* 连接状态 */}
-      <Tooltip title={`WebSocket: ${connectionConfig.text}${reconnectInfo}`}>
-        <Space size="small">
-          {connectionConfig.icon}
-          <Text style={{ fontSize: '12px' }}>
-            {connectionConfig.text}
-            {reconnectInfo}
-          </Text>
-        </Space>
-      </Tooltip>
-    </Space>
+      <span className="inline-flex items-center gap-1.5 cursor-default" title={`WebSocket: ${connConfig.text}${reconnectInfo}`}>
+        {connConfig.icon}
+        <span className="text-xs text-[var(--color-text-muted)]">
+          {connConfig.text}{reconnectInfo}
+        </span>
+      </span>
+    </span>
   );
 };
 

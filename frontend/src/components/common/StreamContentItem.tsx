@@ -1,19 +1,11 @@
-/**
- * StreamContentItem - 单节点流式内容卡片
- * 显示单个节点的流式内容，支持代码/Markdown渲染
- */
 import React, { useEffect, useRef } from 'react';
-import { Spin, Tag, Space, Typography } from 'antd';
-import { CheckCircleFilled, CloseCircleFilled, LoadingOutlined, ClockCircleFilled } from '@ant-design/icons';
+import { CheckCircle2, XCircle, Loader2, Clock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { WorkflowStep, WorkflowType } from '../../types';
 import CodeBlock from './CodeBlock';
-import './StreamContentItem.css';
-
-const { Text } = Typography;
 
 interface StreamContentItemProps {
   step: WorkflowStep;
@@ -21,61 +13,53 @@ interface StreamContentItemProps {
   isActive: boolean;
   isStreaming: boolean;
   workflowType: WorkflowType;
-  contentType?: 'content' | 'reasoning';  // 新增：内容类型
-  reasoningContent?: string;  // 新增：独立的思考内容
+  contentType?: 'content' | 'reasoning';
+  reasoningContent?: string;
 }
 
-// 获取步骤状态颜色
 const getStatusColor = (status: WorkflowStep['status']): string => {
   switch (status) {
-    case 'running':
-      return '#1890ff'; // 蓝色
-    case 'completed':
-      return '#52c41a'; // 绿色
-    case 'error':
-      return '#ff4d4f'; // 红色
-    case 'pending':
-    default:
-      return '#d9d9d9'; // 灰色
+    case 'running': return 'text-blue-400';
+    case 'completed': return 'text-green-400';
+    case 'error': return 'text-red-400';
+    default: return 'text-gray-400';
   }
 };
 
-// 获取步骤状态文本
 const getStatusText = (status: WorkflowStep['status']): string => {
   switch (status) {
+    case 'running': return '执行中';
+    case 'completed': return '已完成';
+    case 'error': return '失败';
+    default: return '等待中';
+  }
+};
+
+const getStepIcon = (status: WorkflowStep['status']) => {
+  const colorClass = getStatusColor(status);
+  switch (status) {
     case 'running':
-      return '执行中';
+      return <Loader2 className={`w-3.5 h-3.5 ${colorClass} animate-spin`} />;
     case 'completed':
-      return '已完成';
+      return <CheckCircle2 className={`w-3.5 h-3.5 ${colorClass}`} />;
     case 'error':
-      return '失败';
-    case 'pending':
+      return <XCircle className={`w-3.5 h-3.5 ${colorClass}`} />;
     default:
-      return '等待中';
+      return <Clock className={`w-3.5 h-3.5 ${colorClass}`} />;
   }
 };
 
-// 获取步骤图标
-const getStepIcon = (status: WorkflowStep['status'], size = 16) => {
-  const color = getStatusColor(status);
-
-  if (status === 'running') {
-    return <LoadingOutlined style={{ fontSize: size, color }} spin />;
+const getTagClasses = (status: WorkflowStep['status']): string => {
+  switch (status) {
+    case 'running': return 'bg-blue-500/20 text-blue-400';
+    case 'completed': return 'bg-green-500/20 text-green-400';
+    case 'error': return 'bg-red-500/20 text-red-400';
+    default: return 'bg-gray-500/20 text-gray-400';
   }
-  if (status === 'completed') {
-    return <CheckCircleFilled style={{ fontSize: size, color }} />;
-  }
-  if (status === 'error') {
-    return <CloseCircleFilled style={{ fontSize: size, color }} />;
-  }
-  return <ClockCircleFilled style={{ fontSize: size, color }} />;
 };
 
-// 检测代码语言
 const detectLanguage = (workflowType: WorkflowType): string => {
-  if (workflowType === 'drawing' || workflowType === 'manim') {
-    return 'python';
-  }
+  if (workflowType === 'drawing' || workflowType === 'manim') return 'python';
   return 'text';
 };
 
@@ -85,18 +69,15 @@ const StreamContentItem: React.FC<StreamContentItemProps> = ({
   isActive,
   isStreaming,
   workflowType,
-  contentType = 'content',  // 默认为普通内容
-  reasoningContent = '',  // 新增：独立的思考内容
+  contentType = 'content',
+  reasoningContent = '',
 }) => {
   const language = detectLanguage(workflowType);
-  const isReasoning = contentType === 'reasoning';  // 是否为思考内容
-  const hasReasoning = !!reasoningContent;  // 是否有思考内容
+  const hasReasoning = !!reasoningContent;
   const contentBodyRef = useRef<HTMLDivElement>(null);
 
-  // 内容变化时自动滚动到底部
   useEffect(() => {
     if (contentBodyRef.current && (content || reasoningContent)) {
-      // 使用 requestAnimationFrame 确保 DOM 渲染完成后再滚动
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (contentBodyRef.current) {
@@ -107,42 +88,29 @@ const StreamContentItem: React.FC<StreamContentItemProps> = ({
     }
   }, [content, reasoningContent]);
 
-  // 判断是否渲染为Markdown
   const shouldRenderAsMarkdown = workflowType === 'document_with_images';
-  // 判断是否渲染为代码
   const shouldRenderAsCode = workflowType === 'drawing' || workflowType === 'manim';
 
-  // 空内容占位（节点已完成且无内容时不显示）
   const shouldShowPlaceholder = !content && !hasReasoning && step.status !== 'completed';
-  const placeholder = shouldShowPlaceholder ? (
-    <div className="stream-content-placeholder">
-      <Text type="secondary" style={{ fontSize: '13px' }}>
-        {step.status === 'pending' ? '等待执行...' : isReasoning ? '暂无思考内容' : '此节点暂无流式内容'}
-      </Text>
-    </div>
-  ) : null;
 
-  // 渲染思考内容
   const renderReasoningContent = () => {
     if (!hasReasoning) return null;
-
     return (
-      <div className="stream-content-reasoning">
-        <Space size="small">
-          <span className="reasoning-icon">🧠</span>
-          <pre className="reasoning-text">{reasoningContent}</pre>
-        </Space>
+      <div className="px-3.5 py-3 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border-l-[3px] border-l-indigo-500">
+        <span className="text-base leading-none mr-1.5">🧠</span>
+        <pre className="inline text-[var(--color-text-secondary)] text-[13px] leading-relaxed whitespace-pre-wrap break-words font-mono">
+          {reasoningContent}
+        </pre>
       </div>
     );
   };
 
-  // 渲染普通内容
   const renderContent = () => {
     if (!content) return null;
 
     if (shouldRenderAsMarkdown) {
       return (
-        <div className="stream-content-markdown">
+        <div className="text-[var(--color-text-primary)] text-sm leading-relaxed break-words">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -164,7 +132,7 @@ const StreamContentItem: React.FC<StreamContentItemProps> = ({
                       background: '#2d2d2d',
                       padding: '2px 6px',
                       borderRadius: '3px',
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                     }}
                     {...props}
                   >
@@ -184,46 +152,52 @@ const StreamContentItem: React.FC<StreamContentItemProps> = ({
       return <CodeBlock code={content} language={language} showLineNumbers={true} />;
     }
 
-    // 纯文本渲染
     return (
-      <pre className="stream-content-text">
+      <pre className="m-0 p-0 text-[var(--color-text-primary)] text-[13px] leading-relaxed font-mono whitespace-pre-wrap break-words">
         {content}
       </pre>
     );
   };
 
   return (
-    <div className={`stream-content-item ${isActive ? 'active' : ''} ${isStreaming ? 'streaming' : ''}`}>
-      {/* 节点头部 */}
-      <div className="stream-content-header">
-        <Space size="small">
-          {getStepIcon(step.status, 14)}
-          <Text strong style={{ fontSize: '13px' }}>
+    <div
+      className={`rounded-lg overflow-hidden transition-all duration-300 ${
+        isActive ? 'border border-blue-500/30 shadow-[0_2px_8px_rgba(59,130,246,0.15)]' : ''
+      } ${isStreaming ? 'animate-[pulse-border_2s_ease-in-out_infinite]' : ''}`}
+    >
+      <div className="flex justify-between items-center px-3.5 py-2.5 bg-[var(--color-bg-dark)] border-b border-[var(--color-border)] min-h-[44px]">
+        <span className="flex items-center gap-1.5">
+          {getStepIcon(step.status)}
+          <span className="font-medium text-[13px] text-[var(--color-text-primary)]">
             {step.name}
-          </Text>
-          <Tag
-            color={step.status === 'running' ? 'processing' : step.status === 'completed' ? 'success' : step.status === 'error' ? 'error' : 'default'}
-            style={{ fontSize: '11px', margin: 0 }}
+          </span>
+          <span
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] leading-none font-medium ${getTagClasses(step.status)}`}
           >
             {getStatusText(step.status)}
-          </Tag>
-          {isStreaming && <Spin size="small" />}
-        </Space>
+          </span>
+          {isStreaming && <Loader2 className="w-3 h-3 text-blue-400 animate-spin ml-1" />}
+        </span>
         {content && (
-          <Text type="secondary" style={{ fontSize: '11px' }}>
+          <span className="text-[11px] text-[var(--color-text-muted)]">
             {content.length} 字符
-          </Text>
+          </span>
         )}
       </div>
 
-      {/* 内容区域 */}
-      <div className="stream-content-body" ref={contentBodyRef}>
-        {/* 先渲染思考内容 */}
+      <div
+        className="p-3.5 bg-[var(--color-bg-card)] min-h-[60px] max-h-[500px] overflow-y-auto scroll-smooth"
+        ref={contentBodyRef}
+      >
         {renderReasoningContent()}
-        {/* 再渲染普通内容 */}
         {renderContent()}
-        {/* 如果没有任何内容，显示占位符（已完成节点除外） */}
-        {shouldShowPlaceholder && placeholder}
+        {shouldShowPlaceholder && (
+          <div className="flex justify-center items-center py-6 min-h-[60px]">
+            <span className="text-[13px] text-[var(--color-text-muted)]">
+              {step.status === 'pending' ? '等待执行...' : contentType === 'reasoning' ? '暂无思考内容' : '此节点暂无流式内容'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

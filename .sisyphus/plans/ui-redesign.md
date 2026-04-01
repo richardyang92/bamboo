@@ -1277,7 +1277,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: App.tsx, App.css (delete), index.css (clean up)
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 13. **Rewrite HistoryPage and PreviewModal**
+- [x] 13. **Rewrite HistoryPage and PreviewModal**
 
   **What to do**:
   - Rewrite `frontend/src/pages/HistoryPage.tsx`:
@@ -1374,7 +1374,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: pages/HistoryPage.tsx, components/PreviewModal.tsx
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 14. **Unify Theme System and Rewrite Remaining Common Components**
+- [x] 14. **Unify Theme System and Rewrite Remaining Common Components**
 
   **What to do**:
   - Rewrite `frontend/src/contexts/ThemeContext.tsx`:
@@ -1480,7 +1480,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: contexts/ThemeContext.tsx, components/common/*.tsx, index.html
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 15. **Remove Ant Design and React Flow Dependencies**
+- [x] 15. **Remove Ant Design and React Flow Dependencies**
 
   **What to do**:
   - Remove from `package.json`:

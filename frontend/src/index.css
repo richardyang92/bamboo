@@ -509,58 +509,6 @@ img {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
-/* 深色模式支持 */
-:root[data-theme='dark'] .stream-content-reasoning {
-  background: linear-gradient(135deg, #1a2634 0%, #1e3a5f 100%);
-  border-left-color: #3b82f6;
-}
-
-:root[data-theme='dark'] .reasoning-text {
-  color: #c5c8c6;
-}
-
-/* 深色模式支持 */
-:root[data-theme='dark'] .stream-content-item.active {
-  border-color: #1677cc;
-  box-shadow: 0 2px 8px rgba(22, 119, 204, 0.4);
-}
-
-:root[data-theme='dark'] .stream-content-item.streaming {
-  animation: pulse-border-dark 2s ease-in-out infinite;
-}
-
-@keyframes pulse-border-dark {
-  0%, 100% {
-    border-color: rgba(22, 119, 204, 0.3);
-  }
-  50% {
-    border-color: rgba(22, 119, 204, 0.8);
-  }
-}
-
-:root[data-theme='dark'] .stream-content-header {
-  background: #1f1f1f;
-  border-bottom-color: #303030;
-}
-
-:root[data-theme='dark'] .stream-content-body {
-  background: #141414;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-:root[data-theme='dark'] .stream-content-placeholder {
-  background: #1a1a1a;
-}
-
-:root[data-theme='dark'] .stream-content-markdown {
-  color: #d4d4d4;
-}
-
-:root[data-theme='dark'] .stream-content-text {
-  color: #d4d4d4;
-}
-
 /* ---- Scrollbar styles ---- */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }

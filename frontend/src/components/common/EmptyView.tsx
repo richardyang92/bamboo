@@ -1,10 +1,5 @@
-/**
- * EmptyView - 空状态占位组件
- * 工作流未开始时显示
- */
 import React from 'react';
 import { Clock } from 'lucide-react';
-import './EmptyView.css';
 
 interface EmptyViewProps {
   workflowType: 'drawing' | 'document_with_images' | 'manim';
@@ -25,9 +20,9 @@ const EmptyView: React.FC<EmptyViewProps> = ({ workflowType }) => {
   };
 
   return (
-    <div className="cli-empty-view">
-      <Clock className="cli-empty-icon" size={16} strokeWidth={1.5} />
-      <span className="cli-empty-text">{getEmptyText()}</span>
+    <div className="flex items-center gap-3 px-4 py-4 font-mono text-[var(--color-text-muted)] text-sm">
+      <Clock className="w-4 h-4 text-[var(--color-text-muted)] flex-shrink-0" strokeWidth={1.5} />
+      <span className="italic text-xs">{getEmptyText()}</span>
     </div>
   );
 };

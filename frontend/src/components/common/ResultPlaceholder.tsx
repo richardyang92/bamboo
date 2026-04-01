@@ -2,8 +2,7 @@
  * 结果区域占位符组件
  * 当没有结果时显示
  */
-import { Empty, Alert } from 'antd';
-import { FileImageOutlined, FileTextOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { Image, FileText, Video } from 'lucide-react';
 
 type ResultPlaceholderProps = {
   type: 'drawing' | 'document' | 'manim';
@@ -13,15 +12,15 @@ type ResultPlaceholderProps = {
 function ResultPlaceholder({ type, error }: ResultPlaceholderProps) {
   const config = {
     drawing: {
-      icon: <FileImageOutlined style={{ fontSize: 48 }} />,
+      icon: <Image className="w-12 h-12 text-gray-400" />,
       description: '生成的图表将显示在这里',
     },
     document: {
-      icon: <FileTextOutlined style={{ fontSize: 48 }} />,
+      icon: <FileText className="w-12 h-12 text-gray-400" />,
       description: '生成的文档将显示在这里',
     },
     manim: {
-      icon: <VideoCameraOutlined style={{ fontSize: 48 }} />,
+      icon: <Video className="w-12 h-12 text-gray-400" />,
       description: '渲染的视频将显示在这里',
     },
   };
@@ -31,21 +30,19 @@ function ResultPlaceholder({ type, error }: ResultPlaceholderProps) {
   return (
     <div>
       {error && (
-        <Alert
-          message="执行出错"
-          description={error}
-          type="error"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <div className="text-red-800 text-sm font-medium">执行出错</div>
+          <div className="text-red-600 text-sm mt-1">{error}</div>
+        </div>
       )}
-      <div style={{ padding: '48px 0', textAlign: 'center' }}>
-        <Empty
-          image={icon}
-          styles={{ image: { fontSize: 48, color: '#d9d9d9' } }}
-          description={description}
-        />
-        <div style={{ marginTop: 16, color: '#999', fontSize: 14 }}>
+      <div className="py-12 text-center">
+        <div className="flex justify-center">
+          {icon}
+        </div>
+        <div className="mt-4 text-gray-500 text-sm">
+          {description}
+        </div>
+        <div className="mt-4 text-gray-400 text-xs">
           请在左侧输入需求并点击开始生成
         </div>
       </div>

@@ -3,8 +3,7 @@
  * 支持语法高亮、行号显示、复制功能
  */
 import React, { useRef, useEffect } from 'react';
-import { Button } from 'antd';
-import { CopyOutlined, CheckOutlined } from '@ant-design/icons';
+import { Copy, Check } from 'lucide-react';
 
 interface CodeBlockProps {
   code: string;
@@ -46,31 +45,35 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
   }, [code]);
 
   return (
-    <div className={`code-block ${className}`} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexShrink: 0 }}>
-        <span style={{ fontSize: '12px', color: '#888' }}>{language}</span>
-        <Button
-          type="text"
-          size="small"
-          icon={copied ? <CheckOutlined /> : <CopyOutlined />}
+    <div className={`code-block ${className} h-full flex flex-col`}>
+      <div className="flex justify-between items-center mb-2 flex-shrink-0">
+        <span className="text-xs text-gray-500">{language}</span>
+        <button
+          type="button"
           onClick={handleCopy}
-          style={{ fontSize: '12px' }}
+          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
         >
-          {copied ? '已复制' : '复制'}
-        </Button>
+          {copied ? (
+            <>
+              <Check className="w-3 h-3" />
+              已复制
+            </>
+          ) : (
+            <>
+              <Copy className="w-3 h-3" />
+              复制
+            </>
+          )}
+        </button>
       </div>
       <pre
         ref={codeRef}
+        className="m-0 p-3 bg-gray-100 rounded-md overflow-auto"
         style={{
-          margin: 0,
-          padding: '12px',
-          background: '#f5f5f5',
-          borderRadius: '4px',
-          overflow: 'auto',
           maxHeight,
           fontSize: '13px',
           lineHeight: '1.6',
-          fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
+          fontFamily: 'var(--font-mono), Consolas, Monaco, "Courier New", monospace',
           flex: 1,
           minHeight: 0,
         }}
@@ -79,7 +82,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
           {showLineNumbers ? (
             lines.map((line, index) => (
               <div key={index}>
-                <span style={{ color: '#999', userSelect: 'none', marginRight: '12px' }}>
+                <span className="text-gray-400 select-none mr-3">
                   {(index + 1).toString().padStart(3, ' ')}
                 </span>
                 <span>{line || ' '}</span>
