@@ -20,7 +20,8 @@
     "ses_2b7b5f2a8ffe0JQ4JdNrtrU879",
     "ses_2b7acacdcffehuLM8320p2KmlQ",
     "ses_2b7a3c929ffesHxYwtCDii4AGU",
-    "ses_2b79e3d01ffe0uEYOiqXo6U0po"
+    "ses_2b79e3d01ffe0uEYOiqXo6U0po",
+    "ses_2b79879d4ffeTdZEyvjGZY93n0"
   ],
   "plan_name": "ui-redesign",
   "agent": "atlas",
@@ -96,6 +97,14 @@
       "agent": "Sisyphus-Junior",
       "category": "unspecified-high",
       "updated_at": "2026-04-01T09:36:29.498Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_2b79879d4ffeTdZEyvjGZY93n0",
+      "agent": "oracle",
+      "updated_at": "2026-04-01T09:50:02.687Z"
     }
   }
 }

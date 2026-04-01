@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, FileText, Video, History, Sun, Moon } from 'lucide-react';
 import { useWorkflow } from '../../contexts/WorkflowContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -23,9 +23,13 @@ function Sidebar() {
   const { state, setCurrentWorkflow } = useWorkflow();
   const { mode, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handleWorkflowClick = (workflow: WorkflowType) => {
     setCurrentWorkflow(workflow);
+    if (location.pathname !== '/') {
+      navigate('/');
+    }
   };
 
   const isActive = (item: NavItem): boolean => {

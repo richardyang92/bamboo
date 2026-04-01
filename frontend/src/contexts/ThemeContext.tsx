@@ -11,15 +11,11 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-function getSystemPreference(): ThemeMode {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const savedMode = localStorage.getItem('theme') as ThemeMode | null;
     if (savedMode === 'light' || savedMode === 'dark') return savedMode;
-    return getSystemPreference();
+    return 'dark';
   });
 
   const toggleTheme = useCallback(() => {
