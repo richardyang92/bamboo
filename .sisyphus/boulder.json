@@ -11,7 +11,11 @@
     "ses_2b7dca7b6ffe5LAwPc5vfjHYAF",
     "ses_2b7d36eb4ffe4dGgpXoS3tOd9N",
     "ses_2b7cd6ce5ffe31PZgs9B43uX2P",
-    "ses_2b7ccde84ffeBj57gVE8dYWDLn"
+    "ses_2b7ccde84ffeBj57gVE8dYWDLn",
+    "ses_2b7c60255ffe3pJ1y0nYe8cFVV",
+    "ses_2b7c673a0ffegaPqpXAHIREJ1H",
+    "ses_2b7c58fe2ffe9naUP4p1S35PjR",
+    "ses_2b7beb921ffeBS7PKqacy1kHjb"
   ],
   "plan_name": "ui-redesign",
   "agent": "atlas",
@@ -33,6 +37,24 @@
       "agent": "Sisyphus-Junior",
       "category": "visual-engineering",
       "updated_at": "2026-04-01T08:44:52.903Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "**Rewrite HomePage and DrawingPanel**",
+      "session_id": "ses_2b7c673a0ffegaPqpXAHIREJ1H",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-04-01T08:52:29.119Z"
+    },
+    "todo:12": {
+      "task_key": "todo:12",
+      "task_label": "12",
+      "task_title": "**Rewrite App.tsx — Remove Ant Design Layout**",
+      "session_id": "ses_2b7beb921ffeBS7PKqacy1kHjb",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-04-01T09:00:54.551Z"
     }
   }
 }

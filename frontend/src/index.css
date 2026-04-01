@@ -347,26 +347,6 @@ img {
   scrollbar-color: #333 transparent;
 }
 
-/* ==================== 响应式 ==================== */
-@media (max-width: 768px) {
-  .cli-timeline {
-    font-size: 12px;
-  }
-
-  .cli-time {
-    font-size: 10px;
-  }
-
-  .cli-step-details {
-    padding-left: 16px;
-  }
-
-  .cli-section-content {
-    padding: 6px 8px;
-    max-height: 250px;
-  }
-}
-
 /* ==================== 深色模式适配（如果系统有浅色模式） ==================== */
 @media (prefers-color-scheme: light) {
   .cli-timeline {
@@ -579,19 +559,6 @@ img {
 
 :root[data-theme='dark'] .stream-content-text {
   color: #d4d4d4;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .stream-content-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .stream-content-body {
-    padding: 10px;
-  }
 }
 
 /* ---- Scrollbar styles ---- */

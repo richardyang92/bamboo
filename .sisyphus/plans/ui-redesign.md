@@ -925,7 +925,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: components/shared/WorkflowPanel.tsx, components/shared/__tests__/WorkflowPanel.test.tsx
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 9. **Rewrite HomePage and DrawingPanel**
+- [x] 9. **Rewrite HomePage and DrawingPanel**
 
   **What to do**:
   - Rewrite `frontend/src/pages/HomePage.tsx`:
@@ -1023,7 +1023,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: pages/HomePage.tsx, components/drawing/DrawingPanel.tsx
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 10. **Rewrite DocumentPanel**
+- [x] 10. **Rewrite DocumentPanel**
 
   **What to do**:
   - Rewrite `frontend/src/components/document/DocumentPanel.tsx`:
@@ -1105,7 +1105,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: components/document/DocumentPanel.tsx
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 11. **Rewrite ManimPanel**
+- [x] 11. **Rewrite ManimPanel**
 
   **What to do**:
   - Rewrite `frontend/src/components/manim/ManimPanel.tsx`:
@@ -1180,7 +1180,7 @@ Max Concurrent: 4 (Waves 2-3)
   - Files: components/manim/ManimPanel.tsx
   - Pre-commit: `cd frontend && npm run build`
 
-- [ ] 12. **Rewrite App.tsx — Remove Ant Design Layout**
+- [x] 12. **Rewrite App.tsx — Remove Ant Design Layout**
 
   **What to do**:
   - Rewrite `frontend/src/App.tsx`:

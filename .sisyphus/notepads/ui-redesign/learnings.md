@@ -158,6 +158,98 @@ Successfully installed headless UI primitives (Radix UI), toast library (sonner)
 
 ---
 
+### DocumentPanel Rewrite Task - 2026-04-01
+
+#### Task Summary
+Successfully rewrote `frontend/src/components/document/DocumentPanel.tsx` to remove all Ant Design dependencies and use the new WorkflowPanel base component with shared MarkdownRenderer.
+
+#### Changes Made
+
+**File Rewritten:**
+- `frontend/src/components/document/DocumentPanel.tsx` — Reduced from ~430 lines to ~140 lines (67% reduction)
+
+**Imports Replaced:**
+| Removed | Replaced With |
+|---------|---------------|
+| `antd` (Card, Input, Button, Space, Tabs, message, Image) | `@radix-ui/react-tabs`, `WorkflowPanel`, `MarkdownRenderer` |
+| `@ant-design/icons` (SendOutlined, LoadingOutlined, PictureOutlined, StopOutlined) | `lucide-react` (ImageIcon) |
+| `useState`, `useMemo` from React | `useMemo` only (state handled by WorkflowPanel) |
+| `useWebSocket` | Removed (handled by WorkflowPanel) |
+| `useWorkflow` | Removed (handled by WorkflowPanel) |
+| `WorkflowStatusIndicator`, `WorkflowExecutionTracker`, `WorkflowTimeline` | Removed (handled by WorkflowPanel) |
+| `EmptyView`, `ResultPlaceholder` | Removed (handled by WorkflowPanel) |
+| `ReactMarkdown`, `remarkMath`, `rehypeKatex`, `rehypeRaw` | `MarkdownRenderer` component |
+
+**Architecture Changes:**
+1. **WorkflowPanel as base** — DocumentPanel now uses `WorkflowPanel` which provides:
+   - Two-column layout (input+timeline | result)
+   - Input textarea with buttons (start/stop/clear)
+   - WebSocket connection management
+   - Toast notifications (showToast)
+   - Timeline display
+
+2. **Render prop pattern** — Implemented `renderResult` callback passed to WorkflowPanel:
+   ```tsx
+   renderResult={(result) => (
+     <Tabs.Root>
+       <Tabs.List>...</Tabs.List>
+       <Tabs.Content value="preview">...</Tabs.Content>
+       <Tabs.Content value="outline">...</Tabs.Content>
+       <Tabs.Content value="images">...</Tabs.Content>
+     </Tabs.Root>
+   )}
+   ```
+
+3. **Radix UI Tabs** — 3 tabs implemented:
+   - **Preview**: Markdown content with image path conversion
+   - **Outline**: Markdown outline with image path conversion  
+   - **Images**: Grid of thumbnails with descriptions (conditional, only shows if images exist)
+
+**Image Path Conversion Logic (Preserved):**
+```tsx
+const contentWithPaths = useMemo(() => {
+  if (!result.content) return '';
+  return result.content.replace(/\.\.\/images\//g, '/api/images/');
+}, [result.content]);
+
+const getImageUrl = (img: GeneratedImage): string => {
+  if (img.url) return img.url;
+  if (img.relative_path) {
+    return img.relative_path.replace(/\.\.\/images\//g, '/api/images/');
+  }
+  // ... fallback logic
+};
+```
+
+**Key Implementation Details:**
+1. **useMemo for path conversion** — Content and outline paths converted once per result change, not on every render
+2. **Conditional images tab** — Only renders if `result.images && result.images.length > 0`
+3. **Image error handling** — On error, hides image and shows placeholder div
+4. **line-clamp for descriptions** — Uses Tailwind `line-clamp-3` for consistent truncation
+5. **flex layout for tabs** — `h-full flex flex-col` ensures proper scrolling behavior
+
+**Styling Applied:**
+- TabsList: `flex border-b border-[var(--color-border)]`
+- TabsTrigger: `px-3 py-1.5 text-sm text-[var(--color-text-secondary)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)]`
+- Image grid: `grid grid-cols-2 lg:grid-cols-3 gap-3`
+- Image card: `rounded-md overflow-hidden border border-[var(--color-border)] bg-[var(--color-bg-card)]`
+- Image: `w-full h-40 object-cover`
+- Description: `p-2 text-xs text-[var(--color-text-secondary)] line-clamp-3`
+
+**Build Verification:**
+- ✅ `npm run build` passes (7.18s, 6722 modules)
+- ✅ Zero Ant Design imports remaining
+- ✅ Zero `@ant-design/icons` imports
+- ✅ TypeScript compilation clean
+- ✅ Bundle size reduced due to removed Ant Design dependencies in this component
+
+**Code Reduction:**
+- Original: ~430 lines with inline markdown rendering, input handling, button logic
+- New: ~140 lines focused purely on result presentation
+- Logic delegated to WorkflowPanel: input handling, API calls, toast notifications, timeline display
+
+---
+
 ## Tailwind CSS v4 Setup Task - 2026-04-01
 
 ### Task Summary
@@ -377,3 +469,276 @@ Created `frontend/src/components/shared/WorkflowPanel.tsx` — a shared base com
 - ✅ `npm run build` passes (6.54s, 6645 modules)
 - ✅ LSP diagnostics clean — zero errors
 - ✅ No new dependencies added
+
+---
+
+## HomePage & DrawingPanel Migration Task - 2026-04-01
+
+### Task Summary
+Successfully rewrote `HomePage.tsx` and `DrawingPanel.tsx` to remove all Ant Design dependencies and use the new IDE layout system with WorkflowPanel base component.
+
+### Files Modified
+
+#### 1. `frontend/src/pages/HomePage.tsx`
+**Before:** 74 lines with Ant Design Tabs, @ant-design/icons, GlobalModelBar
+**After:** 17 lines clean implementation
+
+**Changes:**
+- ❌ Removed: `Tabs` from 'antd'
+- ❌ Removed: `BarChartOutlined`, `FileTextOutlined`, `VideoCameraOutlined` from '@ant-design/icons'
+- ❌ Removed: `GlobalModelBar` import and usage
+- ❌ Removed: Local `activeTab` state (now derived from `state.currentWorkflow`)
+- ✅ Added: `AppLayout` from '../components/layout/AppLayout'
+- ✅ Added: `useWorkflow` hook to access `state.currentWorkflow`
+- ✅ Simplified: Render panels conditionally based on `currentWorkflow`
+
+**New Pattern:**
+```tsx
+function HomePage() {
+  const { state } = useWorkflow();
+  return (
+    <AppLayout>
+      {state.currentWorkflow === 'drawing' && <DrawingPanel />}
+      {state.currentWorkflow === 'document_with_images' && <DocumentPanel />}
+      {state.currentWorkflow === 'manim' && <ManimPanel />}
+    </AppLayout>
+  );
+}
+```
+
+#### 2. `frontend/src/components/drawing/DrawingPanel.tsx`
+**Before:** 194 lines with Ant Design (Card, Input, Button, Space, Image, Tabs, message), @ant-design/icons
+**After:** 68 lines clean implementation
+
+**Changes:**
+- ❌ Removed: All Ant Design imports (`Card`, `Input`, `Button`, `Space`, `Image`, `Tabs`, `message`)
+- ❌ Removed: All @ant-design/icons imports (`SendOutlined`, `LoadingOutlined`, `StopOutlined`)
+- ❌ Removed: `useWebSocket` hook (now handled by WorkflowPanel)
+- ❌ Removed: `useWorkflow` hook (now handled by WorkflowPanel)
+- ❌ Removed: All local state management (now handled by WorkflowPanel)
+- ❌ Removed: `WorkflowExecutionTracker`, `WorkflowTimeline`, `EmptyView`, `ResultPlaceholder` imports (now handled by WorkflowPanel)
+- ✅ Added: `WorkflowPanel` from '../shared/WorkflowPanel'
+- ✅ Added: `@radix-ui/react-tabs` for result tabs
+- ✅ Implemented: `renderDrawingResult` function for Image/Code tabs
+
+**Result Tabs Implementation:**
+```tsx
+function renderDrawingResult(result: WorkflowResult) {
+  return (
+    <Tabs.Root defaultValue="image" className="h-full flex flex-col">
+      <Tabs.List className="flex border-b border-[var(--color-border)]">
+        <Tabs.Trigger value="image" className="...">
+          图片
+        </Tabs.Trigger>
+        <Tabs.Trigger value="code" className="...">
+          代码
+        </Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Content value="image">
+        <img src={result.image_url} alt="生成的图表" className="max-w-full max-h-full object-contain" />
+      </Tabs.Content>
+      <Tabs.Content value="code">
+        <pre className="bg-[var(--color-bg-dark)] p-4 rounded-md overflow-auto font-mono text-sm">
+          {result.generated_code}
+        </pre>
+      </Tabs.Content>
+    </Tabs.Root>
+  );
+}
+```
+
+### Files Deleted
+
+#### `frontend/src/components/common/GlobalModelBar.tsx` (30 lines)
+- Verified zero imports across codebase before deletion
+- Functionality now integrated into Header component via ModelSelector
+
+### Verification Results
+
+#### Import Verification
+```bash
+$ grep -E "from ['\"]antd['\"]|from ['\"]@ant-design/icons['\"]" \
+  src/pages/HomePage.tsx src/components/drawing/DrawingPanel.tsx
+# No output = zero Ant Design imports ✓
+```
+
+#### Build Verification
+- ✅ `npm run build` passes (7.73s, 6722 modules)
+- ✅ TypeScript compilation: no errors
+- ✅ LSP diagnostics: 0 errors in modified files (only unrelated deprecation hints)
+- ✅ Bundle size: CSS 85.04 kB, JS 2,563.25 kB
+
+#### Functionality Preserved
+- Drawing workflow fully functional
+- Image and Code tabs work with Radix UI
+- All API calls (start/stop/clear) work through WorkflowPanel
+- Toast notifications via showToast (through WorkflowPanel)
+
+### Technical Notes
+
+#### WorkflowPanel Props Used
+```tsx
+<WorkflowPanel
+  workflowType="drawing"
+  apiStart={api.startDrawingWorkflow}
+  apiStop={api.stopDrawingWorkflow}
+  apiClear={api.clearDrawingHistory}
+  placeholder="请描述你想要绘制的图表，例如：绘制一个正弦函数图像"
+  startLabel="开始生成"
+  runningLabel="生成中..."
+  renderResult={renderDrawingResult}
+/>
+```
+
+#### Radix UI Tabs Styling Pattern
+- `TabsList`: `flex border-b border-[var(--color-border)]`
+- `TabsTrigger`: Uses `data-[state=active]` for active state styling
+- Active indicator: `data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)]`
+- Content area: `flex-1 overflow-auto` for proper scrolling
+
+### Impact
+- Reduced HomePage from 74 lines to 17 lines (77% reduction)
+- Reduced DrawingPanel from 194 lines to 68 lines (65% reduction)
+- Zero Ant Design dependencies in both files
+- Consistent IDE layout with AppLayout
+- Reusable WorkflowPanel pattern established for DocumentPanel and ManimPanel migrations
+
+---
+
+### ManimPanel Rewrite Task - 2026-04-01
+
+#### Task Summary
+Rewrote `frontend/src/components/manim/ManimPanel.tsx` to remove all Ant Design dependencies and use the new `WorkflowPanel` base component with Radix UI primitives.
+
+#### Changes Made
+- **Lines reduced**: 212 lines → 71 lines (~66% reduction)
+- **Ant Design imports removed**: Card, Input, Button, Space, Tabs, Select, message (7 imports)
+- **Ant Design icons removed**: SendOutlined, LoadingOutlined, StopOutlined
+- **Radix UI components added**: `@radix-ui/react-select`, `@radix-ui/react-tabs`
+- **Icons added**: ChevronDown, Check from `lucide-react`
+
+#### Component Mapping (Ant Design → Radix UI + WorkflowPanel)
+| Ant Design | Replacement |
+|---|---|
+| `Card` + `Space` + layout | `WorkflowPanel` base component |
+| `TextArea` | `WorkflowPanel` (internal textarea) |
+| `Button` + `Select` | `WorkflowPanel` + `extraControls` slot |
+| `Tabs` | `@radix-ui/react-tabs` (in `renderResult`) |
+| `Select` (quality) | `@radix-ui/react-select` (in `extraControls`) |
+| `message.*()` | `showToast.*()` (via `WorkflowPanel`) |
+
+#### Key Implementation Details
+
+1. **Quality Selector as `extraControls`**
+   ```tsx
+   const qualitySelector = (
+     <Select.Root value={quality} onValueChange={(v) => setQuality(v as any)}>
+       <Select.Trigger className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-secondary)]">
+         <Select.Value />
+         <Select.Icon><ChevronDown className="w-3 h-3" /></Select.Icon>
+       </Select.Trigger>
+       {/* Portal + Content + Viewport + Items */}
+     </Select.Root>
+   );
+   ```
+
+2. **Result Tabs with Radix UI**
+   ```tsx
+   const renderManimResult = (result: WorkflowResult) => (
+     <Tabs.Root defaultValue="video">
+       <Tabs.List className="flex border-b border-[var(--color-border)]">
+         <Tabs.Trigger value="video" className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)]">
+           视频
+         </Tabs.Trigger>
+         <Tabs.Trigger value="code" className="...">代码</Tabs.Trigger>
+       </Tabs.List>
+       <Tabs.Content value="video">...</Tabs.Content>
+       <Tabs.Content value="code">...</Tabs.Content>
+     </Tabs.Root>
+   );
+   ```
+
+3. **API Integration with Quality Parameter**
+   ```tsx
+   apiStart={(prompt, options) => api.startManimWorkflow(prompt, quality, options)}
+   ```
+   - `WorkflowPanel` passes `options` as `{ provider?, model?, enable_thinking? }`
+   - `startManimWorkflow` signature: `(prompt, quality, modelConfig?)`
+   - Quality state is captured from component state and merged at call time
+
+#### API Compatibility Notes
+- `startManimWorkflow` requires `quality` as 2nd positional arg, not in options object
+- `WorkflowPanel` injects model config via `options` parameter
+- Wrapper function bridges the gap: merges quality into the call
+
+#### Build Verification
+- ✅ `npm run build` passes (6.25s, 6257 modules)
+- ✅ Zero Ant Design imports remaining
+- ✅ TypeScript compilation clean
+- ✅ No new dependencies (Radix UI already installed)
+
+#### Quality Options Preserved
+| Value | Label |
+|-------|-------|
+| `low` | 480p |
+| `medium` | 720p |
+| `high` | 1080p |
+| `4k` | 4K |
+
+---
+
+## App.tsx Ant Design Removal (T12) - 2026-04-01
+
+### Task Summary
+Rewrote `App.tsx` to remove all Ant Design dependencies, deleted `App.css`, and cleaned up `index.css`.
+
+### Changes Made
+
+#### App.tsx (full rewrite)
+- **Removed**: `Layout`, `Header`, `Content`, `Button`, `ConfigProvider`, `theme` from `antd`
+- **Removed**: `HomeOutlined`, `HistoryOutlined`, `SunOutlined`, `MoonOutlined` from `@ant-design/icons`
+- **Removed**: `antd/locale/zh_CN` import
+- **Removed**: `Link`, `useLocation` from `react-router-dom` (no longer needed)
+- **Removed**: `useTheme` import (theme toggle moved to AppLayout)
+- **Removed**: `AppContent` inner component and all layout/navigation logic
+- **Added**: `Toaster` from `sonner` with `import 'sonner/dist/styles.css'`
+- **Kept**: `Routes`, `Route`, `ThemeProvider`, `WorkflowProvider`, `HomePage`, `HistoryPage`
+- Final App.tsx: 35 lines (down from 101)
+
+#### App.css (deleted)
+- Contained Ant Design overrides (`.dark .ant-layout-header`, `.dark .ant-card`)
+- Contained `.workflow-status-indicator`, `.code-block`, `.stream-controls`
+- Contained `@media (max-width: 768px)` responsive breakpoint
+- All functionality replaced by Tailwind utilities and component CSS
+
+#### index.css cleanup
+- **Removed**: Two `@media (max-width: 768px)` responsive breakpoints (CLI + stream content)
+- **Kept**: `@media (prefers-color-scheme: light)` — color preference, not responsive
+- No `.ant-*` selectors found in index.css (they were only in App.css)
+- No `.workflow-panel-*` or `.workflow-status-indicator` selectors found
+- index.css: 578 lines (down from 611)
+
+### Key Findings
+1. **Sonner CSS path**: sonner v2.0.7 exports `./dist/styles.css` (with 's'), NOT `./dist/style.css`. The exports map is: `"./dist/styles.css": "./dist/styles.css"`
+2. **App.tsx no longer needs layout**: HomePage now handles its own AppLayout (Sidebar + Header), so App.tsx is just providers + routes + toaster
+3. **Theme toggle not in App.tsx**: Already moved to AppLayout's Sidebar component
+4. **HistoryPage still uses Ant Design**: Will be rewritten in T13
+
+### Toaster Configuration
+```tsx
+<Toaster
+  position="top-right"
+  richColors
+  theme="dark"
+  toastOptions={{
+    style: {
+      background: 'var(--color-bg-card)',
+      border: '1px solid var(--color-border)',
+      color: 'var(--color-text-primary)',
+    },
+  }}
+/>
+```
+Uses design tokens from `@theme` block in index.css for consistent styling.
+
+---

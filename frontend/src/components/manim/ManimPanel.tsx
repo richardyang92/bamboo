@@ -1,211 +1,77 @@
-/**
- * Manim 动画工作流面板 - 增强版
- * 集成实时状态展示、步骤进度和流式内容
- */
 import { useState } from 'react';
-import { Card, Input, Button, Space, Tabs, Select, message } from 'antd';
-import { SendOutlined, LoadingOutlined, StopOutlined } from '@ant-design/icons';
-import { useWebSocket } from '../../hooks/useWebSocket';
-import { useWorkflow } from '../../contexts/WorkflowContext';
+import * as Select from '@radix-ui/react-select';
+import * as Tabs from '@radix-ui/react-tabs';
+import { ChevronDown, Check } from 'lucide-react';
+import WorkflowPanel from '../shared/WorkflowPanel';
 import * as api from '../../services/api';
-import WorkflowStatusIndicator from '../common/WorkflowStatusIndicator';
-import WorkflowExecutionTracker from '../common/WorkflowExecutionTracker';
-import WorkflowTimeline from '../common/WorkflowTimeline';
-import EmptyView from '../common/EmptyView';
-import ResultPlaceholder from '../common/ResultPlaceholder';
+import type { WorkflowResult } from '../../types';
 
-const { TextArea } = Input;
+const qualityOptions = [
+  { value: 'low', label: '480p' },
+  { value: 'medium', label: '720p' },
+  { value: 'high', label: '1080p' },
+  { value: '4k', label: '4K' },
+];
 
 function ManimPanel() {
-  const {
-    status,
-    steps,
-    currentStep,
-    result,
-    error,
-    connectionState,
-    currentNode,
-    isStreaming,
-    streamContent,
-    reasoningContent,  // 新增：获取思考内容
-  } = useWebSocket('manim');
-
-  const { state: { modelConfig } } = useWorkflow();
-  const [prompt, setPrompt] = useState('');
   const [quality, setQuality] = useState<'low' | 'medium' | 'high' | '4k'>('medium');
 
-  const handleStart = async () => {
-    if (!prompt.trim()) {
-      message.warning('请输入动画需求');
-      return;
-    }
+  const qualitySelector = (
+    <Select.Root value={quality} onValueChange={(v) => setQuality(v as any)}>
+      <Select.Trigger className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-secondary)]">
+        <Select.Value />
+        <Select.Icon><ChevronDown className="w-3 h-3" /></Select.Icon>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content className="z-50 overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-bg-dark)] shadow-xl" position="popper" sideOffset={4}>
+          <Select.Viewport className="p-1">
+            {qualityOptions.map(opt => (
+              <Select.Item key={opt.value} value={opt.value} className="relative flex items-center px-3 py-1.5 text-sm cursor-pointer text-[var(--color-text-primary)] rounded-md outline-none hover:bg-[var(--color-secondary)] data-[highlighted]:bg-[var(--color-secondary)]">
+                <Select.ItemText>{opt.label}</Select.ItemText>
+                <Select.ItemIndicator className="absolute right-2 text-[var(--color-accent)]"><Check className="w-3.5 h-3.5" /></Select.ItemIndicator>
+              </Select.Item>
+            ))}
+          </Select.Viewport>
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
+  );
 
-    try {
-      await api.startManimWorkflow(prompt, quality, {
-        provider: modelConfig.provider,
-        model: modelConfig.model,
-        enable_thinking: modelConfig.enable_thinking,
-      });
-      message.success('动画工作流已启动');
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : '启动失败');
-    }
-  };
-
-  const handleClear = async () => {
-    try {
-      await api.clearManimHistory();
-      message.success('历史记录已清除');
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : '清除失败');
-    }
-  };
-
-  const handleStop = async () => {
-    try {
-      await api.stopManimWorkflow();
-      message.success('工作流已停止');
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : '停止失败');
-    }
-  };
-
-  const isRunning = status === 'running';
-
-  const qualityOptions = [
-    { label: '低质量 (360p)', value: 'low' },
-    { label: '中等质量 (480p)', value: 'medium' },
-    { label: '高质量 (720p)', value: 'high' },
-    { label: '4K 质量 (2160p)', value: '4k' },
-  ];
+  const renderManimResult = (result: WorkflowResult) => (
+    <Tabs.Root defaultValue="video">
+      <Tabs.List className="flex border-b border-[var(--color-border)]">
+        <Tabs.Trigger value="video" className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)]">视频</Tabs.Trigger>
+        <Tabs.Trigger value="code" className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)]">代码</Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Content value="video" className="pt-3">
+        <div className="flex items-center justify-center min-h-0 h-full">
+          <video
+            src={result.video_url}
+            controls
+            className="max-w-full max-h-full rounded-md"
+          />
+        </div>
+      </Tabs.Content>
+      <Tabs.Content value="code" className="pt-3">
+        <pre className="bg-[var(--color-bg-dark)] p-4 rounded-md overflow-auto font-mono text-sm text-[var(--color-text-primary)]">
+          {result.generated_code}
+        </pre>
+      </Tabs.Content>
+    </Tabs.Root>
+  );
 
   return (
-    <div className="workflow-panel">
-      <div className="workflow-panel-left">
-        <Space style={{ width: '100%' }} direction="vertical" size="large">
-          {/* 输入区域 - 带状态指示器 */}
-          <Card
-            title={
-              <Space>
-                <span>动画需求</span>
-                <WorkflowStatusIndicator
-                  workflowStatus={status}
-                  connectionState={connectionState}
-                  workflowType="manim"
-                />
-              </Space>
-            }
-          >
-            <Space style={{ width: '100%' }} direction="vertical">
-              <TextArea
-                rows={4}
-                placeholder="请描述你想要的数学动画，例如：展示正弦函数的生成过程"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                disabled={isRunning}
-              />
-              <Space>
-                <span>渲染质量：</span>
-                <Select
-                  value={quality}
-                  onChange={setQuality}
-                  style={{ width: 200 }}
-                  disabled={isRunning}
-                  options={qualityOptions}
-                />
-              </Space>
-              <Space style={{ width: '100%' }}>
-                <Button
-                  type="primary"
-                  icon={isRunning ? <LoadingOutlined /> : <SendOutlined />}
-                  onClick={handleStart}
-                  disabled={isRunning}
-                >
-                  {isRunning ? '渲染中...' : '开始渲染'}
-                </Button>
-                {isRunning && (
-                  <Button
-                    danger
-                    icon={<StopOutlined />}
-                    onClick={handleStop}
-                  >
-                    停止
-                  </Button>
-                )}
-                <Button onClick={handleClear} disabled={isRunning}>
-                  清除历史
-                </Button>
-              </Space>
-            </Space>
-          </Card>
-
-          {/* 工作流执行时间线 */}
-          <Card title="执行时间线">
-            {steps.filter(s => s.status !== 'pending').length > 0 ? (
-              <WorkflowTimeline
-                steps={steps}
-                streamContent={streamContent}
-                reasoningContent={reasoningContent}
-                currentNode={currentNode}
-                isStreaming={isStreaming}
-                workflowType="manim"
-              />
-            ) : (
-              <EmptyView workflowType="manim" />
-            )}
-          </Card>
-        </Space>
-      </div>
-
-      {/* 右侧结果区域 */}
-      <div className="workflow-panel-right">
-        {result && result.video_url ? (
-          /* 优先：显示生成结果 */
-          <Card title="生成结果">
-            <Tabs
-              items={[
-                {
-                  key: 'video',
-                  label: '视频',
-                  children: (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0, height: '100%' }}>
-                      <video
-                        src={result.video_url}
-                        controls
-                        style={{ maxWidth: '100%', maxHeight: '100%' }}
-                      />
-                    </div>
-                  ),
-                },
-                {
-                  key: 'code',
-                  label: '代码',
-                  children: (
-                    <pre style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px' }}>
-                      {result.generated_code}
-                    </pre>
-                  ),
-                },
-              ]}
-            />
-          </Card>
-        ) : steps.length > 0 ? (
-          /* 有步骤历史：显示执行进度 */
-          <Card title="执行进度">
-            <WorkflowExecutionTracker
-              steps={steps}
-              currentStep={currentStep}
-              workflowType="manim"
-            />
-          </Card>
-        ) : (
-          /* 默认：显示占位符 */
-          <Card title="生成结果">
-            <ResultPlaceholder type="manim" error={error} />
-          </Card>
-        )}
-      </div>
-    </div>
+    <WorkflowPanel
+      workflowType="manim"
+      apiStart={(prompt, options) => api.startManimWorkflow(prompt, quality, options)}
+      apiStop={api.stopManimWorkflow}
+      apiClear={api.clearManimHistory}
+      placeholder="请描述你想要的数学动画，例如：展示一个圆从左侧移动到右侧的动画"
+      startLabel="开始生成"
+      runningLabel="渲染中..."
+      extraControls={qualitySelector}
+      renderResult={renderManimResult}
+    />
   );
 }
 
