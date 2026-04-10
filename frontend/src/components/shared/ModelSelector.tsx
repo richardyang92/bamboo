@@ -74,13 +74,13 @@ const SelectItem = forwardRef<
   <Select.Item
     ref={ref}
     className="relative flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer
-               text-[var(--color-text-primary)] rounded-md outline-none
-               hover:bg-[var(--color-secondary)] data-[highlighted]:bg-[var(--color-secondary)]
+               text-slate-200 rounded-lg outline-none
+               hover:bg-white/5 data-[highlighted]:bg-white/5
                data-[disabled]:opacity-50 data-[disabled]:pointer-events-none"
     {...props}
   >
-    <Select.ItemText>{children}</Select.ItemText>
-    <Select.ItemIndicator className="absolute right-2 text-[var(--color-accent)]">
+    {children}
+    <Select.ItemIndicator className="absolute right-2 text-[#06b6d4]">
       <Check className="w-3.5 h-3.5" />
     </Select.ItemIndicator>
   </Select.Item>
@@ -215,7 +215,7 @@ function ModelSelector({ onModelChange, disabled = false }: ModelSelectorProps) 
 
   if (!models) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--color-bg-card)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-sm">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-slate-400 text-sm">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
         <span>加载模型中...</span>
       </div>
@@ -231,7 +231,7 @@ function ModelSelector({ onModelChange, disabled = false }: ModelSelectorProps) 
     <Tooltip.Provider delayDuration={300}>
       <div className="flex items-center gap-2">
         {/* 标签: 模型 */}
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/15 text-blue-400">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-cyan-500/15 text-cyan-400">
           <Bot className="w-3 h-3" />
           模型
         </span>
@@ -240,36 +240,55 @@ function ModelSelector({ onModelChange, disabled = false }: ModelSelectorProps) 
         <Select.Root value={currentProvider} onValueChange={handleProviderChange}>
           <Select.Trigger
             disabled={disabled || loading}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm
-                       bg-[var(--color-bg-card)] border border-[var(--color-border)]
-                       text-[var(--color-text-primary)]
-                       hover:border-[var(--color-text-muted)]
-                       focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm
+                       bg-white/5 backdrop-blur-sm border border-white/10
+                       text-slate-200 min-w-[120px]
+                       hover:bg-white/10 hover:border-white/20
+                       focus:outline-none focus:ring-1 focus:ring-[#06b6d4]
                        disabled:opacity-50 disabled:cursor-not-allowed
-                       data-[placeholder]:text-[var(--color-text-muted)]"
+                       data-[placeholder]:text-slate-400
+                       transition-colors"
             aria-label="选择提供商"
           >
-            <Select.Value />
+            <Select.Value>
+              <span className="flex items-center gap-1.5">
+                {currentProvider === 'deepseek' ? (
+                  <>
+                    <Zap className="w-3.5 h-3.5 text-slate-400" />
+                    <span>DeepSeek</span>
+                  </>
+                ) : (
+                  <>
+                    <Bot className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Ollama</span>
+                  </>
+                )}
+              </span>
+            </Select.Value>
             <Select.Icon>
-              <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </Select.Icon>
           </Select.Trigger>
 
           <Select.Portal>
             <Select.Content
-              className="z-50 overflow-hidden rounded-md border border-[var(--color-border)]
-                         bg-[var(--color-bg-dark)] shadow-xl"
+              className="z-50 overflow-hidden rounded-xl border border-white/10
+                         bg-slate-900/95 backdrop-blur-xl shadow-xl"
               position="popper"
               sideOffset={4}
             >
               <Select.Viewport className="p-1">
                 <SelectItem value="deepseek">
-                  <Zap className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
-                  <span>DeepSeek</span>
+                  <span className="flex items-center gap-2">
+                    <Zap className="w-3.5 h-3.5 text-slate-400" />
+                    <span>DeepSeek</span>
+                  </span>
                 </SelectItem>
                 <SelectItem value="ollama">
-                  <Bot className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
-                  <span>Ollama</span>
+                  <span className="flex items-center gap-2">
+                    <Bot className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Ollama</span>
+                  </span>
                 </SelectItem>
               </Select.Viewport>
             </Select.Content>
@@ -280,26 +299,36 @@ function ModelSelector({ onModelChange, disabled = false }: ModelSelectorProps) 
         <Select.Root value={currentModel} onValueChange={handleModelChange}>
           <Select.Trigger
             disabled={disabled || loading}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm
-                       bg-[var(--color-bg-card)] border border-[var(--color-border)]
-                       text-[var(--color-text-primary)] min-w-[180px]
-                       hover:border-[var(--color-text-muted)]
-                       focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm
+                       bg-white/5 backdrop-blur-sm border border-white/10
+                       text-slate-200 min-w-[200px]
+                       hover:bg-white/10 hover:border-white/20
+                       focus:outline-none focus:ring-1 focus:ring-[#06b6d4]
                        disabled:opacity-50 disabled:cursor-not-allowed
-                       data-[placeholder]:text-[var(--color-text-muted)]"
+                       data-[placeholder]:text-slate-400
+                       transition-colors"
             aria-label="选择模型"
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            <Select.Value />
+            <Select.Value>
+              <span className="flex items-center gap-1.5">
+                {currentProvider === 'deepseek' ? (
+                  <Zap className="w-3.5 h-3.5 text-slate-400" />
+                ) : (
+                  <Bot className="w-3.5 h-3.5 text-slate-400" />
+                )}
+                <span>{currentModel}</span>
+              </span>
+            </Select.Value>
             <Select.Icon>
-              <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </Select.Icon>
           </Select.Trigger>
 
           <Select.Portal>
             <Select.Content
-              className="z-50 overflow-hidden rounded-md border border-[var(--color-border)]
-                         bg-[var(--color-bg-dark)] shadow-xl"
+              className="z-50 overflow-hidden rounded-xl border border-white/10
+                         bg-slate-900/95 backdrop-blur-xl shadow-xl"
               position="popper"
               sideOffset={4}
             >
@@ -308,13 +337,20 @@ function ModelSelector({ onModelChange, disabled = false }: ModelSelectorProps) 
                   .filter(m => m && m.name)
                   .map(modelInfo => (
                     <SelectItem key={modelInfo.name} value={modelInfo.name}>
-                      <span>{modelInfo.name}</span>
-                      {/* 识别思考模型：根据后端返回的能力信息判断 */}
-                      {modelInfo.supports_thinking && (
-                        <span className="ml-1 px-1 py-px rounded text-[10px] font-medium bg-purple-500/20 text-purple-400">
-                          推理
-                        </span>
-                      )}
+                      <span className="flex items-center gap-2">
+                        {currentProvider === 'deepseek' ? (
+                          <Zap className="w-3.5 h-3.5 text-slate-400" />
+                        ) : (
+                          <Bot className="w-3.5 h-3.5 text-slate-400" />
+                        )}
+                        <span>{modelInfo.name}</span>
+                        {/* 识别思考模型：根据后端返回的能力信息判断 */}
+                        {modelInfo.supports_thinking && (
+                          <span className="ml-1 px-1 py-px rounded text-[10px] font-medium bg-purple-500/15 text-purple-400">
+                            推理
+                          </span>
+                        )}
+                      </span>
                     </SelectItem>
                   ))}
               </Select.Viewport>
@@ -328,14 +364,14 @@ function ModelSelector({ onModelChange, disabled = false }: ModelSelectorProps) 
             <Tooltip.Trigger asChild>
               <div className="flex items-center gap-1.5">
                 <Lightbulb
-                  className={`w-3.5 h-3.5 ${enableThinking ? 'text-purple-400' : 'text-[var(--color-text-muted)]'}`}
+                  className={`w-3.5 h-3.5 ${enableThinking ? 'text-purple-400' : 'text-slate-400'}`}
                 />
                 <Switch.Root
                   checked={enableThinking}
                   onCheckedChange={handleThinkingChange}
                   disabled={disabled || loading}
                   className="relative h-4 w-8 rounded-full cursor-pointer
-                             bg-[var(--color-secondary)] data-[state=checked]:bg-purple-600
+                             bg-slate-700 data-[state=checked]:bg-purple-600
                              disabled:opacity-50 disabled:cursor-not-allowed
                              transition-colors"
                 >
@@ -345,20 +381,20 @@ function ModelSelector({ onModelChange, disabled = false }: ModelSelectorProps) 
                                transition-transform"
                   />
                 </Switch.Root>
-                <span className="text-[10px] text-[var(--color-text-muted)]">
+                <span className="text-[10px] text-slate-400">
                   {enableThinking ? 'Thinking' : 'Normal'}
                 </span>
               </div>
             </Tooltip.Trigger>
             <Tooltip.Portal>
               <Tooltip.Content
-                className="z-50 px-2.5 py-1 rounded-md text-xs
-                           bg-[var(--color-bg-dark)] border border-[var(--color-border)]
-                           text-[var(--color-text-secondary)] shadow-lg"
+                className="z-50 px-2.5 py-1 rounded-lg text-xs
+                           bg-slate-900/95 backdrop-blur-xl border border-white/10
+                           text-slate-300 shadow-lg"
                 sideOffset={6}
               >
                 启用后显示模型推理过程
-                <Tooltip.Arrow className="fill-[var(--color-border)]" />
+                <Tooltip.Arrow className="fill-white/10" />
               </Tooltip.Content>
             </Tooltip.Portal>
           </Tooltip.Root>
@@ -366,17 +402,17 @@ function ModelSelector({ onModelChange, disabled = false }: ModelSelectorProps) 
 
         {/* 功能标识 */}
         {providerConfig.supports_reasoning && isCurrentModelThinking && (
-          <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-purple-500/20 text-purple-400">
+          <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-purple-500/15 text-purple-400">
             思考模式
           </span>
         )}
         {currentProvider === 'ollama' && (
-          <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-green-500/20 text-green-400">
+          <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-500/15 text-emerald-400">
             本地
           </span>
         )}
         {!backendAvailable && (
-          <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-orange-500/20 text-orange-400">
+          <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-500/15 text-amber-400">
             离线
           </span>
         )}

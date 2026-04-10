@@ -72,8 +72,8 @@ def refine_prompt(state: ManimState) -> ManimState:
 
 ### 重要参数限制
 - **Table/Cell 边框宽度**: 使用 `stroke_width` 参数，不要使用 `linewidth`
-- 错误示例: `Table(..., cell_config={'linewidth': 2})` ❌
-- 正确示例: `Table(..., cell_config={'stroke_width': 2})` ✅
+- 错误示例: `Table(..., cell_config={{'linewidth': 2}})` ❌
+- 正确示例: `Table(..., cell_config={{'stroke_width': 2}})` ✅
 
 ### 性能优化要求（关键！）
 1. **限制self.play()调用**: 整个场景的 `self.play()` 调用次数应控制在 10-15 次以内，包括所有元素的创建、变换和淡出
@@ -485,6 +485,9 @@ for i in range(10):  # 这会创建10个self.play()调用，渲染很慢
             think=client.config.enable_thinking  # 新增：启用 thinking 模式
         )
 
+        if stream is None:
+            return {"error": "LLM API 返回空响应，请检查模型配置和网络连接"}
+
         generated_code = ""
         for chunk in stream:
             if chunk.choices[0].delta.content is not None:
@@ -692,8 +695,12 @@ def execute_code(state: ManimState) -> ManimState:
             # 对于 manim -o 参数，使用不带扩展名的完整路径
             output_path_no_ext = os.path.splitext(target_filename)[0]
 
+            # 优先使用 venv 中的 manim，避免系统 PATH 找不到
+            venv_manim = os.path.join(os.path.dirname(sys.executable), "manim")
+            manim_bin = venv_manim if os.path.isfile(venv_manim) else "manim"
+
             cmd = [
-                "manim",
+                manim_bin,
                 quality_flag,
                 "-o", output_path_no_ext,
                 code_filename,

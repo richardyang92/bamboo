@@ -184,6 +184,8 @@ def generate_outline(state: GraphState, stream_callback=None) -> GraphState:
         # 收集流式响应
         outline = ""
         print(f"   [DEBUG] 开始接收流式响应...")
+        if stream is None:
+            return {"error": "LLM API 返回空响应，请检查模型配置和网络连接"}
         for chunk in stream:
             if chunk.choices[0].delta.content is not None:
                 content = chunk.choices[0].delta.content
@@ -330,6 +332,8 @@ def generate_content(state: GraphState, stream_callback=None) -> GraphState:
         # 收集流式响应
         content = ""
         print(f"   [DEBUG] 开始接收流式响应...")
+        if stream is None:
+            return {"error": "LLM API 返回空响应，请检查模型配置和网络连接"}
         for chunk in stream:
             if chunk.choices[0].delta.content is not None:
                 chunk_content = chunk.choices[0].delta.content
@@ -466,6 +470,8 @@ def enhance_image_prompt_with_llm(image_description: str, document_context: str,
         # 收集流式响应
         enhanced_description = ""
         print(f"   [DEBUG] 开始接收流式响应...")
+        if stream is None:
+            return image_description
         for chunk in stream:
             if chunk.choices[0].delta.content is not None:
                 chunk_content = chunk.choices[0].delta.content

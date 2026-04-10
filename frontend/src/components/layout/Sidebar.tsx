@@ -13,9 +13,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { type: 'workflow', workflow: 'drawing', icon: BarChart3, label: '绘图' },
-  { type: 'workflow', workflow: 'document_with_images', icon: FileText, label: '文档' },
-  { type: 'workflow', workflow: 'manim', icon: Video, label: '动画' },
+  { type: 'workflow', workflow: 'drawing', icon: BarChart3, label: '智能绘图' },
+  { type: 'workflow', workflow: 'document_with_images', icon: FileText, label: '文档生成' },
+  { type: 'workflow', workflow: 'manim', icon: Video, label: '数学动画' },
   { type: 'route', route: '/history', icon: History, label: '历史记录' },
 ];
 
@@ -44,27 +44,43 @@ function Sidebar() {
 
   return (
     <aside
-      className={`w-14 h-full flex flex-col shrink-0 transition-colors duration-200 ${
-        mode === 'dark' ? 'bg-[var(--color-bg-dark)]' : 'bg-white'
-      }`}
+      className={`group h-full flex flex-col shrink-0 glass-sidebar overflow-hidden transition-all duration-300 w-[72px] hover:w-[200px]`}
     >
-      <nav className="flex-1 flex flex-col gap-1 py-3">
+      <nav className="flex-1 flex flex-col gap-1 py-4 px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item);
 
           const buttonContent = (
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors">
+            <div
+              className={`relative flex items-center w-full h-11 rounded-lg transition-all duration-200 cursor-pointer ${
+                active
+                  ? 'bg-[var(--color-accent)]/10'
+                  : 'hover:bg-[var(--color-bg-card)]/50'
+              }`}
+            >
               {active && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[var(--color-accent)] rounded-r" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[var(--color-accent)] rounded-r" />
               )}
-              <Icon
-                className={`w-5 h-5 transition-colors ${
+              <div className="flex items-center justify-center w-14 shrink-0">
+                <Icon
+                  strokeWidth={active ? 2.5 : 1.5}
+                  className={`w-5 h-5 transition-colors ${
+                    active
+                      ? 'text-[var(--color-accent)]'
+                      : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)]'
+                  }`}
+                />
+              </div>
+              <span
+                className={`whitespace-nowrap text-sm font-medium transition-all duration-300 overflow-hidden max-w-0 group-hover:max-w-[120px] ${
                   active
                     ? 'text-[var(--color-accent)]'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+                    : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)]'
                 }`}
-              />
+              >
+                {item.label}
+              </span>
             </div>
           );
 
@@ -73,8 +89,7 @@ function Sidebar() {
               <button
                 key={item.label}
                 onClick={() => handleWorkflowClick(item.workflow!)}
-                className="flex items-center justify-center group"
-                title={item.label}
+                className="w-full"
               >
                 {buttonContent}
               </button>
@@ -85,8 +100,7 @@ function Sidebar() {
             <Link
               key={item.label}
               to={item.route!}
-              className="flex items-center justify-center group"
-              title={item.label}
+              className="w-full"
             >
               {buttonContent}
             </Link>
@@ -94,17 +108,28 @@ function Sidebar() {
         })}
       </nav>
 
-      <div className="py-3 flex justify-center">
+      <div className="py-4 px-2">
+        <div className="h-px bg-[var(--color-border)] mx-2 mb-4" />
         <button
           onClick={toggleTheme}
-          className="relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors hover:bg-[var(--color-bg-card)]/50"
-          title={mode === 'dark' ? '切换到浅色主题' : '切换到深色主题'}
+          className="relative flex items-center w-full h-11 rounded-lg transition-all duration-200 cursor-pointer hover:bg-[var(--color-bg-card)]/50"
         >
-          {mode === 'dark' ? (
-            <Sun className="w-5 h-5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors" />
-          ) : (
-            <Moon className="w-5 h-5 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors" />
-          )}
+          <div className="flex items-center justify-center w-14 shrink-0">
+            {mode === 'dark' ? (
+              <Sun
+                strokeWidth={1.5}
+                className="w-5 h-5 text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors"
+              />
+            ) : (
+              <Moon
+                strokeWidth={1.5}
+                className="w-5 h-5 text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] transition-colors"
+              />
+            )}
+          </div>
+          <span className="whitespace-nowrap text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] transition-colors overflow-hidden max-w-0 group-hover:max-w-[120px]">
+            {mode === 'dark' ? '浅色主题' : '深色主题'}
+          </span>
         </button>
       </div>
     </aside>

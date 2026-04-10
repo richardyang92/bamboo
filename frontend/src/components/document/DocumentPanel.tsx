@@ -35,23 +35,29 @@ function DocumentPanel() {
 
     return (
       <Tabs.Root defaultValue="preview" className="h-full flex flex-col">
-        <Tabs.List className="flex border-b border-[var(--color-border)] shrink-0">
+        <Tabs.List className="bg-white/5 rounded-full p-1 inline-flex w-fit">
           <Tabs.Trigger
             value="preview"
-            className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)] transition-colors"
+            className="px-4 py-1.5 text-sm font-medium transition-all duration-200 rounded-full
+                       data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:text-slate-300 data-[state=inactive]:hover:bg-white/5
+                       data-[state=active]:bg-[#06b6d4] data-[state=active]:text-white data-[state=active]:shadow-md"
           >
             预览
           </Tabs.Trigger>
           <Tabs.Trigger
             value="outline"
-            className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)] transition-colors"
+            className="px-4 py-1.5 text-sm font-medium transition-all duration-200 rounded-full
+                       data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:text-slate-300 data-[state=inactive]:hover:bg-white/5
+                       data-[state=active]:bg-[#06b6d4] data-[state=active]:text-white data-[state=active]:shadow-md"
           >
             大纲
           </Tabs.Trigger>
           {hasImages && (
             <Tabs.Trigger
               value="images"
-              className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)] transition-colors"
+              className="px-4 py-1.5 text-sm font-medium transition-all duration-200 rounded-full
+                         data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:text-slate-300 data-[state=inactive]:hover:bg-white/5
+                         data-[state=active]:bg-[#06b6d4] data-[state=active]:text-white data-[state=active]:shadow-md"
             >
               图片 ({result.images!.length})
             </Tabs.Trigger>
@@ -76,7 +82,7 @@ function DocumentPanel() {
                 return (
                   <div
                     key={idx}
-                    className="rounded-md overflow-hidden border border-[var(--color-border)] bg-[var(--color-bg-card)]"
+                    className="rounded-xl overflow-hidden border border-white/10 bg-slate-800/50 backdrop-blur-sm hover:scale-[1.02] hover:shadow-xl transition-all duration-200"
                   >
                     {hasUrl ? (
                       <img
@@ -94,14 +100,14 @@ function DocumentPanel() {
                       />
                     ) : null}
                     <div
-                      className="image-placeholder hidden w-full h-40 items-center justify-center flex-col bg-[var(--color-secondary)] text-[var(--color-text-muted)]"
+                      className="image-placeholder hidden w-full h-40 items-center justify-center flex-col bg-slate-900/50 text-slate-400"
                       style={{ display: hasUrl ? 'none' : 'flex' }}
                     >
                       <ImageIcon size={32} className="mb-2 opacity-50" />
                       <span className="text-xs">图片加载失败</span>
                     </div>
                     {img.description && (
-                      <p className="p-2 text-xs text-[var(--color-text-secondary)] line-clamp-3">
+                      <p className="p-2 text-xs text-slate-400 line-clamp-3">
                         {img.description}
                       </p>
                     )}

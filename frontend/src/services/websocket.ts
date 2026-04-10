@@ -28,6 +28,9 @@ export class WorkflowWebSocket {
    */
   connect(workflowType: WorkflowType): void {
     this.workflowType = workflowType;
+    // Reset reconnect counter — a new connect() call means we want a fresh attempt,
+    // regardless of any previous disconnect() that set it to max.
+    this.reconnectAttempts = 0;
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
@@ -130,7 +133,11 @@ export class WorkflowWebSocket {
    */
   disconnect(): void {
     if (this.ws) {
-      this.reconnectAttempts = this.maxReconnectAttempts; // 防止自动重连
+      this.reconnectAttempts = this.maxReconnectAttempts;
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
       this.ws.close();
       this.ws = null;
     }

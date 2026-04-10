@@ -240,14 +240,21 @@ export function useWebSocket(workflowType: WorkflowType): UseWebSocketReturn {
     }
   }, [clearStreamContent]);
 
-  // 组件挂载时连接
+  // 组件挂载时连接（延迟避免 React StrictMode 双重挂载问题）
   useEffect(() => {
-    connect(workflowType);
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        connect(workflowType);
+      }
+    }, 50);
 
     return () => {
+      cancelled = true;
+      clearTimeout(timer);
       disconnect();
     };
-  }, [workflowType]); // 移除 connect 和 disconnect 从依赖数组，避免循环
+  }, [workflowType]);
 
   return {
     // 原有返回值

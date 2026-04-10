@@ -12,7 +12,7 @@ function AppLayout({ children }: AppLayoutProps) {
   return (
     <div
       className={`flex h-screen transition-colors duration-200 ${
-        mode === 'dark' ? 'bg-[var(--color-bg-card)]' : 'bg-gray-50'
+        mode === 'dark' ? 'bg-gradient-main' : 'bg-gray-50'
       }`}
     >
       <Sidebar />

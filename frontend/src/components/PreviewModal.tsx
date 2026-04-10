@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, Loader2 } from 'lucide-react';
 import * as api from '../services/api';
@@ -10,6 +11,37 @@ interface PreviewModalProps {
   item: HistoryItem | null;
   onClose: () => void;
 }
+
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+};
+
+const contentVariants = {
+  hidden: { 
+    opacity: 0, 
+    scale: 0.95,
+    y: 10,
+  },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.16, 1, 0.3, 1] as const,
+    },
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.95,
+    y: 10,
+    transition: {
+      duration: 0.2,
+      ease: 'easeIn' as const,
+    },
+  },
+};
 
 function PreviewModal({ item, onClose }: PreviewModalProps) {
   const [loading, setLoading] = useState(false);
@@ -56,35 +88,40 @@ function PreviewModal({ item, onClose }: PreviewModalProps) {
     switch (item.type) {
       case 'image':
         return (
-          <div className="flex items-center justify-center p-6">
-            <img
+          <div className="flex items-center justify-center p-8 bg-slate-950/30">
+            <motion.img
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
               src={item.url}
               alt={item.name}
-              className="max-w-full max-h-[70vh] object-contain"
+              className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl shadow-black/50"
             />
           </div>
         );
 
       case 'document':
         return (
-          <div className="p-6 min-h-[400px]">
+          <div className="p-8 min-h-[400px] bg-slate-950/30">
             {loading ? (
               <div className="flex items-center justify-center py-24">
-                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-accent)]" />
+                <Loader2 className="w-10 h-10 animate-spin text-cyan-500" />
               </div>
             ) : (
-              <MarkdownRenderer content={processedContent} />
+              <div className="max-w-4xl mx-auto">
+                <MarkdownRenderer content={processedContent} />
+              </div>
             )}
           </div>
         );
 
       case 'video':
         return (
-          <div className="flex items-center justify-center p-6">
+          <div className="flex items-center justify-center p-8 bg-slate-950/30 min-h-[400px]">
             <video
               src={item.url}
               controls
-              className="max-w-full max-h-[70vh]"
+              className="max-w-full max-h-[70vh] rounded-xl shadow-2xl shadow-black/50"
             >
               您的浏览器不支持视频播放
             </video>
@@ -93,7 +130,7 @@ function PreviewModal({ item, onClose }: PreviewModalProps) {
 
       default:
         return (
-          <div className="flex items-center justify-center p-6 text-[var(--color-text-muted)]">
+          <div className="flex items-center justify-center p-8 min-h-[400px] text-[#64748b]">
             不支持的文件类型
           </div>
         );
@@ -102,26 +139,49 @@ function PreviewModal({ item, onClose }: PreviewModalProps) {
 
   return (
     <Dialog.Root open={!!item} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg z-50 w-[80%] max-w-4xl max-h-[90vh] flex flex-col">
-          <Dialog.Title className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-            <span className="text-sm font-medium text-[var(--color-text-primary)] truncate pr-4">
-              {getTitle()}
-            </span>
-            <Dialog.Close asChild>
-              <button
-                onClick={onClose}
-                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors shrink-0"
-                aria-label="关闭"
+      <AnimatePresence>
+        {item && (
+          <Dialog.Portal forceMount>
+            <Dialog.Overlay asChild>
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                variants={overlayVariants}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              />
+            </Dialog.Overlay>
+            <Dialog.Content asChild>
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={contentVariants}
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl z-50 w-[85%] max-w-5xl max-h-[90vh] flex flex-col shadow-2xl shadow-black/50"
               >
-                <X className="w-4 h-4" />
-              </button>
-            </Dialog.Close>
-          </Dialog.Title>
-          <div className="flex-1 overflow-auto">{renderContent()}</div>
-        </Dialog.Content>
-      </Dialog.Portal>
+                <Dialog.Title className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5 backdrop-blur-xl rounded-t-2xl">
+                  <span className="text-sm font-medium text-[#f8fafc] truncate pr-4">
+                    {getTitle()}
+                  </span>
+                  <Dialog.Close asChild>
+                    <button
+                      onClick={onClose}
+                      className="p-2 text-[#64748b] hover:text-[#f8fafc] hover:bg-white/10 rounded-xl transition-all duration-200 shrink-0 cursor-pointer"
+                      aria-label="关闭"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </Dialog.Close>
+                </Dialog.Title>
+                <div className="flex-1 overflow-auto rounded-b-2xl">
+                  {renderContent()}
+                </div>
+              </motion.div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        )}
+      </AnimatePresence>
     </Dialog.Root>
   );
 }

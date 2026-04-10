@@ -204,6 +204,9 @@ def generate_code(state: GraphState, stream_callback=None) -> GraphState:
         # 获取当前提供商使用的思考字段名
         reasoning_field = client.get_reasoning_field_name()
 
+        if stream is None:
+            return {"error": "LLM API 返回空响应，请检查模型配置和网络连接"}
+
         for chunk in stream:
             delta = chunk.choices[0].delta
 
@@ -742,6 +745,9 @@ def fix_code_with_feedback(state: GraphState, stream_callback=None) -> GraphStat
         # 收集流式响应
         fixed_code = ""
         print("   [DEBUG] 开始接收修复后的代码...")
+
+        if stream is None:
+            return {"error": "LLM API 返回空响应，请检查模型配置和网络连接"}
 
         for chunk in stream:
             delta = chunk.choices[0].delta

@@ -1,6 +1,7 @@
 /**
- * WorkflowTimeline 样式 - CLI日志风格
+ * WorkflowTimeline 样式 - CLI日志风格（玻璃拟态增强版）
  * 参考现代CLI工具：Vercel CLI, npm, Docker, Railway
+ * 设计系统：Cyan accent (#06b6d4), Glass backgrounds
  */
 
 /* ==================== 容器 ==================== */
@@ -9,7 +10,7 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 0;
-  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-family: 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
   color: #e0e0e0;
@@ -40,10 +41,27 @@
   to { transform: rotate(360deg); }
 }
 
-/* ==================== 步骤 ==================== */
+/* ==================== 步骤（带垂直连接线） ==================== */
 .cli-step {
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* 垂直连接线 */
+.cli-step::before {
+  content: '';
+  position: absolute;
+  left: 27px;
+  top: 28px;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, rgba(6, 182, 212, 0.3), rgba(6, 182, 212, 0.1));
+  z-index: 0;
+}
+
+.cli-step:last-child::before {
+  display: none;
 }
 
 /* 步骤头部行 */
@@ -83,15 +101,19 @@
 }
 
 .cli-icon-success {
-  color: #22c55e;
+  color: #10b981;
 }
 
 .cli-icon-error {
-  color: #ef4444;
+  color: #f43f5e;
 }
 
 .cli-icon-running {
-  color: #3b82f6;
+  color: #06b6d4;
+}
+
+.cli-icon-skipped {
+  color: #64748b;
 }
 
 .cli-icon-spinning {
@@ -143,26 +165,28 @@
   padding-bottom: 8px;
 }
 
-/* ==================== 错误信息 ==================== */
+/* ==================== 错误信息（Glass card with red tint） ==================== */
 .cli-error-message {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border-left: 2px solid #ef4444;
-  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+  background: rgba(244, 63, 94, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  border-radius: 8px;
   margin-top: 4px;
 }
 
 .cli-error-icon {
-  color: #ef4444;
+  color: #f43f5e;
   flex-shrink: 0;
   margin-top: 2px;
 }
 
 .cli-error-text {
-  color: #fca5a5;
+  color: #fda4af;
   font-size: 12px;
   word-break: break-word;
 }
@@ -225,19 +249,25 @@
   font-weight: 500;
 }
 
-/* 区块内容 */
+/* 区块内容（Glass effect） */
 .cli-section-content {
-  padding: 8px 12px;
-  margin: 2px 0;
-  background: rgba(0, 0, 0, 0.3);
-  border-left: 2px solid #333;
-  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+  margin: 4px 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-left: 2px solid rgba(6, 182, 212, 0.5);
+  border-radius: 0 8px 8px 0;
   max-height: 400px;
   overflow-y: auto;
   overflow-x: auto;
 }
 
 .cli-thinking-content {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-left-color: #6366f1;
 }
 
@@ -253,12 +283,12 @@
   font-family: inherit;
 }
 
-/* ==================== 光标动画 ==================== */
+/* ==================== 光标动画（Cyan color） ==================== */
 .cli-cursor {
   display: inline-block;
   width: 8px;
   height: 14px;
-  background: #3b82f6;
+  background: #06b6d4;
   margin-left: 4px;
   animation: blink 1s step-end infinite;
   vertical-align: middle;
@@ -269,7 +299,7 @@
   50% { opacity: 0; }
 }
 
-/* ==================== 滚动条样式 ==================== */
+/* ==================== 滚动条样式（Cyan tint） ==================== */
 .cli-section-content::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -280,18 +310,18 @@
 }
 
 .cli-section-content::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgba(6, 182, 212, 0.3);
   border-radius: 3px;
 }
 
 .cli-section-content::-webkit-scrollbar-thumb:hover {
-  background: #444;
+  background: rgba(6, 182, 212, 0.5);
 }
 
 /* Firefox 滚动条 */
 .cli-section-content {
   scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
+  scrollbar-color: rgba(6, 182, 212, 0.3) transparent;
 }
 
 /* ==================== 响应式 ==================== */
@@ -339,11 +369,14 @@
   }
 
   .cli-section-content {
-    background: rgba(0, 0, 0, 0.03);
-    border-left-color: #ddd;
+    background: rgba(241, 245, 249, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-left-color: rgba(6, 182, 212, 0.4);
   }
 
   .cli-thinking-content {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
     border-left-color: #6366f1;
   }
 

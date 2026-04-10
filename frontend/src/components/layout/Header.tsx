@@ -16,23 +16,30 @@ function Header() {
   const location = useLocation();
 
   const isHistoryPage = location.pathname === '/history';
-  
+
   const title = isHistoryPage
     ? '历史记录'
-    : workflowTitles[state.currentWorkflow] || 'Bamboo';
+    : workflowTitles[state.currentWorkflow] || 'Bamboo AI';
 
   return (
     <header
-      className={`flex items-center justify-between h-10 px-4 shrink-0 transition-colors duration-200 ${
-        mode === 'dark'
-          ? 'bg-[var(--color-bg-card)] border-b border-[var(--color-border)]'
-          : 'bg-gray-50 border-b border-gray-200'
+      className={`relative flex items-center justify-between h-12 px-5 shrink-0 glass-header transition-colors duration-200 ${
+        mode === 'dark' ? '' : 'bg-white/60'
       }`}
     >
-      <h1 className="text-sm font-medium text-[var(--color-text-primary)]">
+      <h1 className="text-base font-medium text-[var(--color-text-primary)] tracking-wide">
         {title}
       </h1>
       <ModelSelector />
+      <div
+        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+        style={{
+          background:
+            mode === 'dark'
+              ? 'linear-gradient(90deg, transparent 0%, rgba(6, 182, 212, 0.3) 50%, transparent 100%)'
+              : 'linear-gradient(90deg, transparent 0%, rgba(6, 182, 212, 0.2) 50%, transparent 100%)',
+        }}
+      />
     </header>
   );
 }

@@ -123,6 +123,27 @@ def update_and_emit_status(workflow_type):
     broadcast_to_workflow(workflow_type, message)
     print(f"[DEBUG] 状态更新已发送: {workflow_type} - {status.get('status', 'unknown')}")
 
+# 辅助函数：发送中间产物到前端
+def emit_artifact(workflow_type, artifact_type, artifact_data, step_name=None):
+    """发送工作流中间产物到前端
+    
+    Args:
+        workflow_type: 工作流类型
+        artifact_type: 产物类型 ('code', 'image', 'document', 'outline', 'video')
+        artifact_data: 产物数据
+        step_name: 产生该产物的步骤名称
+    """
+    message = {
+        'type': 'artifact',
+        'workflow_type': workflow_type,
+        'artifact_type': artifact_type,
+        'step_name': step_name,
+        'data': artifact_data,
+        'timestamp': datetime.now().isoformat()
+    }
+    broadcast_to_workflow(workflow_type, message)
+    print(f"[DEBUG] Artifact已发送: {workflow_type}/{artifact_type} (步骤: {step_name})")
+
 # 辅助函数：发送流式响应内容
 def emit_stream_content(workflow_type, node_name, content, content_type='content'):
     """发送AI流式响应内容到前端
@@ -1003,6 +1024,10 @@ def run_drawing_workflow_thread(user_prompt):
                 # 执行节点逻辑
                 result = refine_prompt(state)
                 
+                # Send refined prompt to frontend for display
+                if result.get('refined_prompt'):
+                    emit_stream_content('drawing', 'refine_prompt', result['refined_prompt'])
+                
                 # 节点完成时立即更新状态
                 workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
@@ -1044,6 +1069,14 @@ def run_drawing_workflow_thread(user_prompt):
                     workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('drawing')
+
+                # 发送代码产物到前端
+                if result.get('generated_code') and not result.get('error'):
+                    emit_artifact('drawing', 'code', {
+                        'code': result['generated_code'],
+                        'language': 'python',
+                        'title': '绘图代码'
+                    }, 'generate_code')
                 
                 print(f"[DEBUG] <<< 节点 'generate_code' 执行完成")
                 if result.get('error'):
@@ -1081,6 +1114,17 @@ def run_drawing_workflow_thread(user_prompt):
                     workflow_statuses['drawing']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['drawing']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('drawing')
+
+                # 发送图片产物到前端
+                if result.get('image_path') and os.path.exists(result['image_path']) and not result.get('error'):
+                    filename = os.path.basename(result['image_path'])
+                    file_size = os.path.getsize(result['image_path'])
+                    emit_artifact('drawing', 'image', {
+                        'image_url': f'/api/images/{filename}',
+                        'image_path': result['image_path'],
+                        'image_size': file_size,
+                        'title': '生成的图表'
+                    }, 'execute_code')
                 
                 print(f"[DEBUG] <<< 节点 'execute_code' 执行完成")
                 if result.get('error'):
@@ -1435,6 +1479,10 @@ def run_document_with_images_thread(user_prompt):
                 
                 # 执行节点逻辑
                 result = refine_prompt(state)
+
+                # 发送润色后的提示词到前端
+                if result.get('refined_prompt'):
+                    emit_stream_content('document_with_images', 'refine_prompt', result['refined_prompt'])
                 
                 # 节点完成时立即更新状态
                 if result.get('error'):
@@ -1481,6 +1529,13 @@ def run_document_with_images_thread(user_prompt):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+
+                # 发送大纲产物到前端
+                if result.get('document_outline') and not result.get('error'):
+                    emit_artifact('document_with_images', 'outline', {
+                        'content': result['document_outline'],
+                        'title': '文档大纲'
+                    }, 'generate_outline')
                 
                 print(f"[DEBUG] <<< 带图片文档节点 'generate_outline' 执行完成")
                 return result
@@ -1518,6 +1573,13 @@ def run_document_with_images_thread(user_prompt):
                     workflow_statuses['document_with_images']['steps'][-1]['status'] = 'completed'
                 workflow_statuses['document_with_images']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('document_with_images')
+
+                # 发送文档内容产物到前端
+                if result.get('markdown_content') and not result.get('error'):
+                    emit_artifact('document_with_images', 'document', {
+                        'content': result['markdown_content'],
+                        'title': '文档内容'
+                    }, 'generate_content')
                 
                 print(f"[DEBUG] <<< 带图片文档节点 'generate_content' 执行完成")
                 return result
@@ -1877,6 +1939,10 @@ def run_manim_workflow_thread(user_prompt, quality):
 
                 result = refine_prompt(state)
 
+                # 发送润色后的提示词到前端
+                if result.get('refined_prompt'):
+                    emit_stream_content('manim', 'refine_prompt', result['refined_prompt'])
+
                 if result.get('error'):
                     workflow_statuses['manim']['steps'][-1]['status'] = 'error'
                     workflow_statuses['manim']['steps'][-1]['error'] = result.get('error', '未知错误')
@@ -1885,7 +1951,6 @@ def run_manim_workflow_thread(user_prompt, quality):
                     workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('manim')
 
-                print(f"[DEBUG] <<< Manim 节点 'refine_prompt' 执行完成")
                 return result
 
             def monitored_generate_code(state):
@@ -1917,6 +1982,14 @@ def run_manim_workflow_thread(user_prompt, quality):
                     workflow_statuses['manim']['steps'][-1]['status'] = 'completed'
                     workflow_statuses['manim']['steps'][-1]['completed_at'] = datetime.now().isoformat()
                 update_and_emit_status('manim')
+
+                # 发送代码产物到前端
+                if result.get('generated_code') and not result.get('error'):
+                    emit_artifact('manim', 'code', {
+                        'code': result['generated_code'],
+                        'language': 'python',
+                        'title': 'Manim 动画代码'
+                    }, 'generate_code')
 
                 print(f"[DEBUG] <<< Manim 节点 'generate_code' 执行完成")
                 if result.get('error'):

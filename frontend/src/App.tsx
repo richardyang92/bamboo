@@ -5,16 +5,18 @@ import { Toaster } from 'sonner';
 import 'sonner/dist/styles.css';
 import HomePage from './pages/HomePage';
 import HistoryPage from './pages/HistoryPage';
+import CommandPalette from './components/shared/CommandPalette';
 
 function App() {
   return (
     <ThemeProvider>
-      <WorkflowProvider>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/history" element={<HistoryPage />} />
-        </Routes>
-        <Toaster
+        <WorkflowProvider>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/history" element={<HistoryPage />} />
+          </Routes>
+          <CommandPalette />
+          <Toaster
           position="top-right"
           richColors
           theme="dark"
